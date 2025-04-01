@@ -13,6 +13,7 @@
     <PackageReference Include="SHA3" Version="1.0.0" />
     <PackageReference Include="SimpleBase" Version="4.0.2" />
     <PackageReference Include="ZoneTree.FullTextSearch" Version="1.0.8" />
+    <PackageReference Include="Crc32.Net" Version="1.2.0" /> <!-- Added CRC32 -->
   </ItemGroup>
 
   <ItemGroup>

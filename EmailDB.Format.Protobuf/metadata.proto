@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package EmailDB.Format.Protobuf;
+
+// Represents the payload for a Metadata block (BlockType.Metadata)
+message MetadataPayload {
+  // Version of the EmailDB file format itself (distinct from block format version)
+  uint32 file_format_version = 1;
+
+  // The BlockId of the root FolderTree block.
+  int64 root_folder_tree_id = 2;
+
+  // The next available BlockId to be assigned.
+  // This should be incremented atomically when a new block is created.
+  int64 next_block_id = 3;
+
+  // Add other global file metadata fields as needed...
+  // e.g., timestamp of last compaction, file creation timestamp, etc.
+  int64 creation_timestamp_ticks = 4;
+  int64 last_compaction_timestamp_ticks = 5;
+}

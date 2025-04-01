@@ -1,10 +1,13 @@
-﻿using EmailDB.Format.CapnProto.Models;
+﻿using EmailDB.Format.CapnProto.Models; // Keep existing models for Block/BlockLocation
+using EmailDB.Format.Protobuf; // Add namespace for Protobuf messages
 using Force.Crc32;
+using Google.Protobuf; // Add Google.Protobuf namespace
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using System.Linq; // For OrderByDescending
 using System.Reflection;
 using System.Reflection.PortableExecutable;
 using System.Text;
@@ -66,6 +69,7 @@ namespace EmailDB.Format.CapnProto
         private readonly ConcurrentDictionary<long, BlockLocation> blockLocations;
         private long currentPosition;
         private bool isDisposed;
+        private long latestMetadataBlockId = -1; // Initialize to invalid ID
 
         #endregion
 
@@ -79,6 +83,8 @@ namespace EmailDB.Format.CapnProto
             this.fileLock = new ReaderWriterLockSlim();
             this.blockLocations = new ConcurrentDictionary<long, BlockLocation>();
             this.currentPosition = this.fileStream.Length;
+            // Scan for existing blocks to populate locations and find latest metadata
+            ScanExistingBlocks();
         }
 
         public void Dispose()
@@ -99,8 +105,9 @@ namespace EmailDB.Format.CapnProto
 
         /// <summary>
         /// Writes a new block to the end of the file in a thread-safe manner.
+        /// Returns a Result containing the BlockLocation on success, or an error message on failure.
         /// </summary>
-        public async Task<BlockLocation> WriteBlockAsync(Block block, CancellationToken cancellationToken = default)
+        public async Task<Result<BlockLocation>> WriteBlockAsync(Block block, CancellationToken cancellationToken = default)
         {
             ThrowIfDisposed();
 
@@ -114,6 +121,7 @@ namespace EmailDB.Format.CapnProto
 
             BlockLocation location;
             fileLock.EnterWriteLock();
+            fileLock.EnterWriteLock();
             try
             {
                 // Store the starting position for this block
@@ -123,8 +131,9 @@ namespace EmailDB.Format.CapnProto
                 fileStream.Seek(blockStartPosition, SeekOrigin.Begin);
 
                 // Write the complete block to the file
-                fileStream.Write(blockData, 0, blockData.Length);
-                fileStream.Flush();
+                // Use WriteAsync for consistency, although Flush might make it less critical here
+                await fileStream.WriteAsync(blockData, 0, blockData.Length, cancellationToken);
+                await fileStream.FlushAsync(cancellationToken); // Ensure data is written to disk
 
                 // Update the current position
                 currentPosition = fileStream.Position;
@@ -137,40 +146,61 @@ namespace EmailDB.Format.CapnProto
                 };
 
                 blockLocations.AddOrUpdate(block.BlockId, location, (key, oldValue) => location);
+
+                return Result<BlockLocation>.Success(location);
+            }
+            catch (IOException ex)
+            {
+                 return Result<BlockLocation>.Failure($"I/O error writing Block ID {block.BlockId}: {ex.Message}");
+            }
+            catch (Exception ex) // Catch unexpected errors
+            {
+                 return Result<BlockLocation>.Failure($"Unexpected error writing Block ID {block.BlockId}: {ex.Message}");
             }
             finally
             {
                 fileLock.ExitWriteLock();
             }
-
-            return location;
         }
 
         /// <summary>
         /// Reads a block from the file by its ID in a thread-safe manner.
+        /// Returns a Result indicating success or failure.
         /// </summary>
-        public async Task<Block> ReadBlockAsync(long blockId, CancellationToken cancellationToken = default)
+        public async Task<Result<Block>> ReadBlockAsync(long blockId, CancellationToken cancellationToken = default)
         {
             ThrowIfDisposed();
 
             if (!blockLocations.TryGetValue(blockId, out BlockLocation location))
             {
-                throw new KeyNotFoundException($"Block ID {blockId} not found");
+                return Result<Block>.Failure($"Block ID {blockId} not found in blockLocations map.");
             }
 
+            byte[] buffer = new byte[location.Length];
+            fileLock.EnterReadLock();
             try
             {
-                fileLock.EnterReadLock();
-
                 fileStream.Seek(location.Position, SeekOrigin.Begin);
-                byte[] buffer = new byte[location.Length];
 
-                await fileStream.ReadAsync(buffer, 0, (int)location.Length, cancellationToken);
+                int bytesRead = await fileStream.ReadAsync(buffer, 0, (int)location.Length, cancellationToken);
+                if (bytesRead != location.Length)
+                {
+                     return Result<Block>.Failure($"Incomplete read for Block ID {blockId}. Expected {location.Length} bytes, got {bytesRead}.");
+                }
 
                 using (var ms = new MemoryStream(buffer))
                 {
-                    return ReadBlockFromStream(ms);
+                    // ReadBlockFromStream now needs to handle potential exceptions and return Result
+                    return ReadBlockFromStreamInternal(ms, blockId);
                 }
+            }
+            catch (IOException ex)
+            {
+                 return Result<Block>.Failure($"I/O error reading Block ID {blockId}: {ex.Message}");
+            }
+            catch (Exception ex) // Catch unexpected errors during read/seek
+            {
+                 return Result<Block>.Failure($"Unexpected error reading Block ID {blockId}: {ex.Message}");
             }
             finally
             {
@@ -206,13 +236,22 @@ namespace EmailDB.Format.CapnProto
                 fileLock.EnterWriteLock();
 
                 string tempFilePath = filePath + ".temp";
-                using (var tempManager = new BlockManager(tempFilePath))
+                using (var tempManager = new RawBlockManager(tempFilePath)) // Use RawBlockManager for temp file
                 {
                     // Copy all current blocks to the temporary file
                     foreach (var kvp in blockLocations)
                     {
-                        var block = await ReadBlockAsync(kvp.Key, cancellationToken);
-                        await tempManager.WriteBlockAsync(block, cancellationToken);
+                        var blockResult = await ReadBlockAsync(kvp.Key, cancellationToken);
+                        if (blockResult.IsSuccess)
+                        {
+                            await tempManager.WriteBlockAsync(blockResult.Value, cancellationToken);
+                        }
+                        else
+                        {
+                            // Log the error and skip this block during compaction
+                            Console.WriteLine($"Compaction warning: Failed to read block {kvp.Key}, skipping. Error: {blockResult.Error}");
+                            // Depending on requirements, might want to throw or handle differently
+                        }
                     }
                 }
 
@@ -319,38 +358,113 @@ namespace EmailDB.Format.CapnProto
             return magicPositions;
         }
 
+        /// <summary>
+        /// Scans the file to populate block locations and find the latest Metadata block ID.
+        /// Should be called during initialization.
+        /// </summary>
         private void ScanExistingBlocks()
         {
+            // Use a read lock initially for scanning locations
+            fileLock.EnterReadLock();
             try
             {
-                fileLock.EnterWriteLock();
-                var fileLength = new FileInfo(filePath)?.Length ?? 1;
-                using (var mmf = MemoryMappedFile.CreateFromFile(fileStream, null, fileLength, MemoryMappedFileAccess.Read, HandleInheritability.None, false))
-                using (var accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read))
+                var fileLength = fileStream.Length;
+                if (fileLength == 0) return; // Nothing to scan
+
+                long currentScanPosition = 0;
+                long foundLatestMetadataId = -1;
+                long maxMetadataPosition = -1;
+
+                // Temporary list to hold locations found during scan
+                var scannedLocations = new Dictionary<long, BlockLocation>();
+
+                // This simplified scan assumes blocks are contiguous and valid from the start.
+                // A more robust scan might need to handle corrupted sections.
+                while (currentScanPosition < fileLength)
                 {
+                    // Read potential header + checksum
+                    if (currentScanPosition + HeaderSize + HeaderChecksumSize > fileLength) break; // Not enough space left
 
-                    long position = 0;
+                    byte[] potentialHeader = new byte[HeaderSize];
+                    fileStream.Seek(currentScanPosition, SeekOrigin.Begin);
+                    int headerBytesRead = fileStream.Read(potentialHeader, 0, HeaderSize);
+                    if (headerBytesRead != HeaderSize) break; // Couldn't read full header
 
-                    while (position < fileLength)
+                    uint storedHeaderChecksum = ReadUInt32FromFileStream(fileStream); // Helper needed or use BinaryReader
+
+                    // Verify magic and checksum before proceeding
+                    ulong headerMagic = BitConverter.ToUInt64(potentialHeader, 0);
+                    uint computedHeaderChecksum = ComputeChecksum(potentialHeader);
+
+                    if (headerMagic == HEADER_MAGIC && storedHeaderChecksum == computedHeaderChecksum)
                     {
-                        // Try to read block at current position
-                        if (TryReadBlockLocation(accessor, position, fileLength, out BlockLocation location, out long blockId))
+                        // Header looks valid, parse details
+                        BlockType type = (BlockType)potentialHeader[10]; // Offset for BlockType
+                        long blockId = BitConverter.ToInt64(potentialHeader, 20); // Offset for BlockId
+                        long payloadLength = BitConverter.ToInt64(potentialHeader, 28); // Offset for PayloadLength
+                        long totalBlockLength = TotalFixedOverhead + payloadLength;
+
+                        // Basic check: does the block fit within the file?
+                        if (currentScanPosition + totalBlockLength <= fileLength)
                         {
-                            blockLocations.TryAdd(blockId, location);
-                            position = location.Position + location.Length;
+                            // TODO: Optionally add footer magic/length check here for extra validation
+
+                            var location = new BlockLocation { Position = currentScanPosition, Length = totalBlockLength };
+                            scannedLocations[blockId] = location; // Store latest location found for this ID
+
+                            if (type == BlockType.Metadata)
+                            {
+                                // Track the metadata block found at the highest position
+                                if (currentScanPosition > maxMetadataPosition)
+                                {
+                                    maxMetadataPosition = currentScanPosition;
+                                    foundLatestMetadataId = blockId;
+                                }
+                            }
+                            currentScanPosition += totalBlockLength; // Move to the next potential block
                         }
                         else
                         {
-                            // If we couldn't read a block, move forward by one byte and try again
-                            position++;
+                            // Block declared length exceeds file bounds, assume corruption/incomplete write
+                            break; // Stop scanning
                         }
                     }
+                    else
+                    {
+                        // Invalid header/checksum, assume corruption or end of valid blocks
+                        break; // Stop scanning
+                    }
                 }
+
+                // Update the main dictionary and latest metadata ID outside the loop
+                // Use TryUpdate or AddOrUpdate if concurrent access during init is possible,
+                // but since this is likely called from constructor, direct assignment might be okay.
+                foreach(var kvp in scannedLocations)
+                {
+                    blockLocations.AddOrUpdate(kvp.Key, kvp.Value, (id, oldLoc) => kvp.Value);
+                }
+                latestMetadataBlockId = foundLatestMetadataId;
+
+            }
+            catch (Exception ex)
+            {
+                // Log error during scanning
+                Console.WriteLine($"Error during file scan: {ex.Message}");
+                // Depending on requirements, might clear blockLocations or throw
             }
             finally
             {
-                fileLock.ExitWriteLock();
+                fileLock.ExitReadLock();
             }
+        }
+
+        // Helper to read uint32 directly from filestream (assumes stream position is correct)
+        private uint ReadUInt32FromFileStream(FileStream fs)
+        {
+            byte[] buffer = new byte[4];
+            int bytesRead = fs.Read(buffer, 0, 4);
+            if (bytesRead < 4) throw new EndOfStreamException("Could not read uint32 from stream.");
+            return BitConverter.ToUInt32(buffer, 0);
         }
 
         private bool TryReadBlockLocation(MemoryMappedViewAccessor accessor, long position, long fileLength, out BlockLocation location, out long blockId)
@@ -458,7 +572,8 @@ namespace EmailDB.Format.CapnProto
             writer.Write(TotalFixedOverhead + (block.Payload?.Length ?? 0));
         }
 
-        private Block ReadBlockFromStream(Stream stream)
+        // Renamed to avoid conflict and clarify internal use with Result pattern
+        private Result<Block> ReadBlockFromStreamInternal(Stream stream, long blockIdForErrorMessage)
         {
             using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
 
@@ -466,14 +581,14 @@ namespace EmailDB.Format.CapnProto
             byte[] headerBytes = reader.ReadBytes(HeaderSize);
             if (headerBytes.Length != HeaderSize)
             {
-                throw new InvalidDataException("Incomplete header");
+                return Result<Block>.Failure($"Incomplete header for Block ID {blockIdForErrorMessage}");
             }
 
             uint storedHeaderChecksum = reader.ReadUInt32();
             uint computedHeaderChecksum = ComputeChecksum(headerBytes);
             if (storedHeaderChecksum != computedHeaderChecksum)
             {
-                throw new InvalidDataException("Header checksum mismatch");
+                return Result<Block>.Failure($"Header checksum mismatch for Block ID {blockIdForErrorMessage}");
             }
 
             // Parse header
@@ -483,7 +598,7 @@ namespace EmailDB.Format.CapnProto
                 ulong headerMagic = headerReader.ReadUInt64();
                 if (headerMagic != HEADER_MAGIC)
                 {
-                    throw new InvalidDataException("Invalid header magic");
+                    return Result<Block>.Failure($"Invalid header magic for Block ID {blockIdForErrorMessage}");
                 }
 
                 var block = new Block
@@ -503,36 +618,40 @@ namespace EmailDB.Format.CapnProto
                     block.Payload = reader.ReadBytes((int)payloadLength);
                     if (block.Payload.Length != payloadLength)
                     {
-                        throw new InvalidDataException("Incomplete payload");
+                        return Result<Block>.Failure($"Incomplete payload read for Block ID {blockIdForErrorMessage}");
                     }
 
                     uint storedPayloadChecksum = reader.ReadUInt32();
                     uint computedPayloadChecksum = ComputeChecksum(block.Payload);
                     if (storedPayloadChecksum != computedPayloadChecksum)
                     {
-                        throw new InvalidDataException("Payload checksum mismatch");
+                        return Result<Block>.Failure($"Payload checksum mismatch for Block ID {blockIdForErrorMessage}");
                     }
                 }
                 else
                 {
-                    reader.ReadUInt32(); // Skip empty payload checksum
+                    uint storedPayloadChecksum = reader.ReadUInt32(); // Read the checksum for empty payload
+                    if (storedPayloadChecksum != 0) // Checksum for empty payload must be 0
+                    {
+                        return Result<Block>.Failure($"Payload checksum mismatch for empty payload for Block ID {blockIdForErrorMessage}");
+                    }
                 }
 
                 // Verify footer
                 ulong footerMagic = reader.ReadUInt64();
                 if (footerMagic != FOOTER_MAGIC)
                 {
-                    throw new InvalidDataException("Invalid footer magic");
+                    return Result<Block>.Failure($"Invalid footer magic for Block ID {blockIdForErrorMessage}");
                 }
 
                 long storedBlockLength = reader.ReadInt64();
                 long computedBlockLength = HeaderSize + HeaderChecksumSize + payloadLength + PayloadChecksumSize + FooterSize;
                 if (storedBlockLength != computedBlockLength)
                 {
-                    throw new InvalidDataException("Block length mismatch");
+                    return Result<Block>.Failure($"Block length mismatch in footer for Block ID {blockIdForErrorMessage}");
                 }
 
-                return block;
+                return Result<Block>.Success(block);
             }
         }
 

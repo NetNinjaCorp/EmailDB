@@ -1,18 +1,21 @@
 ﻿using EmailDB.Format;
-using EmailDB.Format.FileManagement;
-using EmailDB.Format.Models.Blocks;
+// using EmailDB.Format.FileManagement; // Removed - Using new structure
+// using EmailDB.Format.Models.Blocks; // Removed - Using new structure
+using EmailDB.Format.Models; // Added for new Block model
 
 public class StorageManager : IStorageManager
 {
     private readonly string filePath;
     private readonly FileStream fileStream;
-    public readonly BlockManager blockManager;
-    public readonly CacheManager cacheManager;
-    public readonly MetadataManager metadataManager;
-    public readonly FolderManager folderManager;
-    public readonly SegmentManager segmentManager;
-    public readonly EmailManager emailManager;
-    public readonly MaintenanceManager maintenanceManager;
+    // TODO: Refactor manager dependencies based on new RawBlockManager and responsibilities
+    // public readonly BlockManager blockManager; // Old
+    public readonly RawBlockManager rawBlockManager; // New - Assuming this is needed
+    // public readonly CacheManager cacheManager;
+    // public readonly MetadataManager metadataManager; // Old FileManagement one
+    // public readonly FolderManager folderManager;
+    // public readonly SegmentManager segmentManager;
+    // public readonly EmailManager emailManager;
+    // public readonly MaintenanceManager maintenanceManager;
 
     public StorageManager(string path, bool createNew = false)
     {
@@ -20,157 +23,104 @@ public class StorageManager : IStorageManager
         var mode = createNew ? FileMode.Create : FileMode.OpenOrCreate;
         fileStream = new FileStream(path, mode, FileAccess.ReadWrite, FileShare.None);
 
-        // Initialize components
-        blockManager = new BlockManager(fileStream);
-        cacheManager = new CacheManager(blockManager);
-        metadataManager = new MetadataManager(blockManager);
-        folderManager = new FolderManager(blockManager, metadataManager);
-        if (createNew)
-        {
-            InitializeNewFile();
-        }
-        else
-        {
-            cacheManager.LoadHeaderContent();
-        }
+        // TODO: Refactor manager instantiation
+        rawBlockManager = new RawBlockManager(path, createNew); // Instantiate RawBlockManager
+        // cacheManager = new CacheManager(rawBlockManager); // Needs update
+        // metadataManager = new MetadataManager(rawBlockManager); // Needs update
+        // folderManager = new FolderManager(rawBlockManager, metadataManager); // Needs update
+
+        // if (createNew)
+        // {
+        //     InitializeNewFile(); // Commented out - Uses old structure
+        // }
+        // else
+        // {
+        //     // cacheManager.LoadHeaderContent(); // Commented out - Method likely changed/removed
+        // }
       
-        segmentManager = new SegmentManager(blockManager, cacheManager);
-        emailManager = new EmailManager(this, folderManager, segmentManager);
-        maintenanceManager = new MaintenanceManager(blockManager, cacheManager, folderManager, segmentManager);
+        // segmentManager = new SegmentManager(rawBlockManager, cacheManager); // Needs update
+        // emailManager = new EmailManager(this, folderManager, segmentManager); // Needs update
+        // maintenanceManager = new MaintenanceManager(rawBlockManager, cacheManager, folderManager, segmentManager); // Needs update
 
-        if (createNew)
-        {
-            InitializeNewFile();
+        // Duplicate initialization block removed
         }
-        else
-        {
-            cacheManager.LoadHeaderContent();
-        }
+
+    // public void InitializeNewFile() // Commented out - Relies on old Block structure and managers
+    // {
+    //     // This needs complete rewrite using RawBlockManager and the new MetadataManager (in Protobuf project)
+    //     // to write the initial Metadata block with NextBlockId = 1 (or similar starting point).
+    //
+    //     // Example placeholder:
+    //     // var initialMetadataPayload = new EmailDB.Format.Protobuf.MetadataPayload { ... NextBlockId = 1 ... };
+    //     // var initialMetadataBlock = new Block {
+    //     //     BlockId = 0, // Or a specific ID for initial metadata? Needs decision.
+    //     //     Type = BlockType.Metadata,
+    //     //     PayloadEncoding = PayloadEncoding.Protobuf,
+    //     //     Timestamp = DateTime.UtcNow.Ticks,
+    //     //     Payload = initialMetadataPayload.ToByteArray()
+    //     // };
+    //     // var writeResult = rawBlockManager.WriteBlockAsync(initialMetadataBlock).GetAwaiter().GetResult();
+    //     // if(writeResult.IsFailure) throw new Exception("Failed to initialize file header/metadata.");
+    //
+    //     // folderManager?.WriteFolderTree(new FolderTreeContent()); // Needs update
     }
 
-    public void InitializeNewFile()
+    // --- Adding method stubs to satisfy IStorageManager ---
+
+    public void AddEmailToFolder(string folderName, byte[] emailContent)
     {
-        var headerBlock = new Block
-        {
-            Header = new BlockHeader
-            {
-                Type = BlockType.Header,
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                Version = 1
-            },
-            Content = new HeaderContent
-            {
-                FileVersion = 1,
-                FirstMetadataOffset = -1,
-                FirstFolderTreeOffset = -1,
-                FirstCleanupOffset = -1
-            }
-        };
-
-        blockManager.WriteBlock(headerBlock, 0);
-        cacheManager.LoadHeaderContent();
-
-        // Initialize empty folder tree
-        folderManager.WriteFolderTree(new FolderTreeContent());
-    }
-
-    public async void AddEmailToFolder(string folderName, byte[] emailContent)
-    {
-        // The StorageManager now just coordinates between EmailManager and FolderManager
-        var emailId = await emailManager.AddEmailAsync(emailContent,folderName);
-        folderManager.AddEmailToFolder(folderName, emailId);
+        // TODO: Implement using refactored managers
+        throw new NotImplementedException();
     }
 
     public void UpdateEmailContent(EmailHashedID emailId, byte[] newContent)
     {
+        // TODO: Implement using refactored managers
         throw new NotImplementedException();
     }
 
-    public async void MoveEmail(EmailHashedID emailId, string sourceFolder, string targetFolder)
+    public void MoveEmail(EmailHashedID emailId, string sourceFolder, string targetFolder)
     {
-        // Coordinate the move operation between managers       
-        await emailManager.MoveEmailAsync(emailId, sourceFolder, targetFolder);
+        // TODO: Implement using refactored managers
+        throw new NotImplementedException();
     }
 
-    public async void DeleteEmail(EmailHashedID emailId, string folderName)
+    public void DeleteEmail(EmailHashedID emailId, string folderName)
     {
-        // Coordinate deletion between managers
-        await emailManager.MoveEmailAsync(emailId, folderName, "Deleted Items");
+        // TODO: Implement using refactored managers
+        throw new NotImplementedException();
     }
 
-    public async void CreateFolder(string folderName, string parentFolderId = null)
+    public void CreateFolder(string folderName, string parentFolderId = null)
     {
-        if (parentFolderId == null)
-        {
-            folderManager.CreateFolder(folderName);
-
-        }
-        else
-        {
-            var parentFolder = await folderManager.GetFolder(parentFolderId);
-            if (parentFolder == null)
-            {
-                throw new InvalidOperationException("Parent folder does not exist");
-            }
-            folderManager.CreateFolder($"{parentFolderId}\\{folderName}");
-        }
+        // TODO: Implement using refactored managers
+        throw new NotImplementedException();
     }
 
-    public async void DeleteFolder(string folderName, bool deleteEmails = false)
+    public void DeleteFolder(string folderName, bool deleteEmails = false)
     {
-        if (deleteEmails)
-        {
-            var folder = folderManager.GetFolder(folderName).Result;
-            if (folder != null)
-            {
-                foreach (var emailId in folder.EmailIds)
-                {
-                    await emailManager.MoveEmailAsync(emailId, folderName, "Deleted Items");
-                }
-            }
-        }
-        folderManager.DeleteFolder(folderName, deleteEmails);
-    }
-
-    public HeaderContent GetHeader()
-    {
-        return cacheManager.GetHeader();
-    }
-
-    // These methods should be internal and only used by other managers
-    internal Block ReadBlock(long offset)
-    {
-        return blockManager.ReadBlock(offset);
-    }
-
-    internal long WriteBlock(Block block, long? specificOffset = null)
-    {
-        return blockManager.WriteBlock(block, specificOffset);
-    }
-
-    internal IEnumerable<(long Offset, Block Block)> WalkBlocks()
-    {
-        return blockManager.WalkBlocks();
+        // TODO: Implement using refactored managers
+        throw new NotImplementedException();
     }
 
     public void Compact(string outputPath)
     {
-        lock (fileStream)
-        {
-            maintenanceManager.Compact(outputPath);
-        }
+        // TODO: Implement using refactored managers (or confirm if this responsibility moves)
+        throw new NotImplementedException();
     }
 
     public void InvalidateCache()
     {
-        cacheManager.InvalidateCache();
+        // TODO: Implement using refactored managers (or confirm if this responsibility moves)
+        throw new NotImplementedException();
     }
 
     public void Dispose()
     {
-        emailManager?.Dispose();
-        fileStream?.Dispose();
+        // emailManager?.Dispose(); // Needs update
+        rawBlockManager?.Dispose(); // Dispose RawBlockManager
+        fileStream?.Dispose(); // Dispose FileStream
     }
 
 
-}
+} // End of StorageManager class

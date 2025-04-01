@@ -1,5 +1,5 @@
 ﻿using EmailDB.Format.Models;
-using EmailDB.Format.Models.Blocks;
+// using EmailDB.Format.Models.Blocks; // Removed - Causes ambiguity with new models
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,7 +32,7 @@ public class MetadataManager
         {
             Header = new BlockHeader
             {
-                Type = BlockType.WAL,
+                Type = Models.BlockType.Metadata, // Placeholder - WAL type doesn't exist in new enum, needs re-evaluation
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 Version = 1
             },
@@ -87,7 +87,7 @@ public class MetadataManager
         {
             Header = new BlockHeader
             {
-                Type = BlockType.Folder,
+                Type = Models.BlockType.FolderContent, // Assuming Folder maps to FolderContent
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 Version = 1
             },
@@ -103,7 +103,7 @@ public class MetadataManager
         {
             Header = new BlockHeader
             {
-                Type = BlockType.FolderTree,
+                Type = Models.BlockType.FolderTree,
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 Version = 1
             },
@@ -135,7 +135,7 @@ public class MetadataManager
             {
                 Header = new BlockHeader
                 {
-                    Type = BlockType.Metadata,
+                    Type = Models.BlockType.Metadata,
                     Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                     Version = 1
                 },
