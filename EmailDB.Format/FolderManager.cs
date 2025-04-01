@@ -1,5 +1,6 @@
 ﻿using DragonHoard.InMemory;
-using EmailDB.Format.Models;
+using EmailDB.Format.FileManagement;
+using EmailDB.Format.Models.Blocks;
 using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
 
@@ -30,12 +31,12 @@ public class FolderManager
     }
 
     // High-level folder operations
-    public void CreateFolder(string path)
+    public async Task CreateFolder(string path)
     {
         ValidatePath(path);
 
         var (parentPath, folderName) = SplitPath(path);
-        var folderTree = GetLatestFolderTree();
+        var folderTree = await GetLatestFolderTree();
 
         // Check if path already exists
         if (folderTree.FolderIDs.ContainsKey(path))
@@ -61,7 +62,7 @@ public class FolderManager
             FolderId = folderId,
             ParentFolderId = parentFolderId,
             Name = path, // Store the full path as the name
-            EmailIds = new List<ulong>()
+            EmailIds = new List<EmailHashedID>()
         };
 
         // Write folder and update tree
@@ -77,14 +78,14 @@ public class FolderManager
         WriteFolderTree(folderTree);
     }
 
-    public void DeleteFolder(string path, bool deleteContents = false)
+    public async Task DeleteFolder(string path, bool deleteContents = false)
     {
         ValidatePath(path);
-        var folder = GetFolder(path);
+        var folder = await GetFolder(path);
         if (folder == null)
             return;
 
-        var folderTree = GetLatestFolderTree();
+        var folderTree = await GetLatestFolderTree();
 
         // Get all subfolders that start with this path
         var subfolders = folderTree.FolderIDs
@@ -109,16 +110,16 @@ public class FolderManager
         InvalidateCache();
     }
 
-    public void MoveFolder(string sourcePath, string targetParentPath)
+    public async Task MoveFolder(string sourcePath, string targetParentPath)
     {
         ValidatePath(sourcePath);
         ValidatePath(targetParentPath);
 
-        var sourceFolder = GetFolder(sourcePath);
+        var sourceFolder = await GetFolder(sourcePath);
         if (sourceFolder == null)
             throw new InvalidOperationException($"Folder '{sourcePath}' not found");
 
-        var folderTree = GetLatestFolderTree();
+        var folderTree = await GetLatestFolderTree();
 
         // Get target parent folder ID
         if (!folderTree.FolderIDs.TryGetValue(targetParentPath, out var targetParentId))
@@ -161,7 +162,7 @@ public class FolderManager
                 newPath :
                 newPrefix + oldPath.Substring(oldPrefix.Length);
 
-            var folderToUpdate = GetFolder(oldPath);
+            var folderToUpdate = await GetFolder(oldPath);
             folderToUpdate.Name = newFolderPath;
 
             if (oldPath == sourcePath)
@@ -178,9 +179,16 @@ public class FolderManager
         WriteFolderTree(folderTree);
     }
 
-    public void AddEmailToFolder(string path, ulong emailId)
+    public async Task<List<EmailHashedID>> GetEmails(string path)
     {
-        var folder = GetFolder(path);
+        var folder = await GetFolder(path);
+        return folder?.EmailIds ?? new List<EmailHashedID>();
+    }
+
+
+    public async Task AddEmailToFolder(string path, EmailHashedID emailId)
+    {
+        var folder = await GetFolder(path);
         if (folder == null)
             throw new InvalidOperationException($"Folder '{path}' not found");
 
@@ -191,9 +199,9 @@ public class FolderManager
         }
     }
 
-    public void RemoveEmailFromFolder(string path, ulong emailId)
+    public async Task RemoveEmailFromFolder(string path, EmailHashedID emailId)
     {
-        var folder = GetFolder(path);
+        var folder = await GetFolder(path);
         if (folder == null)
             throw new InvalidOperationException($"Folder '{path}' not found");
 
@@ -203,10 +211,10 @@ public class FolderManager
         }
     }
 
-    public void MoveEmail(ulong emailId, string sourcePath, string targetPath)
+    public async Task MoveEmail(EmailHashedID emailId, string sourcePath, string targetPath)
     {
-        var source = GetFolder(sourcePath);
-        var target = GetFolder(targetPath);
+        var source = await GetFolder(sourcePath);
+        var target = await GetFolder(targetPath);
 
         if (source == null)
             throw new InvalidOperationException($"Source folder '{sourcePath}' not found");
@@ -223,10 +231,10 @@ public class FolderManager
         WriteFolder(target);
     }
 
-    public List<string> GetSubfolders(string path)
+    public async Task<List<string>> GetSubfolders(string path)
     {
         ValidatePath(path);
-        var folderTree = GetLatestFolderTree();
+        var folderTree = await GetLatestFolderTree();
         var prefix = path + PathSeparator;
 
         return folderTree.FolderIDs
@@ -281,7 +289,7 @@ public class FolderManager
     }
 
     // Internal helper methods
-    private FolderContent GetFolder(string folderName)
+    internal async Task<FolderContent> GetFolder(string folderName)
     {
         if (string.IsNullOrWhiteSpace(folderName))
             throw new ArgumentException("Folder name cannot be empty", nameof(folderName));
@@ -289,32 +297,29 @@ public class FolderManager
         if (inMemoryCache.TryGetValue<FolderContent>(GetFolderCacheKey(folderName), out var cachedFolder))
             return cachedFolder;
 
-        var folderTree = GetLatestFolderTree();
+        var folderTree = await GetLatestFolderTree();
         if (!folderTree.FolderIDs.TryGetValue(folderName, out var folderId))
             return null;
 
         if (!folderTree.FolderOffsets.TryGetValue(folderId, out var folderOffset))
             return null;
 
-        var result = blockManager.TryReadBlockAt(folderOffset);
-        if (result?.Block?.Content is not FolderContent folder)
+        var result = await blockManager.ReadBlockAsync(folderOffset);
+        if (result?.Content is not FolderContent folder)
             return null;
 
         inMemoryCache.Set(GetFolderCacheKey(folderName), folder);
         return folder;
     }
 
-    private FolderTreeContent GetLatestFolderTree()
+    internal async Task<FolderTreeContent> GetLatestFolderTree()
     {
         if (inMemoryCache.TryGetValue<FolderTreeContent>(GetFolderTreeCacheKey(), out var cachedTree))
             return cachedTree;
 
+        var folderTree = await metadataManager.GetFolderTree();
         lock (folderTreeLock)
-        {
-            if (inMemoryCache.TryGetValue<FolderTreeContent>(GetFolderTreeCacheKey(), out cachedTree))
-                return cachedTree;
-
-            var folderTree = metadataManager.GetFolderTree();
+        {          
             if (folderTree == null)
             {
                 folderTree = new FolderTreeContent
@@ -331,7 +336,7 @@ public class FolderManager
         }
     }
 
-    private long WriteFolder(FolderContent folder)
+    internal long WriteFolder(FolderContent folder)
     {
         var block = new Block
         {
@@ -349,7 +354,7 @@ public class FolderManager
         return offset;
     }
 
-    private void WriteFolderTree(FolderTreeContent folderTree)
+    internal void WriteFolderTree(FolderTreeContent folderTree)
     {
         var block = new Block
         {

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using EmailDB.Format;
-using EmailDB.Format.Models;
+using EmailDB.Format.FileManagement;
+using EmailDB.Format.Models.Blocks;
 
 class Program
 {
@@ -57,7 +57,7 @@ class Program
         AddSampleEmails(storage, "Inbox", 3);
         AddSampleEmails(storage, "Sent", 2);
 
-        DumpFileStructure(storage);
+        DumpFileStructure(storage.blockManager);
     }
 
     static void TestEmailOperations()
@@ -81,12 +81,12 @@ class Program
         stopwatch.Restart();
 
         // First access (uncached)
-        var folder = GetFolder(storage, "Inbox");
+        var folder = GetFolder(storage.blockManager, "Inbox");
         var firstAccessTime = stopwatch.ElapsedMilliseconds;
 
         // Second access (should be cached)
         stopwatch.Restart();
-        folder = GetFolder(storage, "Inbox");
+        folder = GetFolder(storage.blockManager, "Inbox");
         var secondAccessTime = stopwatch.ElapsedMilliseconds;
 
         Console.WriteLine($"First folder access: {firstAccessTime}ms");
@@ -101,7 +101,7 @@ class Program
             Console.WriteLine($"Moved email {emailToMove} from Inbox to Archive");
         }
 
-        DumpFileStructure(storage);
+        DumpFileStructure(storage.blockManager);
     }
 
     static void TestPerformance()
@@ -116,7 +116,7 @@ class Program
         for (int i = 0; i < 5; i++)
         {
             stopwatch.Restart();
-            var tree = GetLatestFolderTree(storage);
+            var tree = GetLatestFolderTree(storage.blockManager);
             Console.WriteLine($"Folder tree access #{i + 1}: {stopwatch.ElapsedMilliseconds}ms");
         }
 
@@ -127,11 +127,11 @@ class Program
         foreach (var folderName in folders)
         {
             stopwatch.Restart();
-            var folder = GetFolder(storage, folderName);
+            var folder = GetFolder(storage.blockManager, folderName);
             var firstAccess = stopwatch.ElapsedMilliseconds;
 
             stopwatch.Restart();
-            folder = GetFolder(storage, folderName);
+            folder = GetFolder(storage.blockManager, folderName);
             var secondAccess = stopwatch.ElapsedMilliseconds;
 
             Console.WriteLine($"Folder '{folderName}':");
@@ -144,7 +144,7 @@ class Program
         storage.InvalidateCache();
 
         stopwatch.Restart();
-        var folderAfterInvalidation = GetFolder(storage, "Inbox");
+        var folderAfterInvalidation = GetFolder(storage.blockManager, "Inbox");
         Console.WriteLine($"Folder access after cache invalidation: {stopwatch.ElapsedMilliseconds}ms");
     }
 
@@ -160,7 +160,7 @@ class Program
         {
             // Force cache invalidation to test recovery
             storage.InvalidateCache();
-            var folder = GetFolder(storage, "Inbox");
+            var folder = GetFolder(storage.blockManager, "Inbox");
             Console.WriteLine("Successfully recovered folder information after cache invalidation");
         }
         catch (Exception ex)
@@ -205,11 +205,11 @@ class Program
         // Test folder access performance
         Console.WriteLine("\nTesting folder access performance...");
         stopwatch.Restart();
-        var folder1 = GetFolder(storage, "Important");
+        var folder1 = GetFolder(storage.blockManager, "Important");
         var firstAccess = stopwatch.ElapsedMilliseconds;
 
         stopwatch.Restart();
-        var folder2 = GetFolder(storage, "Important");
+        var folder2 = GetFolder(storage.blockManager, "Important");
         var cachedAccess = stopwatch.ElapsedMilliseconds;
 
         Console.WriteLine($"First folder access: {firstAccess}ms");
@@ -223,7 +223,7 @@ class Program
         Console.WriteLine("\nTesting folder deletion with cleanup...");
         storage.DeleteFolder("Temporary", deleteEmails: true);
 
-        DumpFileStructure(storage);
+        DumpFileStructure(storage.blockManager);
     }
 
     static void TestCompaction()
@@ -238,7 +238,7 @@ class Program
         {
             AddSampleEmails(storage, "Inbox", 2);
             // Update some emails to create outdated content
-            var folder = GetFolder(storage, "Inbox");
+            var folder = GetFolder(storage.blockManager, "Inbox");
             if (folder?.EmailIds.Count > 0)
             {
                 var emailId = folder.EmailIds[0];
@@ -248,7 +248,7 @@ class Program
         }
 
         Console.WriteLine("\nFile structure before compaction:");
-        DumpFileStructure(storage);
+        DumpFileStructure(storage.blockManager);
 
         // Perform compaction
         Console.WriteLine("\nPerforming compaction...");
@@ -270,7 +270,7 @@ class Program
         Console.WriteLine("\nVerifying compacted file...");
         using (var compactedStorage = new StorageManager(compactedFilePath))
         {
-            DumpFileStructure(compactedStorage);
+            DumpFileStructure(compactedStorage.blockManager);
         }
     }
 
@@ -307,8 +307,8 @@ class Program
 
         // Test invalid email operations
         try
-        {
-            storage.MoveEmail(99999, "Inbox", "Archive");
+        {            
+            storage.MoveEmail(new EmailHashedID(), "Inbox", "Archive");
             Console.WriteLine("ERROR: Should not allow moving nonexistent email");
         }
         catch (Exception ex)
@@ -321,7 +321,7 @@ class Program
         storage.InvalidateCache();
         try
         {
-            var folder = GetFolder(storage, "Inbox");
+            var folder = GetFolder(storage.blockManager, "Inbox");
             Console.WriteLine("Successfully recovered from cache invalidation");
         }
         catch (Exception ex)
@@ -351,7 +351,7 @@ class Program
         }
     }
 
-    static FolderContent GetFolder(StorageManager storage, string folderName)
+    static FolderContent GetFolder(BlockManager storage, string folderName)
     {
         foreach (var (_, block) in storage.WalkBlocks())
         {
@@ -363,7 +363,7 @@ class Program
         return null;
     }
 
-    static FolderTreeContent GetLatestFolderTree(StorageManager storage)
+    static FolderTreeContent GetLatestFolderTree(BlockManager storage)
     {
         FolderTreeContent latest = null;
         foreach (var (_, block) in storage.WalkBlocks())
@@ -376,14 +376,14 @@ class Program
         return latest;
     }
 
-    static void DumpFileStructure(StorageManager storage)
+    static void DumpFileStructure(BlockManager storage)
     {
         Console.WriteLine("\n=== File Structure Summary ===");
         var stats = new Dictionary<BlockType, int>();
         var emailsByFolder = new Dictionary<string, int>();
         var totalEmails = 0;
         var totalEmailSize = 0L;
-        var uniqueSegments = new HashSet<ulong>();
+        var uniqueSegments = new HashSet<long>();
 
         foreach (var (_, block) in storage.WalkBlocks())
         {

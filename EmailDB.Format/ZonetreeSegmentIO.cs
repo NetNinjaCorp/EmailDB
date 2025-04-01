@@ -1,4 +1,4 @@
-﻿using EmailDB.Format.Models;
+﻿using EmailDB.Format.Models.Blocks;
 
 namespace EmailDB.Format;
 
@@ -55,7 +55,7 @@ public class ZoneTreeSegmentIO : IDisposable
         }
     }
 
-    private string GetSegmentFileName(ulong segmentId)
+    private string GetSegmentFileName(long segmentId)
     {
         return $"segment_{segmentId / 1000:D3}.dat";
     }

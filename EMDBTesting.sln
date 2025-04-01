@@ -7,6 +7,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Testing", "EmailDB.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Format", "EmailDB.Format\EmailDB.Format.csproj", "{D701E631-DB72-48EB-9F49-3E26931C8E55}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Format.CapnProto", "EmailDB.Format.CapnProto\EmailDB.Format.CapnProto.csproj", "{B1D2CC0D-FE96-4282-8312-70BAF07BE6CE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Testing.FileFormatBenchmark", "EmailDB.Testing.FileFormatBenchmark\EmailDB.Testing.FileFormatBenchmark.csproj", "{AD90DBDB-7495-43D5-B843-A4DE854DEE93}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Format.Protobuf", "EmailDB.Format.Protobuf\EmailDB.Format.Protobuf.csproj", "{4DD80CF9-5A18-4A61-B751-A54BCB2D09B8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Testing.CapnProtoFile", "EmailDB.Testing.CapnProtoFile\EmailDB.Testing.CapnProtoFile.csproj", "{1E9C60CA-BA07-47F4-83DA-885CBC1126FB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +29,22 @@ Global
 		{D701E631-DB72-48EB-9F49-3E26931C8E55}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D701E631-DB72-48EB-9F49-3E26931C8E55}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D701E631-DB72-48EB-9F49-3E26931C8E55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1D2CC0D-FE96-4282-8312-70BAF07BE6CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1D2CC0D-FE96-4282-8312-70BAF07BE6CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1D2CC0D-FE96-4282-8312-70BAF07BE6CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1D2CC0D-FE96-4282-8312-70BAF07BE6CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD90DBDB-7495-43D5-B843-A4DE854DEE93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD90DBDB-7495-43D5-B843-A4DE854DEE93}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD90DBDB-7495-43D5-B843-A4DE854DEE93}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD90DBDB-7495-43D5-B843-A4DE854DEE93}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4DD80CF9-5A18-4A61-B751-A54BCB2D09B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4DD80CF9-5A18-4A61-B751-A54BCB2D09B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4DD80CF9-5A18-4A61-B751-A54BCB2D09B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4DD80CF9-5A18-4A61-B751-A54BCB2D09B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E9C60CA-BA07-47F4-83DA-885CBC1126FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E9C60CA-BA07-47F4-83DA-885CBC1126FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E9C60CA-BA07-47F4-83DA-885CBC1126FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E9C60CA-BA07-47F4-83DA-885CBC1126FB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

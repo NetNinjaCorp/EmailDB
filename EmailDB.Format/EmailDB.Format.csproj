@@ -12,11 +12,12 @@
     <PackageReference Include="protobuf-net" Version="3.2.45" />
     <PackageReference Include="SHA3" Version="1.0.0" />
     <PackageReference Include="SimpleBase" Version="4.0.2" />
-    <PackageReference Include="ZoneTree.FullTextSearch" Version="1.0.7" />
+    <PackageReference Include="ZoneTree.FullTextSearch" Version="1.0.8" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="NewFolder\" />
+    <Folder Include="ZoneTree\IO\" />
+    <Folder Include="ZoneTree\Interface\" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-﻿using EmailDB.Format.Models;
+﻿using EmailDB.Format.Models.Blocks;
 using ProtoBuf;
 using System.Collections.Concurrent;
 using Tenray.ZoneTree.Exceptions.WAL;

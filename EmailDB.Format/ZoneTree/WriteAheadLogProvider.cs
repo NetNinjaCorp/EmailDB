@@ -1,4 +1,5 @@
-﻿using global::EmailDB.Format.Models;
+﻿using EmailDB.Format.Models.Blocks;
+using global::EmailDB.Format.Models;
 using ProtoBuf;
 using Tenray.ZoneTree.AbstractFileStream;
 using Tenray.ZoneTree.Options;
@@ -29,7 +30,7 @@ public class WriteAheadLogProvider : IWriteAheadLogProvider
         var metadata = GetMetadataContent();
         if (metadata != null)
         {
-            walBlockOffset = metadata.NextWALOffset;
+            walBlockOffset = metadata.WALOffset;
             if (walBlockOffset == -1)
             {
                 // Create initial WAL block
@@ -46,12 +47,10 @@ public class WriteAheadLogProvider : IWriteAheadLogProvider
                 };
 
                 walBlockOffset = storageManager.WriteBlock(walBlock);
-                metadata.NextWALOffset = walBlockOffset;
-                storageManager.UpdateMetadata(m =>
-                {
-                    m.NextWALOffset = walBlockOffset;
-                    return m;
-                });
+                metadata.WALOffset = walBlockOffset;
+                var tmpMD = storageManager.segmentManager.GetMetadata();
+                tmpMD.WALOffset = walBlockOffset;
+                storageManager.segmentManager.UpdateMetadata(tmpMD);
             }
         }
     }

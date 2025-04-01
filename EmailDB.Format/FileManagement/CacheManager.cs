@@ -1,7 +1,7 @@
-﻿using EmailDB.Format.Models;
+﻿using EmailDB.Format.Models.Blocks;
 using System.Collections.Concurrent;
 
-namespace EmailDB.Format;
+namespace EmailDB.Format.FileManagement;
 
 public class CacheManager : IDisposable
 {
@@ -29,94 +29,6 @@ public class CacheManager : IDisposable
         // Start periodic cache cleanup
         cacheCleanupTimer = new Timer(CleanupCache, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
 
-        LoadHeaderContent();
-    }
-
-    public void LoadHeaderContent()
-    {
-        try
-        {
-            cacheLock.EnterWriteLock();
-            try
-            {
-                var headerBlock = blockManager.ReadBlock(0);
-                if (headerBlock?.Content is HeaderContent header)
-                {
-                    ValidateHeader(header);
-                    cachedHeader = header;
-                }
-                else
-                {
-                    throw new InvalidDataException("Invalid or missing header block");
-                }
-            }
-            finally
-            {
-                cacheLock.ExitWriteLock();
-            }
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException("Failed to load header content", ex);
-        }
-    }
-
-    private void ValidateHeader(HeaderContent header)
-    {
-        if (header.FileVersion <= 0)
-            throw new InvalidDataException("Invalid file version in header");
-
-        if (header.FirstMetadataOffset < -1)
-            throw new InvalidDataException("Invalid metadata offset in header");
-
-        if (header.FirstFolderTreeOffset < -1)
-            throw new InvalidDataException("Invalid folder tree offset in header");
-
-        if (header.FirstCleanupOffset < -1)
-            throw new InvalidDataException("Invalid cleanup offset in header");
-    }
-
-    public HeaderContent GetHeader()
-    {
-        ThrowIfDisposed();
-        cacheLock.EnterReadLock();
-        try
-        {
-            return cachedHeader ?? throw new InvalidOperationException("Header not loaded");
-        }
-        finally
-        {
-            cacheLock.ExitReadLock();
-        }
-    }
-
-    public void UpdateHeader(HeaderContent header)
-    {
-        ThrowIfDisposed();
-        if (header == null) throw new ArgumentNullException(nameof(header));
-
-        ValidateHeader(header);
-
-        cacheLock.EnterWriteLock();
-        try
-        {
-            cachedHeader = header;
-            var headerBlock = new Block
-            {
-                Header = new BlockHeader
-                {
-                    Type = BlockType.Header,
-                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    Version = 1
-                },
-                Content = header
-            };
-            blockManager.WriteBlock(headerBlock, 0);
-        }
-        finally
-        {
-            cacheLock.ExitWriteLock();
-        }
     }
 
     public FolderContent GetCachedFolder(string folderName)
@@ -269,7 +181,6 @@ public class CacheManager : IDisposable
             folderCache.Clear();
             metadataCache.Clear();
             cachedFolderTree = null;
-            LoadHeaderContent();
         }
         finally
         {

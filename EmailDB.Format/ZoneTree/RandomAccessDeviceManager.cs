@@ -7,11 +7,11 @@ namespace EmailDB.Format.ZoneTree;
 
 public class RandomAccessDeviceManager : IRandomAccessDeviceManager
 {
-    private readonly StorageManager storageManager;
+    private readonly SegmentManager storageManager;
     private readonly string name;
     private readonly Dictionary<string, IRandomAccessDevice> devices;
 
-    public RandomAccessDeviceManager(StorageManager storageManager, string name)
+    public RandomAccessDeviceManager(SegmentManager storageManager, string name)
     {
         this.storageManager = storageManager;
         this.name = name;
@@ -52,7 +52,7 @@ public class RandomAccessDeviceManager : IRandomAccessDeviceManager
             }
         }
 
-        var device = new RandomAccessDevice(storageManager, name, segmentId, category, true);
+        var device = new RandomAccessDevice(storageManager, segmentId, category, true);
         devices[key] = device;
         return device;
     }
@@ -72,7 +72,7 @@ public class RandomAccessDeviceManager : IRandomAccessDeviceManager
             return existing;
         }
 
-        var device = new RandomAccessDevice(storageManager, name, segmentId, category, false);
+        var device = new RandomAccessDevice(storageManager, segmentId, category, false);
         devices[key] = device;
         return device;
     }

@@ -1,11 +1,11 @@
 ﻿using DragonHoard.InMemory;
-using EmailDB.Format.Models;
 using Microsoft.Extensions.Options;
 using ProtoBuf;
 using System.Security.Cryptography;
 using System.Collections.Concurrent;
+using EmailDB.Format.Models.Blocks;
 
-namespace EmailDB.Format;
+namespace EmailDB.Format.FileManagement;
 
 public class BlockManager : IDisposable
 {
@@ -65,6 +65,10 @@ public class BlockManager : IDisposable
             RecoverFromJournal();
         }
     }
+
+   
+
+
 
     private void InitializeBlockTypeIndex()
     {

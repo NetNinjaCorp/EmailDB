@@ -1,30 +1,164 @@
 \BlockManager.cs
-using EmailDB.Format;
+using DragonHoard.InMemory;
 using EmailDB.Format.Models;
+using Microsoft.Extensions.Options;
 using ProtoBuf;
 using System.Security.Cryptography;
+using System.Collections.Concurrent;
 
-namespace EmailDB.Storage;
+namespace EmailDB.Format;
 
-public class BlockManager
+public class BlockManager : IDisposable
 {
     private readonly FileStream fileStream;
     private readonly object fileLock = new object();
     private long lastWrittenPosition;
+    private readonly bool enableJournaling;
+    private readonly string journalPath;
+    private readonly ConcurrentDictionary<long, WeakReference<Block>> blockCache;
+    private readonly ConcurrentDictionary<BlockType, List<long>> blockTypeIndex;
+    private readonly Timer cacheCleanupTimer;
+    private bool isDisposed;
 
-    public BlockManager(FileStream stream)
+    public class BlockManagerOptions
     {
-        fileStream = stream;
-        lastWrittenPosition = stream.Length;
+        public int MaxRetries { get; set; } = 3;
+        public int BufferSize { get; set; } = 8192;
+        public bool EnableJournaling { get; set; } = true;
+        public TimeSpan CacheCleanupInterval { get; set; } = TimeSpan.FromMinutes(5);
+        public int MaxConcurrentOperations { get; set; } = 5;
+        public TimeSpan RetryDelay { get; set; } = TimeSpan.FromMilliseconds(100);
+        public int MaxCacheSize { get; set; } = 10000;
+        public bool EnableBlockTypeIndexing { get; set; } = true;
     }
 
-    public long WriteBlock(Block block, long? specificOffset = null)
+    private readonly BlockManagerOptions options;
+    private readonly SemaphoreSlim concurrencyLimiter;
+
+    public BlockManager(FileStream stream, BlockManagerOptions options = null)
+    {
+        if (stream == null)
+            throw new ArgumentNullException(nameof(stream));
+
+        if (!stream.CanRead || !stream.CanWrite)
+            throw new ArgumentException("Stream must support both reading and writing", nameof(stream));
+
+        this.options = options ?? new BlockManagerOptions();
+        fileStream = stream;
+        enableJournaling = this.options.EnableJournaling;
+        journalPath = enableJournaling ? Path.ChangeExtension(stream.Name, ".journal") : null;
+        lastWrittenPosition = stream.Length;
+        blockCache = new ConcurrentDictionary<long, WeakReference<Block>>();
+        blockTypeIndex = new ConcurrentDictionary<BlockType, List<long>>();
+        concurrencyLimiter = new SemaphoreSlim(this.options.MaxConcurrentOperations);
+
+        if (this.options.EnableBlockTypeIndexing)
+        {
+            InitializeBlockTypeIndex();
+        }
+
+        cacheCleanupTimer = new Timer(CleanupCache, null,
+            this.options.CacheCleanupInterval,
+            this.options.CacheCleanupInterval);
+
+        if (enableJournaling && File.Exists(journalPath))
+        {
+            RecoverFromJournal();
+        }
+    }
+
+    private void InitializeBlockTypeIndex()
+    {
+        foreach (BlockType type in Enum.GetValues(typeof(BlockType)))
+        {
+            blockTypeIndex[type] = new List<long>();
+        }
+
+        foreach (var (offset, block) in WalkBlocks())
+        {
+            if (blockTypeIndex.TryGetValue(block.Header.Type, out var offsetList))
+            {
+                lock (offsetList)
+                {
+                    offsetList.Add(offset);
+                }
+            }
+        }
+    }
+
+    public IEnumerable<(long Offset, Block Block)> GetBlocksByType(BlockType type)
+    {
+        if (!options.EnableBlockTypeIndexing)
+            throw new InvalidOperationException("Block type indexing is disabled");
+
+        if (blockTypeIndex.TryGetValue(type, out var offsetList))
+        {
+            List<long> offsets;
+            lock (offsetList)
+            {
+                offsets = offsetList.ToList(); // Create a copy to avoid locking during iteration
+            }
+
+            foreach (var offset in offsets)
+            {
+                var block = ReadBlock(offset);
+                if (block != null)
+                {
+                    yield return (offset, block);
+                }
+            }
+        }
+    }
+
+    public async Task<long> WriteBlockAsync(Block block, long? specificOffset = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (block == null)
+            throw new ArgumentNullException(nameof(block));
+
+        if (specificOffset.HasValue && specificOffset.Value < 0)
+            throw new ArgumentOutOfRangeException(nameof(specificOffset));
+
+        if (isDisposed)
+            throw new ObjectDisposedException(nameof(BlockManager));
+
+        await concurrencyLimiter.WaitAsync(cancellationToken);
+        try
+        {
+            for (int attempt = 0; attempt < options.MaxRetries; attempt++)
+            {
+                try
+                {
+                    return await WriteBlockInternalAsync(block, specificOffset, cancellationToken);
+                }
+                catch (IOException ex) when (attempt < options.MaxRetries - 1)
+                {
+                    await Task.Delay(
+                        TimeSpan.FromMilliseconds(options.RetryDelay.TotalMilliseconds * (attempt + 1)),
+                        cancellationToken);
+                }
+            }
+
+            throw new IOException($"Failed to write block after {options.MaxRetries} attempts");
+        }
+        finally
+        {
+            concurrencyLimiter.Release();
+        }
+    }
+
+    private async Task<long> WriteBlockInternalAsync(Block block, long? specificOffset,
+        CancellationToken cancellationToken)
     {
         lock (fileLock)
         {
             long position = specificOffset ?? lastWrittenPosition;
 
-            // Calculate checksum
+            if (enableJournaling)
+            {
+                WriteToJournal(block, position);
+            }
+
             using (var ms = new MemoryStream())
             {
                 block.Header.Checksum = 0;
@@ -32,8 +166,20 @@ public class BlockManager
                 block.Header.Checksum = CalculateChecksum(ms.ToArray());
             }
 
+            if (position == -1)
+            {
+                position = fileStream.Length;
+            }
+
             fileStream.Position = position;
-            Serializer.SerializeWithLengthPrefix(fileStream, block, PrefixStyle.Base128);
+
+            using (var ms = new MemoryStream())
+            {
+                Serializer.SerializeWithLengthPrefix(ms, block, PrefixStyle.Base128);
+                var data = ms.ToArray();
+                fileStream.Write(data, 0, data.Length);
+            }
+
             fileStream.Flush(true);
 
             if (!specificOffset.HasValue)
@@ -41,76 +187,381 @@ public class BlockManager
                 lastWrittenPosition = fileStream.Position;
             }
 
+            // Update cache and index
+            UpdateCacheAndIndex(position, block);
+
+            if (enableJournaling)
+            {
+                ClearJournalEntry(position);
+            }
+
             return position;
         }
     }
 
-    public Block ReadBlock(long offset)
+    private void UpdateCacheAndIndex(long position, Block block)
+    {
+        // Update cache with weak reference
+        if (blockCache.Count >= options.MaxCacheSize)
+        {
+            CleanupCache(null);
+        }
+        blockCache[position] = new WeakReference<Block>(block);
+
+        // Update block type index if enabled
+        if (options.EnableBlockTypeIndexing &&
+            blockTypeIndex.TryGetValue(block.Header.Type, out var offsetList))
+        {
+            lock (offsetList)
+            {
+                offsetList.Add(position);
+            }
+        }
+    }
+
+    public async Task<Block> ReadBlockAsync(long offset, CancellationToken cancellationToken = default)
+    {
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+
+        if (isDisposed)
+            throw new ObjectDisposedException(nameof(BlockManager));
+
+        // Try cache first
+        if (TryGetFromCache(offset, out var cachedBlock))
+        {
+            return cachedBlock;
+        }
+
+        await concurrencyLimiter.WaitAsync(cancellationToken);
+        try
+        {
+            for (int attempt = 0; attempt < options.MaxRetries; attempt++)
+            {
+                try
+                {
+                    var block = await ReadBlockInternalAsync(offset, cancellationToken);
+                    blockCache[offset] = new WeakReference<Block>(block);
+                    return block;
+                }
+                catch (IOException ex) when (attempt < options.MaxRetries - 1)
+                {
+                    await Task.Delay(
+                        TimeSpan.FromMilliseconds(options.RetryDelay.TotalMilliseconds * (attempt + 1)),
+                        cancellationToken);
+                }
+            }
+
+            throw new IOException($"Failed to read block after {options.MaxRetries} attempts");
+        }
+        finally
+        {
+            concurrencyLimiter.Release();
+        }
+    }
+
+    private bool TryGetFromCache(long offset, out Block block)
+    {
+        block = null;
+        return blockCache.TryGetValue(offset, out var weakRef) &&
+               weakRef.TryGetTarget(out block);
+    }
+
+    private async Task<Block> ReadBlockInternalAsync(long offset, CancellationToken cancellationToken)
     {
         lock (fileLock)
         {
-            if (offset < 0 || offset >= fileStream.Length)
+            if (offset >= fileStream.Length)
             {
-                throw new ArgumentException($"Invalid offset: {offset}");
+                throw new ArgumentException($"Invalid offset: {offset}. File length: {fileStream.Length}");
             }
 
             fileStream.Position = offset;
-            Block block = Serializer.DeserializeWithLengthPrefix<Block>(fileStream, PrefixStyle.Base128);
+            Block block;
+
+            try
+            {
+                block = Serializer.DeserializeWithLengthPrefix<Block>(fileStream, PrefixStyle.Base128);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidDataException($"Failed to deserialize block at offset {offset}", ex);
+            }
 
             if (block == null)
             {
                 throw new InvalidDataException($"Failed to deserialize block at offset {offset}");
             }
 
-            // Verify checksum
-            uint storedChecksum = block.Header.Checksum;
-            block.Header.Checksum = 0;
-
-            using (var ms = new MemoryStream())
+            if (!ValidateBlock(block, offset))
             {
-                Serializer.SerializeWithLengthPrefix(ms, block, PrefixStyle.Base128);
-                uint computedChecksum = CalculateChecksum(ms.ToArray());
-
-                if (computedChecksum != storedChecksum)
+                if (enableJournaling)
                 {
-                    throw new InvalidDataException($"Checksum verification failed at offset {offset}");
+                    var recoveredBlock = TryRecoverBlockFromJournal(offset);
+                    if (recoveredBlock != null)
+                    {
+                        return recoveredBlock;
+                    }
                 }
+                throw new InvalidDataException($"Block validation failed at offset {offset}");
             }
 
             return block;
         }
     }
 
+    private bool ValidateBlock(Block block, long offset)
+    {
+        uint storedChecksum = block.Header.Checksum;
+        block.Header.Checksum = 0;
+
+        using (var ms = new MemoryStream())
+        {
+            Serializer.SerializeWithLengthPrefix(ms, block, PrefixStyle.Base128);
+            uint computedChecksum = CalculateChecksum(ms.ToArray());
+
+            // Restore original checksum
+            block.Header.Checksum = storedChecksum;
+
+            return computedChecksum == storedChecksum;
+        }
+    }
+
     public IEnumerable<(long Offset, Block Block)> WalkBlocks()
     {
+        if (isDisposed)
+            throw new ObjectDisposedException(nameof(BlockManager));
+
         long currentOffset = 0;
+        int errorCount = 0;
+        const int MAX_ERRORS = 5;
+
         while (currentOffset < fileStream.Length)
         {
             var result = TryReadBlockAt(currentOffset);
             if (result == null)
-                yield break;
+            {
+                errorCount++;
+                if (errorCount >= MAX_ERRORS)
+                {
+                    throw new InvalidOperationException(
+                        $"Too many errors encountered while walking blocks. Last offset: {currentOffset}");
+                }
+                currentOffset += options.BufferSize;
+                continue;
+            }
 
+            errorCount = 0;
             yield return (currentOffset, result.Value.Block);
             currentOffset = result.Value.NextOffset;
         }
     }
 
-    public (Block Block, long NextOffset)? TryReadBlockAt(long offset)
+    private (Block Block, long NextOffset)? TryReadBlockAt(long offset)
     {
         try
         {
-            fileStream.Position = offset;
-            Block block = Serializer.DeserializeWithLengthPrefix<Block>(fileStream, PrefixStyle.Base128);
+            lock (fileLock)
+            {
+                fileStream.Position = offset;
+                Block block = Serializer.DeserializeWithLengthPrefix<Block>(fileStream, PrefixStyle.Base128);
 
-            if (block == null)
-                return null;
+                if (block == null)
+                    return null;
 
-            return (block, fileStream.Position);
+                if (!ValidateBlock(block, offset))
+                {
+                    if (enableJournaling)
+                    {
+                        var recoveredBlock = TryRecoverBlockFromJournal(offset);
+                        if (recoveredBlock != null)
+                        {
+                            return (recoveredBlock, fileStream.Position);
+                        }
+                    }
+                    return null;
+                }
+
+                return (block, fileStream.Position);
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error reading block at offset {offset}: {ex.Message}");
+            // Log error if needed
             return null;
+        }
+    }
+
+    private void WriteToJournal(Block block, long position)
+    {
+        if (!enableJournaling) return;
+
+        var journalEntry = new JournalEntry
+        {
+            Position = position,
+            Block = block,
+            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
+
+        using var journalStream = new FileStream(journalPath, FileMode.Append, FileAccess.Write, FileShare.None);
+        using var ms = new MemoryStream();
+        Serializer.SerializeWithLengthPrefix(ms, journalEntry, PrefixStyle.Base128);
+        var data = ms.ToArray();
+        journalStream.Write(data, 0, data.Length);
+        journalStream.Flush(true);
+    }
+
+    private void ClearJournalEntry(long position)
+    {
+        if (!enableJournaling || !File.Exists(journalPath)) return;
+
+        var entries = ReadJournalEntries()
+            .Where(e => e.Position != position)
+            .ToList();
+
+        if (entries.Count == 0)
+        {
+            File.Delete(journalPath);
+            return;
+        }
+
+        using var journalStream = new FileStream(journalPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        foreach (var entry in entries)
+        {
+            using var ms = new MemoryStream();
+            Serializer.SerializeWithLengthPrefix(ms, entry, PrefixStyle.Base128);
+            var data = ms.ToArray();
+            journalStream.Write(data, 0, data.Length);
+        }
+        journalStream.Flush(true);
+    }
+
+    private Block TryRecoverBlockFromJournal(long position)
+    {
+        if (!enableJournaling || !File.Exists(journalPath)) return null;
+
+        var entry = ReadJournalEntries()
+            .Where(e => e.Position == position)
+            .OrderByDescending(e => e.Timestamp)
+            .FirstOrDefault();
+
+        return entry?.Block;
+    }
+
+    private IEnumerable<JournalEntry> ReadJournalEntries()
+    {
+        if (!File.Exists(journalPath)) yield break;
+        using var journalStream = new FileStream(journalPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        while (journalStream.Position < journalStream.Length)
+        {
+            var entry = TryReadEntry(journalStream);
+            if (entry != null)
+            {
+                yield return entry;
+            }
+        }
+    }
+
+    private JournalEntry TryReadEntry(FileStream journalStream)
+    {
+        try
+        {
+            return Serializer.DeserializeWithLengthPrefix<JournalEntry>(journalStream, PrefixStyle.Base128);
+        }
+        catch
+        {
+            // Skip corrupted entries
+            return null;
+        }
+    }
+
+    private void RecoverFromJournal()
+    {
+        if (!File.Exists(journalPath)) return;
+
+        var recoveredEntries = new List<JournalEntry>();
+        foreach (var entry in ReadJournalEntries())
+        {
+            try
+            {
+                WriteBlockInternal(entry.Block, entry.Position);
+                recoveredEntries.Add(entry);
+            }
+            catch (Exception ex)
+            {
+                // Log recovery failure but continue with other entries
+                Console.WriteLine($"Failed to recover block at position {entry.Position}: {ex.Message}");
+            }
+        }
+
+        // Clear journal after successful recovery
+        if (recoveredEntries.Any())
+        {
+            File.Delete(journalPath);
+        }
+    }
+
+    private long WriteBlockInternal(Block block, long position)
+    {
+        using var ms = new MemoryStream();
+        block.Header.Checksum = 0;
+        Serializer.SerializeWithLengthPrefix(ms, block, PrefixStyle.Base128);
+        block.Header.Checksum = CalculateChecksum(ms.ToArray());
+
+        fileStream.Position = position;
+        ms.Position = 0;
+        ms.CopyTo(fileStream);
+        fileStream.Flush(true);
+
+        // Update cache and index
+        UpdateCacheAndIndex(position, block);
+
+        return fileStream.Position;
+    }
+
+    private void CleanupCache(object state)
+    {
+        if (isDisposed) return;
+
+        var keysToRemove = new List<long>();
+        foreach (var kvp in blockCache)
+        {
+            if (!kvp.Value.TryGetTarget(out _))
+            {
+                keysToRemove.Add(kvp.Key);
+            }
+        }
+
+        foreach (var key in keysToRemove)
+        {
+            blockCache.TryRemove(key, out _);
+        }
+
+        // Additional cleanup for block type index if enabled
+        if (options.EnableBlockTypeIndexing)
+        {
+            foreach (var type in blockTypeIndex.Keys)
+            {
+                if (blockTypeIndex.TryGetValue(type, out var offsetList))
+                {
+                    lock (offsetList)
+                    {
+                        offsetList.RemoveAll(offset => !IsValidOffset(offset));
+                    }
+                }
+            }
+        }
+    }
+
+    private bool IsValidOffset(long offset)
+    {
+        try
+        {
+            return offset >= 0 && offset < fileStream.Length;
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -120,39 +571,98 @@ public class BlockManager
         byte[] hash = sha.ComputeHash(data);
         return BitConverter.ToUInt32(hash, 0);
     }
+
+    // Synchronous versions of async methods for backward compatibility
+    public long WriteBlock(Block block, long? specificOffset = null)
+    {
+        return WriteBlockAsync(block, specificOffset).GetAwaiter().GetResult();
+    }
+
+    public Block ReadBlock(long offset)
+    {
+        return ReadBlockAsync(offset).GetAwaiter().GetResult();
+    }
+
+    public void Dispose()
+    {
+        if (!isDisposed)
+        {
+            cacheCleanupTimer?.Dispose();
+            concurrencyLimiter?.Dispose();
+            blockCache.Clear();
+            blockTypeIndex.Clear();
+            isDisposed = true;
+        }
+    }
+
+    [ProtoContract]
+    private class JournalEntry
+    {
+        [ProtoMember(1)]
+        public long Position { get; set; }
+
+        [ProtoMember(2)]
+        public Block Block { get; set; }
+
+        [ProtoMember(3)]
+        public long Timestamp { get; set; }
+    }
 }
 \CacheManager.cs
 using EmailDB.Format.Models;
+using System.Collections.Concurrent;
 
-namespace EmailDB.Storage;
+namespace EmailDB.Format;
 
-public class CacheManager
+public class CacheManager : IDisposable
 {
-    private HeaderContent cachedHeader;
-    private Dictionary<string, (long Offset, FolderContent Content)> folderCache;
-    private Dictionary<string, MetadataContent> metadataCache;
-    private FolderTreeContent cachedFolderTree;
     private readonly BlockManager blockManager;
+    private volatile HeaderContent cachedHeader;
+    private readonly ConcurrentDictionary<string, (long Offset, FolderContent Content, DateTime LastAccess)> folderCache;
+    private readonly ConcurrentDictionary<string, (MetadataContent Content, DateTime LastAccess)> metadataCache;
+    private volatile FolderTreeContent cachedFolderTree;
+    private readonly ReaderWriterLockSlim cacheLock;
+    private readonly int maxCacheSize;
+    private readonly TimeSpan cacheTimeout;
+    private readonly Timer cacheCleanupTimer;
+    private bool isDisposed;
 
-    public CacheManager(BlockManager blockManager)
+    public CacheManager(BlockManager blockManager, int maxCacheSize = 1000, TimeSpan? cacheTimeout = null)
     {
-        this.blockManager = blockManager;
-        folderCache = new Dictionary<string, (long, FolderContent)>();
-        metadataCache = new Dictionary<string, MetadataContent>();
+        this.blockManager = blockManager ?? throw new ArgumentNullException(nameof(blockManager));
+        this.maxCacheSize = maxCacheSize;
+        this.cacheTimeout = cacheTimeout ?? TimeSpan.FromMinutes(30);
+
+        folderCache = new ConcurrentDictionary<string, (long, FolderContent, DateTime)>();
+        metadataCache = new ConcurrentDictionary<string, (MetadataContent, DateTime)>();
+        cacheLock = new ReaderWriterLockSlim();
+
+        // Start periodic cache cleanup
+        cacheCleanupTimer = new Timer(CleanupCache, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+       
     }
 
     public void LoadHeaderContent()
     {
         try
         {
-            var headerBlock = blockManager.ReadBlock(0);
-            if (headerBlock?.Content is HeaderContent header)
+            cacheLock.EnterWriteLock();
+            try
             {
-                cachedHeader = header;
+                var headerBlock = blockManager.ReadBlock(0);
+                if (headerBlock?.Content is HeaderContent header)
+                {
+                    ValidateHeader(header);
+                    cachedHeader = header;
+                }
+                else
+                {
+                    throw new InvalidDataException("Invalid or missing header block");
+                }
             }
-            else
+            finally
             {
-                throw new InvalidDataException("Invalid or missing header block");
+                cacheLock.ExitWriteLock();
             }
         }
         catch (Exception ex)
@@ -161,26 +671,70 @@ public class CacheManager
         }
     }
 
-    public HeaderContent GetHeader() => cachedHeader;
+    private void ValidateHeader(HeaderContent header)
+    {
+        if (header.FileVersion <= 0)
+            throw new InvalidDataException("Invalid file version in header");
+
+        if (header.FirstMetadataOffset < -1)
+            throw new InvalidDataException("Invalid metadata offset in header");
+
+        if (header.FirstFolderTreeOffset < -1)
+            throw new InvalidDataException("Invalid folder tree offset in header");
+
+        if (header.FirstCleanupOffset < -1)
+            throw new InvalidDataException("Invalid cleanup offset in header");
+    }
+
+    public HeaderContent GetHeader()
+    {
+        ThrowIfDisposed();
+        cacheLock.EnterReadLock();
+        try
+        {
+            return cachedHeader ?? throw new InvalidOperationException("Header not loaded");
+        }
+        finally
+        {
+            cacheLock.ExitReadLock();
+        }
+    }
 
     public void UpdateHeader(HeaderContent header)
     {
-        cachedHeader = header;
-        var headerBlock = new Block
+        ThrowIfDisposed();
+        if (header == null) throw new ArgumentNullException(nameof(header));
+
+        ValidateHeader(header);
+
+        cacheLock.EnterWriteLock();
+        try
         {
-            Header = new BlockHeader
+            cachedHeader = header;
+            var headerBlock = new Block
             {
-                Type = BlockType.Header,
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                Version = 1
-            },
-            Content = header
-        };
-        blockManager.WriteBlock(headerBlock, 0);
+                Header = new BlockHeader
+                {
+                    Type = BlockType.Header,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    Version = 1
+                },
+                Content = header
+            };
+            blockManager.WriteBlock(headerBlock, 0);
+        }
+        finally
+        {
+            cacheLock.ExitWriteLock();
+        }
     }
 
     public FolderContent GetCachedFolder(string folderName)
     {
+        ThrowIfDisposed();
+        if (string.IsNullOrWhiteSpace(folderName))
+            throw new ArgumentException("Folder name cannot be null or empty", nameof(folderName));
+
         if (folderCache.TryGetValue(folderName, out var cachedFolder))
         {
             try
@@ -188,12 +742,17 @@ public class CacheManager
                 var block = blockManager.ReadBlock(cachedFolder.Offset);
                 if (block?.Content is FolderContent folder && folder.Name == folderName)
                 {
+                    // Update last access time
+                    folderCache.TryUpdate(folderName,
+                        (cachedFolder.Offset, folder, DateTime.UtcNow),
+                        cachedFolder);
                     return folder;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                folderCache.Remove(folderName);
+                // Log error if needed
+                folderCache.TryRemove(folderName, out _);
             }
         }
         return null;
@@ -201,45 +760,98 @@ public class CacheManager
 
     public void CacheFolder(string folderName, long offset, FolderContent folder)
     {
-        folderCache[folderName] = (offset, folder);
+        ThrowIfDisposed();
+        if (string.IsNullOrWhiteSpace(folderName))
+            throw new ArgumentException("Folder name cannot be null or empty", nameof(folderName));
+        if (folder == null)
+            throw new ArgumentNullException(nameof(folder));
+        if (offset < 0)
+            throw new ArgumentException("Offset cannot be negative", nameof(offset));
+
+        // Implement LRU eviction if cache is full
+        if (folderCache.Count >= maxCacheSize)
+        {
+            var oldestEntry = folderCache
+                .OrderBy(x => x.Value.LastAccess)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrEmpty(oldestEntry.Key))
+            {
+                folderCache.TryRemove(oldestEntry.Key, out _);
+            }
+        }
+
+        folderCache.AddOrUpdate(folderName,
+            (offset, folder, DateTime.UtcNow),
+            (_, _) => (offset, folder, DateTime.UtcNow));
     }
 
     public FolderTreeContent GetCachedFolderTree()
     {
-        if (cachedFolderTree != null)
+        ThrowIfDisposed();
+        cacheLock.EnterReadLock();
+        try
         {
-            return cachedFolderTree;
-        }
-
-        if (cachedHeader.FirstFolderTreeOffset != -1)
-        {
-            try
+            if (cachedFolderTree != null)
             {
-                var block = blockManager.ReadBlock(cachedHeader.FirstFolderTreeOffset);
-                if (block?.Content is FolderTreeContent tree)
+                return cachedFolderTree;
+            }
+
+            if (cachedHeader.FirstFolderTreeOffset != -1)
+            {
+                try
                 {
-                    cachedFolderTree = tree;
-                    return tree;
+                    var block = blockManager.ReadBlock(cachedHeader.FirstFolderTreeOffset);
+                    if (block?.Content is FolderTreeContent tree)
+                    {
+                        cachedFolderTree = tree;
+                        return tree;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log error if needed
                 }
             }
-            catch
-            {
-                // Will fall back to null
-            }
+            return null;
         }
-        return null;
+        finally
+        {
+            cacheLock.ExitReadLock();
+        }
     }
 
     public void CacheFolderTree(FolderTreeContent tree)
     {
-        cachedFolderTree = tree;
+        ThrowIfDisposed();
+        if (tree == null) throw new ArgumentNullException(nameof(tree));
+
+        cacheLock.EnterWriteLock();
+        try
+        {
+            cachedFolderTree = tree;
+        }
+        finally
+        {
+            cacheLock.ExitWriteLock();
+        }
     }
 
     public MetadataContent GetCachedMetadata()
     {
+        ThrowIfDisposed();
         if (cachedHeader.FirstMetadataOffset == -1)
         {
             return null;
+        }
+
+        var key = cachedHeader.FirstMetadataOffset.ToString();
+        if (metadataCache.TryGetValue(key, out var cached))
+        {
+            metadataCache.TryUpdate(key,
+                (cached.Content, DateTime.UtcNow),
+                cached);
+            return cached.Content;
         }
 
         try
@@ -247,179 +859,639 @@ public class CacheManager
             var block = blockManager.ReadBlock(cachedHeader.FirstMetadataOffset);
             if (block?.Content is MetadataContent metadata)
             {
+                metadataCache.TryAdd(key, (metadata, DateTime.UtcNow));
                 return metadata;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Will fall back to null
+            // Log error if needed
         }
         return null;
     }
 
     public void InvalidateCache()
     {
-        folderCache.Clear();
-        metadataCache.Clear();
-        cachedFolderTree = null;
-        LoadHeaderContent();
+        ThrowIfDisposed();
+        cacheLock.EnterWriteLock();
+        try
+        {
+            folderCache.Clear();
+            metadataCache.Clear();
+            cachedFolderTree = null;
+            LoadHeaderContent();
+        }
+        finally
+        {
+            cacheLock.ExitWriteLock();
+        }
+    }
+
+    private void CleanupCache(object state)
+    {
+        if (isDisposed) return;
+
+        var expirationTime = DateTime.UtcNow - cacheTimeout;
+
+        // Clean up folder cache
+        var expiredFolders = folderCache
+            .Where(x => x.Value.LastAccess < expirationTime)
+            .Select(x => x.Key)
+            .ToList();
+
+        foreach (var folder in expiredFolders)
+        {
+            folderCache.TryRemove(folder, out _);
+        }
+
+        // Clean up metadata cache
+        var expiredMetadata = metadataCache
+            .Where(x => x.Value.LastAccess < expirationTime)
+            .Select(x => x.Key)
+            .ToList();
+
+        foreach (var key in expiredMetadata)
+        {
+            metadataCache.TryRemove(key, out _);
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (isDisposed)
+        {
+            throw new ObjectDisposedException(nameof(CacheManager));
+        }
+    }
+
+    public void Dispose()
+    {
+        if (!isDisposed)
+        {
+            isDisposed = true;
+            cacheCleanupTimer?.Dispose();
+            cacheLock?.Dispose();
+            folderCache.Clear();
+            metadataCache.Clear();
+            cachedFolderTree = null;
+            cachedHeader = null;
+        }
     }
 }
 \EmailManager.cs
+using MimeKit;
+using Tenray.ZoneTree;
 using EmailDB.Format.Models;
+using EmailDB.Format.ZoneTree;
+using System.Collections.Concurrent;
+using ZoneTree.FullTextSearch.SearchEngines;
 
-namespace EmailDB.Storage;
+namespace EmailDB.Format;
 
-public class EmailManager
+public class EmailManager : IDisposable
 {
-    private readonly BlockManager blockManager;
-    private readonly CacheManager cacheManager;
+    private readonly StorageManager storageManager;
+    private readonly IZoneTree<EmailHashedID, EnhancedEmailContent> emailIndex;
+    private readonly ConcurrentDictionary<string, EmailHashedID> emailCache;
+    private readonly HashedSearchEngine<EmailHashedID> emailSearchEngine;
     private readonly FolderManager folderManager;
+    private readonly SegmentManager segmentManager;
+    private readonly object writeLock = new object();
 
-    public EmailManager(BlockManager blockManager, CacheManager cacheManager, FolderManager folderManager)
+    public EmailManager(StorageManager storageManager, FolderManager folderManager, SegmentManager segmentManager)
     {
-        this.blockManager = blockManager;
-        this.cacheManager = cacheManager;
-        this.folderManager = folderManager;
+        this.storageManager = storageManager ?? throw new ArgumentNullException(nameof(storageManager));
+        this.folderManager = folderManager ?? throw new ArgumentNullException(nameof(folderManager));
+        this.segmentManager = segmentManager ?? throw new ArgumentNullException(nameof(segmentManager));
+
+        // Initialize ZoneTree for email indexing
+        var factory = new EmailDBZoneTreeFactory<EmailHashedID, EnhancedEmailContent>(storageManager);
+
+        if (!factory.CreateZoneTree("email_index")) { throw new Exception("Problem Creating Email Index"); }
+        this.emailIndex = factory.OpenOrCreate();
+        this.emailCache = new ConcurrentDictionary<string, EmailHashedID>();
+       // this.emailSearchEngine = new HashedSearchEngine<EmailHashedID>();
     }
 
-    public ulong GetMaxSegmentId()
+    public async Task<EmailHashedID> AddEmailAsync(string emlFilePath, string folderName)
     {
-        ulong maxId = 0;
-        foreach (var (_, block) in blockManager.WalkBlocks())
+        if (string.IsNullOrWhiteSpace(emlFilePath))
+            throw new ArgumentException("EML file path cannot be empty", nameof(emlFilePath));
+
+        if (string.IsNullOrWhiteSpace(folderName))
+            throw new ArgumentException("Folder name cannot be empty", nameof(folderName));
+
+        // Read and parse the email
+        var message = await ReadEmailFromFileAsync(emlFilePath);
+        if (message == null)
+            throw new InvalidOperationException("Failed to read email from file");
+
+        lock (writeLock)
         {
-            if (block.Content is SegmentContent segment)
+            // Generate EmailHashedID
+            var emailId = new EmailHashedID(message);
+
+            // Check if email already exists
+            if (emailIndex.TryGet(emailId, out var _))
+                throw new InvalidOperationException("Email already exists in the system");
+
+            // Create enhanced email content
+            var enhancedContent = CreateEnhancedEmailContent(message);
+
+            // Store in ZoneTree
+            emailIndex.TryAdd(emailId, enhancedContent, out long OpIndex);
+
+            // Add to folder
+            folderManager.AddEmailToFolder(folderName, emailId).RunSynchronously();
+
+            // Cache the email ID
+            emailCache[message.MessageId] = emailId;
+
+            return emailId;
+        }
+    }
+    public async Task<EmailHashedID> AddEmailAsync(byte[] emlBytes, string folderName)
+    {
+
+        if (string.IsNullOrWhiteSpace(folderName))
+            throw new ArgumentException("Folder name cannot be empty", nameof(folderName));
+
+        // Read and parse the email
+        var message = new MimeMessage(new MemoryStream(emlBytes));
+        if (message == null)
+            throw new InvalidOperationException("Failed to read email from file");
+
+        lock (writeLock)
+        {
+            // Generate EmailHashedID
+            var emailId = new EmailHashedID(message);
+
+            // Check if email already exists
+            if (emailIndex.TryGet(emailId, out var _))
+                throw new InvalidOperationException("Email already exists in the system");
+
+            // Create enhanced email content
+            var enhancedContent = CreateEnhancedEmailContent(message);
+
+            // Store in ZoneTree
+            emailIndex.TryAdd(emailId, enhancedContent, out long OpIndex);
+
+            // Add to folder
+            folderManager.AddEmailToFolder(folderName, emailId).RunSynchronously();
+
+            // Cache the email ID
+            emailCache[message.MessageId] = emailId;
+
+            return emailId;
+        }
+    }
+
+    public async Task<EnhancedEmailContent> GetEmailContentAsync(EmailHashedID emailId)
+    {
+        if (emailIndex.TryGet(emailId, out var content))
+            return content;
+
+        throw new KeyNotFoundException("Email not found");
+    }
+
+    public async Task<byte[]> GetRawEmailAsync(EmailHashedID emailId)
+    {
+        if (emailIndex.TryGet(emailId, out var content))
+        {
+            return content.RawEmailContent;
+        }
+        else { return null; }
+    }
+
+
+
+    public async Task<List<EmailHashedID>> SearchEmailsAsync(string searchTerm, SearchField field)
+    {
+        var results = new List<EmailHashedID>();
+
+        // Perform search through ZoneTree entries
+
+        //// Use the search engine to find matching email IDs
+
+
+        return results;
+    }
+
+    public async Task DeleteEmailAsync(EmailHashedID emailId, string folderName)
+    {
+        lock (writeLock)
+        {
+            // Remove from ZoneTree
+            if (emailIndex.TryDelete(emailId, out var res))
             {
-                maxId = Math.Max(maxId, segment.SegmentId);
+
+            }
+
+            // Remove from folder           
+            folderManager.RemoveEmailFromFolder(folderName, emailId);
+
+            // Remove from cache
+            foreach (var key in emailCache.Where(x => x.Value.Equals(emailId)))
+            {
+                emailCache.TryRemove(key.Key, out _);
             }
         }
-        return maxId;
     }
 
-    public List<long> GetSegmentOffsets(ulong segmentId)
+    public async Task MoveEmailAsync(EmailHashedID emailId, string sourceFolder, string targetFolder)
     {
-        var offsets = new List<long>();
-        foreach (var (offset, block) in blockManager.WalkBlocks())
-        {
-            if (block.Content is SegmentContent segment && segment.SegmentId == segmentId)
-            {
-                offsets.Add(offset);
-            }
-        }
-        return offsets;
+        storageManager.MoveEmail(emailId, sourceFolder, targetFolder);
     }
 
-    public SegmentContent GetLatestSegment(ulong segmentId)
+    private async Task<MimeMessage> ReadEmailFromFileAsync(string emlFilePath)
     {
-        SegmentContent latest = null;
-        foreach (var (_, block) in blockManager.WalkBlocks())
-        {
-            if (block.Content is SegmentContent segment && segment.SegmentId == segmentId)
-            {
-                latest = segment;
-            }
-        }
-        return latest;
+        using var stream = File.OpenRead(emlFilePath);
+        return await MimeMessage.LoadAsync(stream);
     }
 
-    public long WriteSegment(SegmentContent segment)
+    private EnhancedEmailContent CreateEnhancedEmailContent(MimeMessage message)
     {
-        var block = new Block
+        return new EnhancedEmailContent
         {
-            Header = new BlockHeader
-            {
-                Type = BlockType.Segment,
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                Version = 1
-            },
-            Content = segment
+            StrSubject = message.Subject ?? string.Empty,
+            StrFrom = message.From.ToString() ?? string.Empty,
+            StrTo = message.To.ToString() ?? string.Empty,
+            StrCc = message.Cc.ToString() ?? string.Empty,
+            StrBcc = message.Bcc.ToString() ?? string.Empty,
+            Date = message.Date.DateTime,
+            StrTextContent = GetTextContent(message),
+            AttachmentCount = message.Attachments.Count(),
+            ProcessedTime = DateTime.UtcNow,
+            // Store the raw content if needed for full reconstruction
+            RawEmailContent = GetRawContent(message)
         };
-
-        return blockManager.WriteBlock(block);
     }
 
-    public void UpdateMetadata(Func<MetadataContent, MetadataContent> updateFunc)
+    private string GetTextContent(MimeMessage message)
     {
-        var metadata = cacheManager.GetCachedMetadata() ?? new MetadataContent();
-        metadata = updateFunc(metadata);
+        return message.TextBody ?? string.Empty;
+    }
 
-        var block = new Block
-        {
-            Header = new BlockHeader
-            {
-                Type = BlockType.Metadata,
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                Version = 1
-            },
-            Content = metadata
-        };
+    private byte[] GetRawContent(MimeMessage message)
+    {
+        using var ms = new MemoryStream();
+        message.WriteTo(ms);
+        return ms.ToArray();
+    }
 
-        long offset = blockManager.WriteBlock(block);
-
-        // Update header
-        var header = cacheManager.GetHeader();
-        header.FirstMetadataOffset = offset;
-        cacheManager.UpdateHeader(header);
+    public void Dispose()
+    {
+        emailIndex?.Dispose();
+        emailCache.Clear();
     }
 }
-\FolderManager.cs
-using EmailDB.Format.Models;
 
-namespace EmailDB.Storage;
+public enum SearchField
+{
+    Subject,
+    From,
+    To,
+    Content
+}
+\FolderManager.cs
+using DragonHoard.InMemory;
+using EmailDB.Format.Models;
+using Microsoft.Extensions.Options;
+using System.Text.RegularExpressions;
+
+namespace EmailDB.Format;
 
 public class FolderManager
 {
     private readonly BlockManager blockManager;
-    private readonly CacheManager cacheManager;
+    private readonly MetadataManager metadataManager;
+    private readonly InMemoryCache inMemoryCache;
+    private readonly object folderTreeLock = new object();
+    private const char PathSeparator = '\\';
 
-    public FolderManager(BlockManager blockManager, CacheManager cacheManager)
+    public FolderManager(BlockManager blockManager, MetadataManager metadataManager)
     {
-        this.blockManager = blockManager;
-        this.cacheManager = cacheManager;
+        this.blockManager = blockManager ?? throw new ArgumentNullException(nameof(blockManager));
+        this.metadataManager = metadataManager ?? throw new ArgumentNullException(nameof(metadataManager));
+
+        IEnumerable<IOptions<InMemoryCacheOptions>> options = new List<IOptions<InMemoryCacheOptions>>()
+        {
+            new OptionsWrapper<InMemoryCacheOptions>(new InMemoryCacheOptions
+            {
+                MaxCacheSize = 10000,
+                ScanFrequency = TimeSpan.FromMinutes(5)
+            })
+        };
+        inMemoryCache = new InMemoryCache(options);
     }
 
-    public FolderContent GetFolder(string folderName)
+    // High-level folder operations
+    public async Task CreateFolder(string path)
     {
-        // Check cache first
-        var cachedFolder = cacheManager.GetCachedFolder(folderName);
-        if (cachedFolder != null)
+        ValidatePath(path);
+
+        var (parentPath, folderName) = SplitPath(path);
+        var folderTree = await GetLatestFolderTree();
+
+        // Check if path already exists
+        if (folderTree.FolderIDs.ContainsKey(path))
+            throw new InvalidOperationException($"Folder '{path}' already exists");
+
+        // Get parent folder ID
+        long parentFolderId = 0;
+        if (!string.IsNullOrEmpty(parentPath))
         {
+            if (!folderTree.FolderIDs.TryGetValue(parentPath, out parentFolderId))
+                throw new InvalidOperationException($"Parent folder '{parentPath}' not found");
+        }
+        else if (folderTree.RootFolderId == -1)
+        {
+            // This will be the root folder
+            parentFolderId = 0;
+        }
+
+        // Create new folder
+        var folderId = GetNextFolderId(folderTree);
+        var folder = new FolderContent
+        {
+            FolderId = folderId,
+            ParentFolderId = parentFolderId,
+            Name = path, // Store the full path as the name
+            EmailIds = new List<EmailHashedID>()
+        };
+
+        // Write folder and update tree
+        var offset = WriteFolder(folder);
+        folderTree.FolderIDs[path] = folderId;
+        folderTree.FolderOffsets[folderId] = offset;
+
+        if (parentFolderId != 0)
+            folderTree.FolderHierarchy[folderId.ToString()] = parentFolderId.ToString();
+        else if (folderTree.RootFolderId == -1)
+            folderTree.RootFolderId = folderId;
+
+        WriteFolderTree(folderTree);
+    }
+
+    public async Task DeleteFolder(string path, bool deleteContents = false)
+    {
+        ValidatePath(path);
+        var folder = await GetFolder(path);
+        if (folder == null)
+            return;
+
+        var folderTree = await GetLatestFolderTree();
+
+        // Get all subfolders that start with this path
+        var subfolders = folderTree.FolderIDs
+            .Where(x => x.Key.StartsWith(path + PathSeparator))
+            .ToList();
+
+        if (subfolders.Any())
+            throw new InvalidOperationException("Cannot delete folder with subfolders");
+
+        if (!deleteContents && folder.EmailIds.Any())
+            throw new InvalidOperationException("Cannot delete non-empty folder without deleteContents flag");
+
+        // Remove from folder tree
+        folderTree.FolderIDs.Remove(path);
+        folderTree.FolderOffsets.Remove(folder.FolderId);
+        folderTree.FolderHierarchy.Remove(folder.FolderId.ToString());
+
+        if (folderTree.RootFolderId == folder.FolderId)
+            folderTree.RootFolderId = -1;
+
+        WriteFolderTree(folderTree);
+        InvalidateCache();
+    }
+
+    public async Task MoveFolder(string sourcePath, string targetParentPath)
+    {
+        ValidatePath(sourcePath);
+        ValidatePath(targetParentPath);
+
+        var sourceFolder = await GetFolder(sourcePath);
+        if (sourceFolder == null)
+            throw new InvalidOperationException($"Folder '{sourcePath}' not found");
+
+        var folderTree = await GetLatestFolderTree();
+
+        // Get target parent folder ID
+        if (!folderTree.FolderIDs.TryGetValue(targetParentPath, out var targetParentId))
+            throw new InvalidOperationException($"Target parent folder '{targetParentPath}' not found");
+
+        // Check for circular reference
+        var currentParent = targetParentId;
+        while (currentParent != 0)
+        {
+            if (currentParent == sourceFolder.FolderId)
+                throw new InvalidOperationException("Moving folder would create circular reference");
+
+            var parentStr = currentParent.ToString();
+            if (!folderTree.FolderHierarchy.TryGetValue(parentStr, out var nextParentStr))
+                break;
+
+            if (!long.TryParse(nextParentStr, out currentParent))
+                break;
+        }
+
+        // Calculate new path
+        var folderName = GetFolderName(sourcePath);
+        var newPath = Combine(targetParentPath, folderName);
+
+        // Check if new path already exists
+        if (folderTree.FolderIDs.ContainsKey(newPath))
+            throw new InvalidOperationException($"Target folder '{newPath}' already exists");
+
+        // Update folder and its subfolders
+        var oldPrefix = sourcePath + PathSeparator;
+        var newPrefix = newPath + PathSeparator;
+        var foldersToUpdate = folderTree.FolderIDs
+            .Where(x => x.Key.StartsWith(oldPrefix) || x.Key == sourcePath)
+            .ToList();
+
+        foreach (var kvp in foldersToUpdate)
+        {
+            var oldPath = kvp.Key;
+            var newFolderPath = oldPath == sourcePath ?
+                newPath :
+                newPrefix + oldPath.Substring(oldPrefix.Length);
+
+            var folderToUpdate = await GetFolder(oldPath);
+            folderToUpdate.Name = newFolderPath;
+
+            if (oldPath == sourcePath)
+                folderToUpdate.ParentFolderId = targetParentId;
+
+            var newOffset = WriteFolder(folderToUpdate);
+
+            folderTree.FolderIDs.Remove(oldPath);
+            folderTree.FolderIDs[newFolderPath] = kvp.Value;
+            folderTree.FolderOffsets[kvp.Value] = newOffset;
+        }
+
+        folderTree.FolderHierarchy[sourceFolder.FolderId.ToString()] = targetParentId.ToString();
+        WriteFolderTree(folderTree);
+    }
+
+    public async Task<List<EmailHashedID>> GetEmails(string path)
+    {
+        var folder = await GetFolder(path);
+        return folder?.EmailIds ?? new List<EmailHashedID>();
+    }
+
+
+    public async Task AddEmailToFolder(string path, EmailHashedID emailId)
+    {
+        var folder = await GetFolder(path);
+        if (folder == null)
+            throw new InvalidOperationException($"Folder '{path}' not found");
+
+        if (!folder.EmailIds.Contains(emailId))
+        {
+            folder.EmailIds.Add(emailId);
+            WriteFolder(folder);
+        }
+    }
+
+    public async Task RemoveEmailFromFolder(string path, EmailHashedID emailId)
+    {
+        var folder = await GetFolder(path);
+        if (folder == null)
+            throw new InvalidOperationException($"Folder '{path}' not found");
+
+        if (folder.EmailIds.Remove(emailId))
+        {
+            WriteFolder(folder);
+        }
+    }
+
+    public async Task MoveEmail(EmailHashedID emailId, string sourcePath, string targetPath)
+    {
+        var source = await GetFolder(sourcePath);
+        var target = await GetFolder(targetPath);
+
+        if (source == null)
+            throw new InvalidOperationException($"Source folder '{sourcePath}' not found");
+        if (target == null)
+            throw new InvalidOperationException($"Target folder '{targetPath}' not found");
+
+        if (!source.EmailIds.Contains(emailId))
+            throw new InvalidOperationException($"Email {emailId} not found in source folder");
+
+        source.EmailIds.Remove(emailId);
+        target.EmailIds.Add(emailId);
+
+        WriteFolder(source);
+        WriteFolder(target);
+    }
+
+    public async Task<List<string>> GetSubfolders(string path)
+    {
+        ValidatePath(path);
+        var folderTree = await GetLatestFolderTree();
+        var prefix = path + PathSeparator;
+
+        return folderTree.FolderIDs
+            .Where(x => x.Key.StartsWith(prefix))
+            .Select(x => x.Key)
+            .Where(x => x.Substring(prefix.Length).IndexOf(PathSeparator) == -1)
+            .ToList();
+    }
+
+    // Path handling methods
+    private void ValidatePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            throw new ArgumentException("Path cannot be empty");
+
+        if (path.Contains("//"))
+            throw new ArgumentException("Path cannot contain consecutive separators");
+
+        if (path.EndsWith(PathSeparator))
+            throw new ArgumentException("Path cannot end with separator");
+
+        // Additional validation as needed
+        var invalidChars = Path.GetInvalidPathChars()
+            .Concat(new[] { '<', '>', ':', '"', '|', '?', '*' })
+            .Where(c => c != PathSeparator);
+
+        if (path.Any(c => invalidChars.Contains(c)))
+            throw new ArgumentException("Path contains invalid characters");
+    }
+
+    private (string ParentPath, string FolderName) SplitPath(string path)
+    {
+        var lastSeparatorIndex = path.LastIndexOf(PathSeparator);
+        if (lastSeparatorIndex == -1)
+            return (string.Empty, path);
+
+        var parentPath = path.Substring(0, lastSeparatorIndex);
+        var folderName = path.Substring(lastSeparatorIndex + 1);
+        return (parentPath, folderName);
+    }
+
+    private string GetFolderName(string path)
+    {
+        var (_, name) = SplitPath(path);
+        return name;
+    }
+
+    private string Combine(string path1, string path2)
+    {
+        if (string.IsNullOrEmpty(path1)) return path2;
+        return path1 + PathSeparator + path2;
+    }
+
+    // Internal helper methods
+    internal async Task<FolderContent> GetFolder(string folderName)
+    {
+        if (string.IsNullOrWhiteSpace(folderName))
+            throw new ArgumentException("Folder name cannot be empty", nameof(folderName));
+
+        if (inMemoryCache.TryGetValue<FolderContent>(GetFolderCacheKey(folderName), out var cachedFolder))
             return cachedFolder;
-        }
 
-        // Try metadata lookup
-        var metadata = cacheManager.GetCachedMetadata();
-        if (metadata?.FolderOffsets.TryGetValue(folderName, out long offset) == true)
-        {
-            try
-            {
-                var block = blockManager.ReadBlock(offset);
-                if (block?.Content is FolderContent folder && folder.Name == folderName)
-                {
-                    cacheManager.CacheFolder(folderName, offset, folder);
-                    return folder;
-                }
-            }
-            catch
-            {
-                // Will fall back to walking blocks
-            }
-        }
+        var folderTree = await GetLatestFolderTree();
+        if (!folderTree.FolderIDs.TryGetValue(folderName, out var folderId))
+            return null;
 
-        // Fallback: Walk blocks
-        foreach (var (blockOffset, block) in blockManager.WalkBlocks())
-        {
-            if (block.Content is FolderContent folder && folder.Name == folderName)
-            {
-                cacheManager.CacheFolder(folderName, blockOffset, folder);
-                return folder;
-            }
-        }
+        if (!folderTree.FolderOffsets.TryGetValue(folderId, out var folderOffset))
+            return null;
 
-        return null;
+        var result = await blockManager.ReadBlockAsync(folderOffset);
+        if (result?.Content is not FolderContent folder)
+            return null;
+
+        inMemoryCache.Set(GetFolderCacheKey(folderName), folder);
+        return folder;
     }
 
-    public long WriteFolder(FolderContent folder)
+    internal async Task<FolderTreeContent> GetLatestFolderTree()
+    {
+        if (inMemoryCache.TryGetValue<FolderTreeContent>(GetFolderTreeCacheKey(), out var cachedTree))
+            return cachedTree;
+
+        var folderTree = await metadataManager.GetFolderTree();
+        lock (folderTreeLock)
+        {          
+            if (folderTree == null)
+            {
+                folderTree = new FolderTreeContent
+                {
+                    RootFolderId = -1,
+                    FolderHierarchy = new Dictionary<string, string>(),
+                    FolderIDs = new Dictionary<string, long>(),
+                    FolderOffsets = new Dictionary<long, long>()
+                };
+            }
+
+            inMemoryCache.Set(GetFolderTreeCacheKey(), folderTree);
+            return folderTree;
+        }
+    }
+
+    internal long WriteFolder(FolderContent folder)
     {
         var block = new Block
         {
@@ -432,36 +1504,12 @@ public class FolderManager
             Content = folder
         };
 
-        return blockManager.WriteBlock(block);
+        var offset = blockManager.WriteBlock(block);
+        inMemoryCache.Set(GetFolderCacheKey(folder.Name), folder);
+        return offset;
     }
 
-    public FolderTreeContent GetLatestFolderTree()
-    {
-        var cachedTree = cacheManager.GetCachedFolderTree();
-        if (cachedTree != null)
-        {
-            return cachedTree;
-        }
-
-        // Fallback: Walk blocks
-        FolderTreeContent latest = null;
-        foreach (var (_, block) in blockManager.WalkBlocks())
-        {
-            if (block.Content is FolderTreeContent tree)
-            {
-                latest = tree;
-            }
-        }
-
-        if (latest != null)
-        {
-            cacheManager.CacheFolderTree(latest);
-        }
-
-        return latest ?? throw new InvalidOperationException("No folder tree found");
-    }
-
-    public void WriteFolderTree(FolderTreeContent content)
+    internal void WriteFolderTree(FolderTreeContent folderTree)
     {
         var block = new Block
         {
@@ -471,16 +1519,32 @@ public class FolderManager
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 Version = 1
             },
-            Content = content
+            Content = folderTree
         };
 
-        long offset = blockManager.WriteBlock(block);
+        var offset = blockManager.WriteBlock(block);
+        metadataManager.UpdateFolderTreeOffset(offset);
+        inMemoryCache.Set(GetFolderTreeCacheKey(), folderTree);
+    }
 
-        // Update header
-        var header = cacheManager.GetHeader();
-        header.FirstFolderTreeOffset = offset;
-        cacheManager.UpdateHeader(header);
-        cacheManager.CacheFolderTree(content);
+    private long GetNextFolderId(FolderTreeContent folderTree)
+    {
+        return folderTree.FolderOffsets.Keys.DefaultIfEmpty(0).Max() + 1;
+    }
+
+    private string GetFolderCacheKey(string folderName)
+    {
+        return $"folder_{folderName}";
+    }
+
+    private string GetFolderTreeCacheKey()
+    {
+        return "folder_tree";
+    }
+
+    public void InvalidateCache()
+    {
+        inMemoryCache.Remove(GetFolderTreeCacheKey());
     }
 }
 \iStorageManager.cs
@@ -494,49 +1558,49 @@ namespace EmailDB.Format;
 public interface IStorageManager : IDisposable
 {
     void AddEmailToFolder(string folderName, byte[] emailContent);
-    void MoveEmail(ulong emailId, string sourceFolder, string targetFolder);
-    void DeleteEmail(ulong emailId, string folderName);
-    void UpdateEmailContent(ulong emailId, byte[] newContent);
+    void MoveEmail(EmailHashedID emailId, string sourceFolder, string targetFolder);
+    void DeleteEmail(EmailHashedID emailId, string folderName);
+    void UpdateEmailContent(EmailHashedID emailId, byte[] newContent);
     void CreateFolder(string folderName, string parentFolderId = null);
     void DeleteFolder(string folderName, bool deleteEmails = false);
     void Compact(string outputPath);
     void InvalidateCache();
 }
 \MaintenanceManager.cs
-using EmailDB.Format;
 using EmailDB.Format.Models;
 
-namespace EmailDB.Storage;
+namespace EmailDB.Format;
 
 public class MaintenanceManager
 {
     private readonly BlockManager blockManager;
     private readonly CacheManager cacheManager;
     private readonly FolderManager folderManager;
-    private readonly EmailManager emailManager;
+    private readonly SegmentManager segmentManager;
 
     public MaintenanceManager(BlockManager blockManager, CacheManager cacheManager,
-                            FolderManager folderManager, EmailManager emailManager)
+                            FolderManager folderManager, SegmentManager segmentManager)
     {
         this.blockManager = blockManager;
         this.cacheManager = cacheManager;
         this.folderManager = folderManager;
-        this.emailManager = emailManager;
+        this.segmentManager = segmentManager;
     }
 
-    public void Compact(string outputPath)
+    public async void Compact(string outputPath)
     {
         using var outputStream = new FileStream(outputPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
         var outputBlockManager = new BlockManager(outputStream);
         var outputCacheManager = new CacheManager(outputBlockManager);
+        var metadataManager = new MetadataManager(outputBlockManager);
 
         // Initialize components for new file
-        var outputFolderManager = new FolderManager(outputBlockManager, outputCacheManager);
-        var outputEmailManager = new EmailManager(outputBlockManager, outputCacheManager, outputFolderManager);
+        var outputFolderManager = new FolderManager(outputBlockManager, metadataManager);
+        var outputEmailManager = new SegmentManager(outputBlockManager, outputCacheManager);
 
         // Get current state
-        var folderTree = folderManager.GetLatestFolderTree();
-        var referencedSegments = new HashSet<ulong>();
+        var folderTree = await folderManager.GetLatestFolderTree();
+        var referencedSegments = new HashSet<long>();
 
         // Initialize new file
         InitializeNewFile(outputBlockManager, outputCacheManager);
@@ -544,45 +1608,45 @@ public class MaintenanceManager
         // Write folder tree
         outputFolderManager.WriteFolderTree(folderTree);
 
-        // Process each folder and its contents
-        foreach (var (_, block) in blockManager.WalkBlocks())
-        {
-            if (block.Content is FolderContent folder)
-            {
-                if (folder.EmailIds.Count > 0)
-                {
-                    // Write folder
-                    var folderOffset = outputFolderManager.WriteFolder(folder);
+        //// Process each folder and its contents
+        //foreach (var (_, block) in blockManager.WalkBlocks())
+        //{
+        //    if (block.Content is FolderContent folder)
+        //    {
+        //        if (folder.EmailIds.Count > 0)
+        //        {
+        //            // Write folder
+        //            var folderOffset = outputFolderManager.WriteFolder(folder);
 
-                    // Track and write segments
-                    foreach (var emailId in folder.EmailIds)
-                    {
-                        if (referencedSegments.Add(emailId))
-                        {
-                            var segment = emailManager.GetLatestSegment(emailId);
-                            if (segment != null)
-                            {
-                                var segmentOffset = outputEmailManager.WriteSegment(segment);
+        //            // Track and write segments
+        //            foreach (var emailId in folder.EmailIds)
+        //            {
+        //                if (referencedSegments.Add(emailId))
+        //                {
+        //                    var segment = segmentManager.GetLatestSegment(emailId);
+        //                    if (segment != null)
+        //                    {
+        //                        var segmentOffset = outputEmailManager.WriteSegment(segment);
 
-                                // Update metadata for new segment
-                                outputEmailManager.UpdateMetadata(metadata =>
-                                {
-                                    metadata.SegmentOffsets.Add(segmentOffset);
-                                    return metadata;
-                                });
-                            }
-                        }
-                    }
+        //                        // Update metadata for new segment
+        //                        outputEmailManager.UpdateMetadata(metadata =>
+        //                        {
+        //                            metadata.SegmentOffsets.Add(segmentOffset);
+        //                            return metadata;
+        //                        });
+        //                    }
+        //                }
+        //            }
 
-                    // Update metadata for new folder
-                    outputEmailManager.UpdateMetadata(metadata =>
-                    {
-                        metadata.FolderOffsets[folder.Name] = folderOffset;
-                        return metadata;
-                    });
-                }
-            }
-        }
+        //            // Update metadata for new folder
+        //            outputEmailManager.UpdateMetadata(metadata =>
+        //            {
+        //                metadata.FolderOffsets[folder.Name] = folderOffset;
+        //                return metadata;
+        //            });
+            //    }
+            //}
+        //}
     }
 
     private void InitializeNewFile(BlockManager blockManager, CacheManager cacheManager)
@@ -664,21 +1728,321 @@ public class MaintenanceManager
         cacheManager.UpdateHeader(header);
     }
 }
-\StorageManager.cs
-using EmailDB.Format;
+\MetadataManager.cs
+using EmailDB.Format.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace EmailDB.Format;
+public class MetadataManager
+{
+    private readonly BlockManager blockManager;
+    private MetadataContent metadata;
+    private readonly object metadataLock = new object();
+
+    public MetadataManager(BlockManager blockManager)
+    {
+        this.blockManager = blockManager ?? throw new ArgumentNullException(nameof(blockManager));
+        LoadMetadata();
+    }
+
+    private void LoadMetadata()
+    {
+        // Walk blocks to find latest metadata
+        MetadataContent latest = null;
+        foreach (var (_, block) in blockManager.WalkBlocks())
+        {
+            if (block.Content is MetadataContent metadataContent)
+            {
+                latest = metadataContent;
+            }
+        }
+
+        metadata = latest ?? new MetadataContent();
+    }
+
+    public async Task<FolderTreeContent> GetFolderTree()
+    {
+        if (metadata.FolderTreeOffset == -1)
+        {
+            return null;
+        }
+
+        var result = await blockManager.ReadBlockAsync(metadata.FolderTreeOffset);
+        if (result == null)
+        {
+            return null;
+        }
+
+        if (result.Content is not FolderTreeContent)
+        {
+            throw new InvalidOperationException("Folder tree offset does not point to a folder tree");
+        }
+
+        return (FolderTreeContent)result.Content;
+    }
+
+    public long WriteFolder(FolderContent folder)
+    {
+        var block = new Block
+        {
+            Header = new BlockHeader
+            {
+                Type = BlockType.Folder,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Version = 1
+            },
+            Content = folder
+        };
+
+        return blockManager.WriteBlock(block);
+    }
+
+    public void WriteFolderTree(FolderTreeContent folderTree)
+    {
+        var block = new Block
+        {
+            Header = new BlockHeader
+            {
+                Type = BlockType.FolderTree,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Version = 1
+            },
+            Content = folderTree
+        };
+
+        lock (metadataLock)
+        {
+            var offset = blockManager.WriteBlock(block);
+            UpdateFolderTreeOffset(offset);
+        }
+    }
+
+    public void UpdateFolderTreeOffset(long offset)
+    {
+        lock (metadataLock)
+        {
+            metadata.FolderTreeOffset = offset;
+            WriteMetadata();
+        }
+    }
+
+    private void WriteMetadata()
+    {
+        var block = new Block
+        {
+            Header = new BlockHeader
+            {
+                Type = BlockType.Metadata,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Version = 1
+            },
+            Content = metadata
+        };
+
+        blockManager.WriteBlock(block);
+    }
+}
+\SegmentManager.cs
 using EmailDB.Format.Models;
 
-namespace EmailDB.Storage;
+namespace EmailDB.Format;
+
+public class SegmentManager
+{
+    private readonly BlockManager blockManager;
+    private readonly CacheManager cacheManager;
+    private readonly object metadataLock = new();
+
+    public SegmentManager(BlockManager blockManager, CacheManager cacheManager)
+    {
+        this.blockManager = blockManager ?? throw new ArgumentNullException(nameof(blockManager));
+        this.cacheManager = cacheManager ?? throw new ArgumentNullException(nameof(cacheManager));
+    }
+
+    public MetadataContent GetMetadata()
+    {
+        return cacheManager.GetCachedMetadata() ?? new MetadataContent();
+    }
+
+    public long WriteSegment(SegmentContent segment)
+    {
+        var block = new Block
+        {
+            Header = new BlockHeader
+            {
+                Type = BlockType.Segment,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Version = 1
+            },
+            Content = segment
+        };
+        // Update metadata with new segment offset
+        lock (metadataLock)
+        {
+            var metadata = GetMetadata();
+            var offset = blockManager.WriteBlock(block);
+            metadata.SegmentOffsets[segment.FileName] = offset;
+            UpdateMetadata(metadata);
+            return offset;
+        }
+       
+    }
+
+    public Block ReadBlock(long offset)
+    {
+        return blockManager.ReadBlock(offset);
+    }
+
+    public void UpdateMetadata(MetadataContent metadata)
+    {
+        lock (metadataLock)
+        {
+            var block = new Block
+            {
+                Header = new BlockHeader
+                {
+                    Type = BlockType.Metadata,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    Version = 1
+                },
+                Content = metadata
+            };
+
+            var offset = blockManager.WriteBlock(block);
+
+            // Update header with new metadata offset
+            var header = cacheManager.GetHeader();
+            header.FirstMetadataOffset = offset;
+            cacheManager.UpdateHeader(header);
+        }
+    }
+
+    public void DeleteSegment(string path)
+    {
+        lock (metadataLock)
+        {
+            var metadata = GetMetadata();
+            if (metadata.SegmentOffsets.TryGetValue(path, out var offset))
+            {
+                metadata.OutdatedOffsets.Add(offset);
+                metadata.SegmentOffsets.Remove(path);
+                UpdateMetadata(metadata);
+            }
+        }
+    }
+
+    public IEnumerable<(long Offset, Block Block)> WalkBlocks()
+    {
+        return blockManager.WalkBlocks();
+    }
+
+    public void Compact()
+    {
+        lock (metadataLock)
+        {
+            var metadata = GetMetadata();
+            var validOffsets = new HashSet<long>(metadata.SegmentOffsets.Values);
+            var outdatedOffsets = metadata.OutdatedOffsets.ToList();
+
+            // Remove any outdated offsets that are still referenced
+            outdatedOffsets.RemoveAll(offset => validOffsets.Contains(offset));
+
+            metadata.OutdatedOffsets = outdatedOffsets;
+            UpdateMetadata(metadata);
+        }
+    }
+
+    public bool TryGetSegment(string path, out SegmentContent segment)
+    {
+        segment = null;
+        var metadata = GetMetadata();
+
+        if (metadata.SegmentOffsets.TryGetValue(path, out var offset))
+        {
+            var block = ReadBlock(offset);
+            if (block?.Content is SegmentContent segmentContent)
+            {
+                segment = segmentContent;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public Dictionary<string, SegmentContent> GetAllSegments()
+    {
+        var result = new Dictionary<string, SegmentContent>();
+        var metadata = GetMetadata();
+
+        foreach (var kvp in metadata.SegmentOffsets)
+        {
+            var block = ReadBlock(kvp.Value);
+            if (block?.Content is SegmentContent segment)
+            {
+                result[kvp.Key] = segment;
+            }
+        }
+
+        return result;
+    }
+
+    public long GetSegmentOffset(string path)
+    {
+        var metadata = GetMetadata();
+        return metadata.SegmentOffsets.TryGetValue(path, out var offset) ? offset : -1;
+    }
+
+    public bool IsSegmentOutdated(long offset)
+    {
+        var metadata = GetMetadata();
+        return metadata.OutdatedOffsets.Contains(offset);
+    }
+
+    public void UpdateSegmentPath(string oldPath, string newPath)
+    {
+        lock (metadataLock)
+        {
+            var metadata = GetMetadata();
+            if (metadata.SegmentOffsets.TryGetValue(oldPath, out var offset))
+            {
+                metadata.SegmentOffsets.Remove(oldPath);
+                metadata.SegmentOffsets[newPath] = offset;
+                UpdateMetadata(metadata);
+            }
+        }
+    }
+
+    public void CleanupOutdatedSegments()
+    {
+        lock (metadataLock)
+        {
+            var metadata = GetMetadata();
+            var validOffsets = new HashSet<long>(metadata.SegmentOffsets.Values);
+            metadata.OutdatedOffsets.RemoveAll(offset => validOffsets.Contains(offset));
+            UpdateMetadata(metadata);
+        }
+    }
+}
+\StorageManager.cs
+using EmailDB.Format.Models;
+using EmailDB.Format;
 
 public class StorageManager : IStorageManager
 {
     private readonly string filePath;
     private readonly FileStream fileStream;
-    private readonly BlockManager blockManager;
-    private readonly CacheManager cacheManager;
-    private readonly FolderManager folderManager;
-    private readonly EmailManager emailManager;
-    private readonly MaintenanceManager maintenanceManager;
+    public readonly BlockManager blockManager;
+    public readonly CacheManager cacheManager;
+    public readonly MetadataManager metadataManager;
+    public readonly FolderManager folderManager;
+    public readonly SegmentManager segmentManager;
+    public readonly EmailManager emailManager;
+    public readonly MaintenanceManager maintenanceManager;
 
     public StorageManager(string path, bool createNew = false)
     {
@@ -689,9 +2053,20 @@ public class StorageManager : IStorageManager
         // Initialize components
         blockManager = new BlockManager(fileStream);
         cacheManager = new CacheManager(blockManager);
-        folderManager = new FolderManager(blockManager, cacheManager);
-        emailManager = new EmailManager(blockManager, cacheManager, folderManager);
-        maintenanceManager = new MaintenanceManager(blockManager, cacheManager, folderManager, emailManager);
+        metadataManager = new MetadataManager(blockManager);
+        folderManager = new FolderManager(blockManager, metadataManager);
+        if (createNew)
+        {
+            InitializeNewFile();
+        }
+        else
+        {
+            cacheManager.LoadHeaderContent();
+        }
+      
+        segmentManager = new SegmentManager(blockManager, cacheManager);
+        emailManager = new EmailManager(this, folderManager, segmentManager);
+        maintenanceManager = new MaintenanceManager(blockManager, cacheManager, folderManager, segmentManager);
 
         if (createNew)
         {
@@ -729,202 +2104,62 @@ public class StorageManager : IStorageManager
         folderManager.WriteFolderTree(new FolderTreeContent());
     }
 
-    public void AddEmailToFolder(string folderName, byte[] emailContent)
+    public async void AddEmailToFolder(string folderName, byte[] emailContent)
     {
-        lock (fileStream)
+        // The StorageManager now just coordinates between EmailManager and FolderManager
+        var emailId = await emailManager.AddEmailAsync(emailContent,folderName);
+        folderManager.AddEmailToFolder(folderName, emailId);
+    }
+
+    public void UpdateEmailContent(EmailHashedID emailId, byte[] newContent)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async void MoveEmail(EmailHashedID emailId, string sourceFolder, string targetFolder)
+    {
+        // Coordinate the move operation between managers       
+        await emailManager.MoveEmailAsync(emailId, sourceFolder, targetFolder);
+    }
+
+    public async void DeleteEmail(EmailHashedID emailId, string folderName)
+    {
+        // Coordinate deletion between managers
+        await emailManager.MoveEmailAsync(emailId, folderName, "Deleted Items");
+    }
+
+    public async void CreateFolder(string folderName, string parentFolderId = null)
+    {
+        if (parentFolderId == null)
         {
-            // Find max segment ID
-            ulong newId = emailManager.GetMaxSegmentId() + 1;
+            folderManager.CreateFolder(folderName);
 
-            // Create and write new segment
-            var segment = new SegmentContent
+        }
+        else
+        {
+            var parentFolder = await folderManager.GetFolder(parentFolderId);
+            if (parentFolder == null)
             {
-                SegmentId = newId,
-                SegmentData = emailContent
-            };
-
-            long segmentOffset = emailManager.WriteSegment(segment);
-
-            // Update folder
-            var folder = folderManager.GetFolder(folderName);
-            if (folder == null)
-            {
-                throw new InvalidOperationException($"Folder '{folderName}' not found");
+                throw new InvalidOperationException("Parent folder does not exist");
             }
-
-            folder.EmailIds.Add(newId);
-            long folderOffset = folderManager.WriteFolder(folder);
-
-            // Update metadata
-            emailManager.UpdateMetadata(metadata =>
-            {
-                metadata.SegmentOffsets.Add(segmentOffset);
-                metadata.FolderOffsets[folderName] = folderOffset;
-                return metadata;
-            });
+            folderManager.CreateFolder($"{parentFolderId}\\{folderName}");
         }
     }
 
-    public void MoveEmail(ulong emailId, string sourceFolder, string targetFolder)
+    public async void DeleteFolder(string folderName, bool deleteEmails = false)
     {
-        lock (fileStream)
+        if (deleteEmails)
         {
-            var source = folderManager.GetFolder(sourceFolder);
-            var target = folderManager.GetFolder(targetFolder);
-
-            if (source == null || target == null)
+            var folder = folderManager.GetFolder(folderName).Result;
+            if (folder != null)
             {
-                throw new InvalidOperationException("Source or target folder not found");
-            }
-
-            if (!source.EmailIds.Contains(emailId))
-            {
-                throw new InvalidOperationException($"Email {emailId} not found in source folder");
-            }
-
-            source.EmailIds.Remove(emailId);
-            target.EmailIds.Add(emailId);
-
-            long sourceOffset = folderManager.WriteFolder(source);
-            long targetOffset = folderManager.WriteFolder(target);
-
-            emailManager.UpdateMetadata(metadata =>
-            {
-                metadata.FolderOffsets[sourceFolder] = sourceOffset;
-                metadata.FolderOffsets[targetFolder] = targetOffset;
-                return metadata;
-            });
-        }
-    }
-
-    public void DeleteEmail(ulong emailId, string folderName)
-    {
-        lock (fileStream)
-        {
-            var folder = folderManager.GetFolder(folderName);
-            if (folder == null)
-            {
-                throw new InvalidOperationException($"Folder '{folderName}' not found");
-            }
-
-            if (!folder.EmailIds.Contains(emailId))
-            {
-                throw new InvalidOperationException($"Email {emailId} not found in folder");
-            }
-
-            folder.EmailIds.Remove(emailId);
-            long folderOffset = folderManager.WriteFolder(folder);
-
-            var segmentOffsets = emailManager.GetSegmentOffsets(emailId);
-            emailManager.UpdateMetadata(metadata =>
-            {
-                metadata.FolderOffsets[folderName] = folderOffset;
-                metadata.OutdatedOffsets.AddRange(segmentOffsets);
-                return metadata;
-            });
-        }
-    }
-
-    public void UpdateEmailContent(ulong emailId, byte[] newContent)
-    {
-        lock (fileStream)
-        {
-            var segment = new SegmentContent
-            {
-                SegmentId = emailId,
-                SegmentData = newContent
-            };
-
-            long newOffset = emailManager.WriteSegment(segment);
-            var oldOffsets = emailManager.GetSegmentOffsets(emailId);
-
-            emailManager.UpdateMetadata(metadata =>
-            {
-                metadata.OutdatedOffsets.AddRange(oldOffsets);
-                metadata.SegmentOffsets.Add(newOffset);
-                return metadata;
-            });
-        }
-    }
-
-    public void CreateFolder(string folderName, string parentFolderId = null)
-    {
-        lock (fileStream)
-        {
-            if (folderManager.GetFolder(folderName) != null)
-            {
-                throw new InvalidOperationException($"Folder '{folderName}' already exists");
-            }
-
-            var folderId = Guid.NewGuid().ToString();
-            var folder = new FolderContent
-            {
-                FolderId = folderId,
-                Name = folderName,
-                EmailIds = new List<ulong>()
-            };
-
-            long folderOffset = folderManager.WriteFolder(folder);
-
-            emailManager.UpdateMetadata(metadata =>
-            {
-                metadata.FolderOffsets[folderName] = folderOffset;
-                return metadata;
-            });
-
-            var tree = folderManager.GetLatestFolderTree();
-            if (parentFolderId == null)
-            {
-                parentFolderId = tree.RootFolderId ?? folderId;
-                if (tree.RootFolderId == null)
-                {
-                    tree.RootFolderId = folderId;
-                }
-            }
-            else if (!tree.FolderHierarchy.ContainsKey(parentFolderId))
-            {
-                throw new InvalidOperationException($"Parent folder ID '{parentFolderId}' not found");
-            }
-
-            tree.FolderHierarchy[folderId] = parentFolderId;
-            folderManager.WriteFolderTree(tree);
-        }
-    }
-
-    public void DeleteFolder(string folderName, bool deleteEmails = false)
-    {
-        lock (fileStream)
-        {
-            var folder = folderManager.GetFolder(folderName);
-            if (folder == null)
-            {
-                throw new InvalidOperationException($"Folder '{folderName}' not found");
-            }
-
-            if (deleteEmails)
-            {
-                var segmentOffsets = new List<long>();
                 foreach (var emailId in folder.EmailIds)
                 {
-                    segmentOffsets.AddRange(emailManager.GetSegmentOffsets(emailId));
+                    await emailManager.MoveEmailAsync(emailId, folderName, "Deleted Items");
                 }
-
-                emailManager.UpdateMetadata(metadata =>
-                {
-                    metadata.OutdatedOffsets.AddRange(segmentOffsets);
-                    metadata.FolderOffsets.Remove(folderName);
-                    return metadata;
-                });
             }
-            else if (folder.EmailIds.Count > 0)
-            {
-                throw new InvalidOperationException("Cannot delete non-empty folder without deleteEmails flag");
-            }
-
-            var tree = folderManager.GetLatestFolderTree();
-            tree.FolderHierarchy.Remove(folder.FolderId);
-            folderManager.WriteFolderTree(tree);
         }
+        folderManager.DeleteFolder(folderName, deleteEmails);
     }
 
     public HeaderContent GetHeader()
@@ -932,25 +2167,22 @@ public class StorageManager : IStorageManager
         return cacheManager.GetHeader();
     }
 
-    public Block ReadBlock(long offset)
+    // These methods should be internal and only used by other managers
+    internal Block ReadBlock(long offset)
     {
         return blockManager.ReadBlock(offset);
     }
 
-    public long WriteBlock(Block block, long? specificOffset = null)
+    internal long WriteBlock(Block block, long? specificOffset = null)
     {
         return blockManager.WriteBlock(block, specificOffset);
     }
 
-    public IEnumerable<(long Offset, Block Block)> WalkBlocks()
+    internal IEnumerable<(long Offset, Block Block)> WalkBlocks()
     {
         return blockManager.WalkBlocks();
     }
 
-    public void UpdateMetadata(Func<MetadataContent, MetadataContent> updateFunc)
-    {
-        emailManager.UpdateMetadata(updateFunc);
-    }
     public void Compact(string outputPath)
     {
         lock (fileStream)
@@ -961,22 +2193,21 @@ public class StorageManager : IStorageManager
 
     public void InvalidateCache()
     {
-        lock (fileStream)
-        {
-            cacheManager.InvalidateCache();
-        }
+        cacheManager.InvalidateCache();
     }
 
     public void Dispose()
     {
+        emailManager?.Dispose();
         fileStream?.Dispose();
     }
+
+
 }
 \ZonetreeSegmentIO.cs
-using EmailDB.Format;
 using EmailDB.Format.Models;
 
-namespace EmailDB.Storage;
+namespace EmailDB.Format;
 
 // ZoneTree IO handler for segment files
 public class ZoneTreeSegmentIO : IDisposable
@@ -1031,7 +2262,7 @@ public class ZoneTreeSegmentIO : IDisposable
         }
     }
 
-    private string GetSegmentFileName(ulong segmentId)
+    private string GetSegmentFileName(long segmentId)
     {
         return $"segment_{segmentId / 1000:D3}.dat";
     }
@@ -1156,6 +2387,383 @@ public class CleanupContent : BlockContent
     [ProtoMember(1003)]
     public long CleanupThreshold { get; set; }
 }
+\EmailHashedID.cs
+using System;
+using System.Text;
+using DZen.Security.Cryptography;
+using MimeKit;
+using SimpleBase;
+using Tenray.ZoneTree.Comparers;
+using Tenray.ZoneTree.Serializers;
+
+public struct EmailHashedID : IComparable<EmailHashedID>, IEquatable<EmailHashedID>, ISerializer<EmailHashedID>, IRefComparer<EmailHashedID>
+{
+    // Store the full 256 bits (32 bytes) of the SHA3-256 hash
+    private readonly ulong _part1; // First 8 bytes
+    private readonly ulong _part2; // Second 8 bytes
+    private readonly ulong _part3; // Third 8 bytes
+    private readonly ulong _part4; // Fourth 8 bytes
+
+    public ulong Part1 => _part1;
+    public ulong Part2 => _part2;
+    public ulong Part3 => _part3;
+    public ulong Part4 => _part4;
+
+    // Define a static default instance
+    public static readonly EmailHashedID Empty = new EmailHashedID(new byte[32]);
+
+    // Property to check if this is a default/empty instance
+    public bool IsEmpty => _part1 == 0 && _part2 == 0 && _part3 == 0 && _part4 == 0;
+
+    // Constructor for database reconstruction
+    public EmailHashedID(ulong part1, ulong part2, ulong part3, ulong part4)
+    {
+        _part1 = part1;
+        _part2 = part2;
+        _part3 = part3;
+        _part4 = part4;
+    }
+
+    public EmailHashedID()
+    {
+        _part1 = 0;
+        _part2 = 0;
+        _part3 = 0;
+        _part4 = 0;
+    }
+    public EmailHashedID(byte[] hash)
+    {
+        if (hash == null || hash.Length != 32)
+            throw new ArgumentException("Hash must be exactly 32 bytes (SHA3-256).", nameof(hash));
+
+        _part1 = BitConverter.ToUInt64(hash, 0);
+        _part2 = BitConverter.ToUInt64(hash, 8);
+        _part3 = BitConverter.ToUInt64(hash, 16);
+        _part4 = BitConverter.ToUInt64(hash, 24);
+    }
+
+    public EmailHashedID(string MessageID, long EmailTime, string EmailSubject, string EmailFrom, string EmailTo)
+    {
+        using var sha3 = SHA3.Create();
+        var hash = sha3.ComputeHash(Encoding.UTF8.GetBytes(
+            MessageID + EmailTime + EmailSubject + EmailFrom + EmailTo));
+
+        _part1 = BitConverter.ToUInt64(hash, 0);
+        _part2 = BitConverter.ToUInt64(hash, 8);
+        _part3 = BitConverter.ToUInt64(hash, 16);
+        _part4 = BitConverter.ToUInt64(hash, 24);
+    }
+
+    public EmailHashedID(MimeMessage message)
+    {
+        using var sha3 = SHA3.Create();
+        var hash = sha3.ComputeHash(Encoding.UTF8.GetBytes(
+            message.MessageId +
+            message.Date.ToUnixTimeMilliseconds() +
+            message.Subject +
+            message.From.ToString() +
+            message.To.ToString()));
+
+        _part1 = BitConverter.ToUInt64(hash, 0);
+        _part2 = BitConverter.ToUInt64(hash, 8);
+        _part3 = BitConverter.ToUInt64(hash, 16);
+        _part4 = BitConverter.ToUInt64(hash, 24);
+    }
+
+    public byte[] GetBytes()
+    {
+        var bytes = new byte[32];
+        BitConverter.TryWriteBytes(bytes.AsSpan(0, 8), _part1);
+        BitConverter.TryWriteBytes(bytes.AsSpan(8, 8), _part2);
+        BitConverter.TryWriteBytes(bytes.AsSpan(16, 8), _part3);
+        BitConverter.TryWriteBytes(bytes.AsSpan(24, 8), _part4);
+        return bytes;
+    }
+
+    public string ToBase32String()
+    {
+        return Base32.ZBase32.Encode(GetBytes());
+    }
+
+    public static EmailHashedID FromBase32String(string base32)
+    {
+        var bytes = Base32.ZBase32.Decode(base32);
+        if (bytes.Length != 32)
+            throw new ArgumentException("Invalid base32 string length", nameof(base32));
+        return new EmailHashedID(bytes);
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is EmailHashedID other && Equals(other);
+    }
+
+    public bool Equals(EmailHashedID other)
+    {
+        return _part1 == other._part1 &&
+               _part2 == other._part2 &&
+               _part3 == other._part3 &&
+               _part4 == other._part4;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = (hash * 31) + _part1.GetHashCode();
+            hash = (hash * 31) + _part2.GetHashCode();
+            hash = (hash * 31) + _part3.GetHashCode();
+            hash = (hash * 31) + _part4.GetHashCode();
+            return hash;
+        }
+    }
+
+    public int CompareTo(EmailHashedID other)
+    {
+        int comparison = _part1.CompareTo(other._part1);
+        if (comparison != 0) return comparison;
+
+        comparison = _part2.CompareTo(other._part2);
+        if (comparison != 0) return comparison;
+
+        comparison = _part3.CompareTo(other._part3);
+        if (comparison != 0) return comparison;
+
+        return _part4.CompareTo(other._part4);
+    }
+
+    public override string ToString()
+    {
+        return ToBase32String();
+    }
+
+    public static bool TryParse(string input, out EmailHashedID result)
+    {
+        try
+        {
+            result = FromBase32String(input);
+            return true;
+        }
+        catch
+        {
+            result = default;
+            return false;
+        }
+    }
+
+    public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider provider)
+    {
+        var str = ToBase32String();
+        if (destination.Length < str.Length)
+        {
+            charsWritten = 0;
+            return false;
+        }
+        str.CopyTo(destination);
+        charsWritten = str.Length;
+        return true;
+    }
+
+    public EmailHashedID Deserialize(Memory<byte> bytes)
+    {
+        return new EmailHashedID(bytes.ToArray());
+    }
+
+    public Memory<byte> Serialize(in EmailHashedID entry)
+    {
+        return GetBytes();
+    }
+
+    public int Compare(in EmailHashedID x, in EmailHashedID y)
+    {
+        return x.CompareTo(y);
+    }
+}
+\EnhancedEmailContent.cs
+using ProtoBuf;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Tenray.ZoneTree.Serializers;
+
+[ProtoContract]
+public class EnhancedEmailContent : ISerializer<EnhancedEmailContent>
+{
+    [ProtoMember(1)]
+    public byte[] Subject { get; set; }
+
+    public string StrSubject
+    {
+        get => Subject is null || Subject.Length == 0
+            ? string.Empty
+            : Encoding.UTF8.GetString(Subject);
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                // Store an empty array instead of throwing an exception
+                Subject = Array.Empty<byte>();
+            }
+            else
+            {
+                Subject = Encoding.UTF8.GetBytes(value);
+            }
+        }
+    }
+
+    [ProtoMember(2)]
+    public byte[] From { get; set; }
+
+    public string StrFrom
+    {
+        get => From is null || From.Length == 0
+            ? string.Empty
+            : Encoding.UTF8.GetString(From);
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                From = Array.Empty<byte>();
+            }
+            else
+            {
+                From = Encoding.UTF8.GetBytes(value);
+            }
+        }
+    }
+
+    [ProtoMember(3)]
+    public byte[] To { get; set; }
+
+    public string StrTo
+    {
+        get => To is null || To.Length == 0
+            ? string.Empty
+            : Encoding.UTF8.GetString(To);
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                To = Array.Empty<byte>();
+            }
+            else
+            {
+                To = Encoding.UTF8.GetBytes(value);
+            }
+        }
+    }
+
+    [ProtoMember(4)]
+    public byte[] Cc { get; set; }
+
+    public string StrCc
+    {
+        get => Cc is null || Cc.Length == 0
+            ? string.Empty
+            : Encoding.UTF8.GetString(Cc);
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                Cc = Array.Empty<byte>();
+            }
+            else
+            {
+                Cc = Encoding.UTF8.GetBytes(value);
+            }
+        }
+    }
+
+    [ProtoMember(5)]
+    public byte[] Bcc { get; set; }
+
+    public string StrBcc
+    {
+        get => Bcc is null || Bcc.Length == 0
+            ? string.Empty
+            : Encoding.UTF8.GetString(Bcc);
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                Bcc = Array.Empty<byte>();
+            }
+            else
+            {
+                Bcc = Encoding.UTF8.GetBytes(value);
+            }
+        }
+    }
+
+    [ProtoMember(6)]
+    public DateTime Date { get; set; }
+
+    [ProtoMember(7)]
+    public byte[] TextContent { get; set; }
+
+    public string StrTextContent
+    {
+        get => TextContent is null || TextContent.Length == 0
+            ? string.Empty
+            : Encoding.UTF8.GetString(TextContent);
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                TextContent = Array.Empty<byte>();
+            }
+            else
+            {
+                TextContent = Encoding.UTF8.GetBytes(value);
+            }
+        }
+    }
+
+    [ProtoMember(8)]
+    public byte[] AttachmentContent { get; set; }
+
+    public string StrAttachmentContent
+    {
+        get => AttachmentContent is null || AttachmentContent.Length == 0
+            ? string.Empty
+            : Encoding.UTF8.GetString(AttachmentContent);
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                AttachmentContent = Array.Empty<byte>();
+            }
+            else
+            {
+                AttachmentContent = Encoding.UTF8.GetBytes(value);
+            }
+        }
+    }
+
+    [ProtoMember(9)]
+    public DateTime ProcessedTime { get; set; }
+
+    [ProtoMember(10)]
+    public int AttachmentCount { get; set; }
+    [ProtoMember(11)]
+    public byte[] RawEmailContent { get; set; }
+
+    public EnhancedEmailContent Deserialize(Memory<byte> bytes)
+    {
+        return ProtoBuf.Serializer.Deserialize<EnhancedEmailContent>(bytes.Span);
+
+    }
+
+    public Memory<byte> Serialize(in EnhancedEmailContent entry)
+    {
+        var memStream = new MemoryStream();
+        ProtoBuf.Serializer.Serialize(memStream, entry);
+        return memStream.ToArray();
+    }
+}
 \FolderContent.cs
 using ProtoBuf;
 using System;
@@ -1169,13 +2777,16 @@ namespace EmailDB.Format.Models;
 public class FolderContent : BlockContent
 {
     [ProtoMember(2000)]
-    public string FolderId { get; set; }
+    public long FolderId { get; set; }
 
     [ProtoMember(2001)]
-    public string Name { get; set; }
+    public long ParentFolderId { get; set; }
 
     [ProtoMember(2002)]
-    public List<ulong> EmailIds { get; set; } = new();
+    public string Name { get; set; }
+
+    [ProtoMember(2003)]
+    public List<EmailHashedID> EmailIds { get; set; } = new();
 }
 \FolderTreeContent.cs
 using ProtoBuf;
@@ -1190,10 +2801,17 @@ namespace EmailDB.Format.Models;
 public class FolderTreeContent : BlockContent
 {
     [ProtoMember(2500)]
-    public string RootFolderId { get; set; }
+    public long RootFolderId { get; set; }
 
     [ProtoMember(2501)]
     public Dictionary<string, string> FolderHierarchy { get; set; } = new();
+
+    [ProtoMember(2502)]
+    public Dictionary<string, long> FolderIDs { get; set; } = new();
+
+    [ProtoMember(2503)]
+    public Dictionary<long, long> FolderOffsets { get; set; } = new();
+
 }
 
 \HeaderContent.cs
@@ -1234,19 +2852,19 @@ namespace EmailDB.Format.Models;
 public class MetadataContent : BlockContent
 {
     [ProtoMember(3500)]
-    public Dictionary<string, long> FolderOffsets { get; set; } = new();
-
+    public long WALOffset { get; set; } = -1;
     [ProtoMember(3501)]
-    public List<long> SegmentOffsets { get; set; } = new();
+    public long FolderTreeOffset { get; set; } = -1;
 
     [ProtoMember(3502)]
-    public List<long> OutdatedOffsets { get; set; } = new();
+    public Dictionary<string, long> SegmentOffsets { get; set; } = new();
 
     [ProtoMember(3503)]
-    public long NextWALOffset { get; set; } = -1;
+    public List<long> OutdatedOffsets { get; set; } = new();
 
-    [ProtoMember(3504)]
-    public Dictionary<string, long> WALOffsets { get; set; } = new();
+    [ProtoMember(3599)]
+    public byte[] UpdateBuffer { get; set; } = new byte[10 * 1024 * 1024]; // 10MB buffer for updates
+    
 }
 
 \SegmentContent.cs
@@ -1262,7 +2880,7 @@ namespace EmailDB.Format.Models;
 public class SegmentContent : BlockContent
 {
     [ProtoMember(4000)]
-    public ulong SegmentId { get; set; }
+    public long SegmentId { get; set; }
 
     [ProtoMember(4001)]
     public byte[] SegmentData { get; set; }
@@ -1290,7 +2908,7 @@ public class SegmentContent : BlockContent
     public Dictionary<string, string> Metadata { get; set; } = new();  // Optional metadata for the segment
 
     // Computed property to help with segment file organization
-    public ulong SegmentFileGroup => SegmentId / 1000;
+    public long SegmentFileGroup => SegmentId / 1000;
 }
 
 \WALContent.cs
@@ -1334,9 +2952,1218 @@ public class WALEntry
     [ProtoMember(5)]
     public long SegmentId { get; set; }
 }
-\EmailDBWriteAheadLog.cs
+\EmailDBHashedSearchEngine.cs
+//using System;
+//using System.Collections.Generic;
+//using System.Linq;
+//using System.Text;
+//using System.Threading.Tasks;
+//using Tenray.ZoneTree.Comparers;
+//using ZoneTree.FullTextSearch.Hashing;
+//using ZoneTree.FullTextSearch.Tokenizer;
+
+//namespace EmailDB.Format.ZoneTree;
+
+//public class EmailDBHashedSearchEngine<TRecord> : IDisposable
+//    where TRecord : unmanaged
+//{
+//    /// <summary>
+//    /// Gets the index used by the search engine to store and retrieve records.
+//    /// </summary>
+//    public readonly EmailDBIndexOfRecord<TRecord, ulong> Index;
+
+//    /// <summary>
+//    /// The tokenizer used to split text into word slices for hashing.
+//    /// </summary>
+//    readonly IWordTokenizer WordTokenizer;
+
+//    /// <summary>
+//    /// The hash code generator used to generate hash codes for tokens.
+//    /// </summary>
+//    readonly IHashCodeGenerator HashCodeGenerator;
+
+
+
+//    /// <summary>
+//    /// Initializes a new instance of the <see cref="HashedSearchEngine{TRecord}"/> class.
+//    /// </summary>
+//    /// <param name="dataPath">The path to the data storage, defaulting to "data".</param>
+//    /// <param name="useSecondaryIndex">Indicates whether a secondary index should be used to perform faster deletion.</param>
+//    /// <param name="recordComparer">The comparer used to manage references to records.</param>
+//    /// <param name="wordTokenizer">The tokenizer used to split words. If null, a default tokenizer is used.</param>
+//    /// <param name="hashCodeGenerator">The hash code generator used to generate hash codes for the tokens. If null, a default generator is used.</param>
+//    /// <param name="blockCacheLifeTimeInMilliseconds">Defines the life time of cached blocks. Default is 1 minute.</param>
+//    public EmailDBHashedSearchEngine(
+//        StorageManager storageManager,
+//        IWordTokenizer wordTokenizer = null,
+//        IRefComparer<TRecord> recordComparer = null,
+//        IHashCodeGenerator hashCodeGenerator = null,
+//        long blockCacheLifeTimeInMilliseconds = 60_000)
+//    {
+//        HashCodeGenerator = hashCodeGenerator ?? new DefaultHashCodeGenerator();
+//        Index = new(
+//            storageManager,
+//            recordComparer,
+//            new UInt64ComparerAscending(),            
+//            blockCacheLifeTimeInMilliseconds: blockCacheLifeTimeInMilliseconds);
+//        WordTokenizer =
+//            wordTokenizer ??
+//            new WordTokenizer(hashCodeGenerator: HashCodeGenerator);
+//    }
+
+//    bool isDisposed;
+
+//    public void Dispose()
+//    {
+//        if (isDisposed) return;
+//        isDisposed = true;
+//        Index.IsReadOnly = true;
+//        Index.WaitForBackgroundThreads();
+//        Index.Dispose();
+//    }
+//}
+
+\EmailDBIndexOfRecord.cs
+//using global::ZoneTree.FullTextSearch.Model;
+//using global::ZoneTree.FullTextSearch.Search;
+//using global::ZoneTree.FullTextSearch;
+//using System.Threading;
+//using Tenray.ZoneTree;
+//using Tenray.ZoneTree.Comparers;
+//using Tenray.ZoneTree.PresetTypes;
+//using Tenray.ZoneTree.Serializers;
+//using ZoneTree.FullTextSearch.Model;
+//using ZoneTree.FullTextSearch.QueryLanguage;
+//using ZoneTree.FullTextSearch.Search;
+//using Tenray.ZoneTree.Options;
+
+//namespace EmailDB.Format.ZoneTree;
+
+
+///// <summary>
+///// Represents an index structure for managing records associated with hashed tokens,
+///// with support for an optional secondary index and token-based searching.
+///// </summary>
+///// <typeparam name="TRecord">The type of the records managed by the index. Must be an unmanaged type.</typeparam>
+///// <typeparam name="TToken">The type of the tokens used for indexing. Must be an unmanaged type.</typeparam>
+//public sealed class EmailDBIndexOfRecord<TRecord, TToken>
+//    : IDisposable
+//    where TRecord : unmanaged
+//    where TToken : unmanaged
+//{
+
+//    bool isDropped;
+
+//    bool isDisposed;
+
+//    readonly SearchOnIndexOfTokenRecordPreviousToken<TRecord, TToken>
+//        searchAlgorithm;
+
+//    readonly AdvancedSearchOnIndexOfTokenRecordPreviousToken<TRecord, TToken>
+//        advancedSearchAlgorithm;
+
+//    /// <summary>
+//    /// Gets the primary zone tree used to store and retrieve records by token and previous token.
+//    /// </summary>
+//    public readonly IZoneTree<
+//        CompositeKeyOfTokenRecordPrevious<TRecord, TToken>,
+//        byte> ZoneTree1;
+
+//    /// <summary>
+//    /// Gets the maintainer for managing the primary zone tree, including background tasks.
+//    /// </summary>
+//    public readonly IMaintainer Maintainer1;
+
+
+//    /// <summary>
+//    /// Gets the ref comparer of record.
+//    /// </summary>
+//    public IRefComparer<TRecord> RecordComparer { get; }
+
+//    /// <summary>
+//    /// Gets the ref comparer of token.
+//    /// </summary>
+//    public IRefComparer<TToken> TokenComparer { get; }
+
+//    /// <summary>
+//    /// Gets or sets a value indicating whether the index is read-only.
+//    /// When set to true, both the primary and secondary zone trees (if applicable) become read-only.
+//    /// </summary>
+//    public bool IsReadOnly
+//    {
+//        get => ZoneTree1.IsReadOnly;
+//        set
+//        {
+//            ZoneTree1.IsReadOnly = value;
+//        }
+//    }
+
+//    /// <summary>
+//    /// Returns true if the index is dropped, otherwise false.
+//    /// </summary>
+//    public bool IsIndexDropped { get => isDropped; }
+
+//    /// <summary>
+//    /// Initializes a new instance of the <see cref="IndexOfTokenRecordPreviousToken{TRecord, TToken}"/> class,
+//    /// with the option to configure primary and secondary zone trees.
+//    /// </summary>
+//    /// <param name="recordComparer">The comparer of record.</param>
+//    /// <param name="tokenComparer">The comparer of token.</param>      
+//    /// <param name="configure1">Optional configuration action for the primary zone tree.</param>
+//    /// <param name="blockCacheLifeTimeInMilliseconds">Defines the life time of cached blocks. Default is 1 minute.</param>
+//    public EmailDBIndexOfRecord(StorageManager storageManager,
+//        IRefComparer<TRecord> recordComparer = null,
+//        IRefComparer<TToken> tokenComparer = null,
+//        Action<EmailDBZoneTreeFactory<
+//                CompositeKeyOfTokenRecordPrevious<TRecord, TToken>,
+//                byte>> configure1 = null,
+//        long blockCacheLifeTimeInMilliseconds = 60_000)
+//    {        
+
+//        if (recordComparer == null)
+//            recordComparer = ComponentsForKnownTypes.GetComparer<TRecord>();
+//        if (tokenComparer == null)
+//            tokenComparer = ComponentsForKnownTypes.GetComparer<TToken>();
+//        var factory1 = new EmailDBZoneTreeFactory<CompositeKeyOfTokenRecordPrevious<TRecord, TToken>, byte>(storageManager, true, CompressionMethod.LZ4)
+//            .SetIsDeletedDelegate(
+//                (in CompositeKeyOfTokenRecordPrevious<TRecord, TToken> key, in byte value) => value == 1)
+//            .SetMarkValueDeletedDelegate((ref byte x) => x = 1)
+//            .SetKeySerializer(new StructSerializer<CompositeKeyOfTokenRecordPrevious<TRecord, TToken>>())
+//            .SetComparer(
+//                new CompositeKeyOfTokenRecordPreviousComparer<TRecord, TToken>(
+//                    recordComparer,
+//                    tokenComparer));
+
+//        configure1?.Invoke(factory1);
+
+//        ZoneTree1 = factory1.OpenOrCreate();
+//        Maintainer1 = ZoneTree1.CreateMaintainer();
+//        Maintainer1.InactiveBlockCacheCleanupInterval = TimeSpan.FromSeconds(30);
+//        Maintainer1.BlockCacheLifeTime =
+//            TimeSpan.FromMilliseconds(blockCacheLifeTimeInMilliseconds);
+//        Maintainer1.EnableJobForCleaningInactiveCaches = true;
+//        RecordComparer = recordComparer;
+//        TokenComparer = tokenComparer;
+//        //searchAlgorithm = new(this.ZoneTree1);
+//        //advancedSearchAlgorithm = new(this);
+//    }
+
+//    /// <summary>
+//    /// Throws an exception if the index has been dropped, preventing further operations on a dropped index.
+//    /// </summary>
+//    public void ThrowIfIndexIsDropped()
+//    {
+//        if (isDropped) throw new Exception($"{nameof(
+//            EmailDBIndexOfRecord<TRecord, TToken>)} is dropped.");
+//    }
+
+//    /// <summary>
+//    /// Evicts data from memory to disk in both primary and secondary zone trees.
+//    /// </summary>
+//    public void EvictToDisk()
+//    {
+//        ThrowIfIndexIsDropped();
+//        Maintainer1.EvictToDisk();
+//    }
+
+//    /// <summary>
+//    /// Attempts to cancel any background threads associated with maintenance tasks for both zone trees.
+//    /// </summary>
+//    public void TryCancelBackgroundThreads()
+//    {
+//        ThrowIfIndexIsDropped();
+//        Maintainer1.TryCancelBackgroundThreads();
+//    }
+
+//    /// <summary>
+//    /// Waits for all background threads associated with maintenance tasks to complete for both zone trees.
+//    /// </summary>
+//    public void WaitForBackgroundThreads()
+//    {
+//        ThrowIfIndexIsDropped();
+//        Maintainer1.WaitForBackgroundThreads();
+//    }
+
+//    /// <summary>
+//    /// Drops the index by canceling and waiting for background threads, and then destroying the zone trees.
+//    /// </summary>
+//    public void Drop()
+//    {
+//        ThrowIfIndexIsDropped();
+//        TryCancelBackgroundThreads();
+//        WaitForBackgroundThreads();
+//        isDropped = true;
+//        IsReadOnly = true;
+//        ZoneTree1.Maintenance.Drop();
+//        ZoneTree1.Dispose();
+//    }
+
+//    /// <summary>
+//    /// Upserts a record in the primary zone tree, and optionally in the secondary zone tree if enabled.
+//    /// </summary>
+//    /// <param name="token">The token associated with the record.</param>
+//    /// <param name="record">The record to be upserted.</param>
+//    /// <param name="previousToken">The token that precedes the current token in the record.</param>
+//    public void UpsertRecord(TToken token, TRecord record, TToken previousToken)
+//    {
+//        ThrowIfIndexIsDropped();
+//        ZoneTree1.Upsert(new CompositeKeyOfTokenRecordPrevious<TRecord, TToken>()
+//        {
+//            Token = token,
+//            Record = record,
+//            PreviousToken = previousToken
+//        }, 0);
+//    }
+
+//    /// <summary>
+//    /// Deletes a record from the primary zone tree, and optionally from the secondary zone tree if a secondary index is enabled.
+//    /// </summary>
+//    /// <param name="token">The token associated with the record to delete.</param>
+//    /// <param name="record">The record to be deleted.</param>
+//    /// <param name="previousToken">The token that precedes the current token in the record.</param>
+//    public void DeleteRecord(TToken token, TRecord record, TToken previousToken)
+//    {
+//        ThrowIfIndexIsDropped();
+//        ZoneTree1.ForceDelete(new CompositeKeyOfTokenRecordPrevious<TRecord, TToken>()
+//        {
+//            Token = token,
+//            Record = record,
+//            PreviousToken = previousToken
+//        });
+
+//    }
+
+//    /// <summary>
+//    /// Deletes a record from the index without using the secondary index.
+//    /// </summary>
+//    /// <param name="record">The record to delete.</param>
+//    /// <returns>The number of entries deleted.</returns>
+//    long DeleteRecordWithoutInvertedIndex(TRecord record)
+//    {
+//        using var iterator1 = ZoneTree1.CreateIterator(
+//            IteratorType.NoRefresh,
+//            contributeToTheBlockCache: false);
+//        var deletedEntries = 0L;
+//        var recordComparer = RecordComparer;
+//        while (iterator1.Next())
+//        {
+//            var key = iterator1.CurrentKey;
+//            if (recordComparer.AreNotEqual(key.Record, record)) continue;
+//            ZoneTree1.ForceDelete(key);
+//            ++deletedEntries;
+//        }
+//        return deletedEntries;
+//    }
+
+//    /// <summary>
+//    /// Deletes a record from the index, including from the secondary index if enabled.
+//    /// </summary>
+//    /// <param name="record">The record to delete.</param>
+//    /// <returns>The number of entries deleted.</returns>
+//    public long DeleteRecord(TRecord record)
+//    {
+//        ThrowIfIndexIsDropped();
+//        return DeleteRecordWithoutInvertedIndex(record);     
+//    }
+
+//    /// <summary>
+//    /// Searches the index for records that match the specified tokens, with optional support for facets, token order respect, and pagination.
+//    /// </summary>
+//    /// <param name="tokens">
+//    /// A read-only span of tokens that the records must contain. This parameter is mandatory unless facets are provided.
+//    /// The tokens are logically grouped using "AND", meaning all tokens must be present in the matching records.
+//    /// If both the tokens span and the facets span are empty, the result will be an empty array, as searching without tokens and facets is not supported.
+//    /// Tokens can be empty if facets are provided; in this case, the search will be based solely on the facets.
+//    /// To retrieve records without specific search tokens or facets, consider fetching them from the actual record source instead of using the search index.
+//    /// </param>
+//    /// <param name="firstLookAt">
+//    /// An optional token that the search will prioritize when searching. 
+//    /// If not specified, the first token in the tokens span is used.
+//    /// </param>
+//    /// <param name="respectTokenOrder">
+//    /// A boolean indicating whether the search should respect the order of tokens in the record.
+//    /// If true, the records must contain the tokens in the specified order.
+//    /// </param>
+//    /// <param name="facets">
+//    /// An optional read-only span of tokens that can be used to filter the search results.
+//    /// If any facets are provided, records must contain at least one of these facet tokens to be included in the results.
+//    /// If the span is empty or not provided, no facet filtering is applied, and all matching records are returned regardless of facet values.
+//    /// </param>
+//    /// <param name="skip">
+//    /// The number of matching records to skip in the result set, useful for pagination.
+//    /// Defaults to 0.
+//    /// </param>
+//    /// <param name="limit">
+//    /// The maximum number of records to return, useful for limiting the result set size.
+//    /// Defaults to 0, which indicates no limit.
+//    /// </param>
+//    /// <param name="cancellationToken">
+//    /// A token to monitor for cancellation requests. This allows the search operation to be canceled if necessary.
+//    /// </param>
+//    /// <returns>
+//    /// An array of records that match the specified tokens and facets, respecting the token order if specified.
+//    /// The array may be empty if no matching records are found.
+//    /// </returns>
+//    public TRecord[] SimpleSearch(
+//        ReadOnlySpan<TToken> tokens,
+//        TToken? firstLookAt = null,
+//        bool respectTokenOrder = true,
+//        ReadOnlySpan<TToken> facets = default,
+//        int skip = 0,
+//        int limit = 0,
+//        CancellationToken cancellationToken = default)
+//    {
+//        return searchAlgorithm
+//            .Search(tokens, firstLookAt, respectTokenOrder, facets, skip, limit, cancellationToken);
+//    }
+
+//    /// <summary>
+//    /// Performs a search based on the specified query and returns the matching records.
+//    /// </summary>
+//    /// <param name="query">The search query to execute.</param>
+//    /// <param name="cancellationToken">
+//    /// A token to monitor for cancellation requests. This allows the search operation to be canceled if necessary.
+//    /// </param>
+//    /// <returns>An array of records that match the search criteria.</returns>
+//    public TRecord[] Search(
+//        SearchQuery<TToken> query,
+//        CancellationToken cancellationToken = default)
+//    {
+//        return advancedSearchAlgorithm.Search(query, cancellationToken);
+//    }
+
+//    /// <summary>
+//    /// Disposes the resources used by the index.
+//    /// </summary>
+//    public void Dispose()
+//    {
+//        if (isDisposed) return;
+//        isDisposed = true;
+//        Maintainer1.WaitForBackgroundThreads();
+//        Maintainer1.Dispose();
+//        ZoneTree1.Dispose();
+//    }
+//}
+
+\FileStreamProvider.cs
 using EmailDB.Format.Models;
-using EmailDB.Storage;
+using EmailDB.Format;
+using Tenray.ZoneTree.AbstractFileStream;
+
+public class EmailDBFileStreamProvider : IFileStreamProvider
+{
+    private readonly SegmentManager segmentManager;
+    private readonly Dictionary<string, EmailDBFileStream> openStreams;
+    private readonly object lockObj = new();
+
+    public EmailDBFileStreamProvider(SegmentManager segmentManager)
+    {
+        this.segmentManager = segmentManager;
+        this.openStreams = new Dictionary<string, EmailDBFileStream>();
+    }
+
+    public IFileStream CreateFileStream(string path, FileMode mode, FileAccess access,
+        FileShare share, int bufferSize = 4096, FileOptions options = FileOptions.None)
+    {
+        lock (lockObj)
+        {
+            if (openStreams.TryGetValue(path, out var existingStream))
+            {
+                if (existingStream.CanBeReused(access))
+                    return existingStream;
+
+                existingStream.Dispose();
+                openStreams.Remove(path);
+            }
+
+            var stream = new EmailDBFileStream(segmentManager, path, mode, access);
+            openStreams[path] = stream;
+            return stream;
+        }
+    }
+
+    public void DeleteFile(string path)
+    {
+        lock (lockObj)
+        {
+            if (openStreams.TryGetValue(path, out var stream))
+            {
+                stream.Dispose();
+                openStreams.Remove(path);
+            }
+
+            segmentManager.DeleteSegment(path); 
+           
+        }
+    }
+
+    public bool FileExists(string path)
+    {
+        var metadata = segmentManager.GetMetadata();
+        return metadata.SegmentOffsets.ContainsKey(path);
+    }
+
+    // Simple IFileStreamProvider implementation methods
+    public string CombinePaths(string path1, string path2) => Path.Combine(path1, path2);
+    public void CreateDirectory(string path) { } // No-op as we use virtual paths
+    public bool DirectoryExists(string path) => true; // Virtual paths always exist
+    public void DeleteDirectory(string path, bool recursive)
+    {
+        var metadata = segmentManager.GetMetadata();
+        var pathsToDelete = metadata.SegmentOffsets.Keys
+            .Where(p => p.StartsWith(path))
+            .ToList();
+
+        foreach (var p in pathsToDelete)
+        {
+            DeleteFile(p);
+        }
+    }
+    public IReadOnlyList<string> GetDirectories(string path) => new List<string>();
+    public DurableFileWriter GetDurableFileWriter() => new DurableFileWriter(this);
+
+    public string ReadAllText(string path)
+    {
+        throw new NotImplementedException();
+    }
+
+    public byte[] ReadAllBytes(string path)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Replace(string sourceFileName, string destinationFileName, string destinationBackupFileName)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class EmailDBFileStream : IFileStream
+{
+    private readonly SegmentManager segmentManager;
+    private readonly string path;
+    private readonly FileAccess access;
+    private readonly List<SegmentContent> segments;
+    private long position;
+    private bool isDisposed;
+    private readonly object writeLock = new();
+
+    public EmailDBFileStream(SegmentManager segmentManager, string path,
+        FileMode mode, FileAccess access)
+    {
+        this.segmentManager = segmentManager;
+        this.path = path;
+        this.access = access;
+        this.segments = new List<SegmentContent>();
+
+        InitializeStream(mode);
+    }
+
+    private void InitializeStream(FileMode mode)
+    {
+        var metadata = segmentManager.GetMetadata();
+
+        // Load existing segment if it exists
+        if (metadata.SegmentOffsets.TryGetValue(path, out var offset))
+        {
+            var block = segmentManager.ReadBlock(offset);
+            if (block?.Content is SegmentContent segment)
+            {
+                segments.Add(segment);
+            }
+        }
+
+        switch (mode)
+        {
+            case FileMode.Create:
+            case FileMode.Truncate:
+                segments.Clear();
+                break;
+            case FileMode.CreateNew:
+                if (segments.Any())
+                    throw new IOException("File already exists");
+                break;
+            case FileMode.Open:
+                if (!segments.Any())
+                    throw new FileNotFoundException();
+                break;
+            case FileMode.Append:
+                position = segments.Sum(s => s.ContentLength);
+                break;
+        }
+    }
+
+    public void Write(byte[] buffer, int offset, int count)
+    {
+        if (!CanWrite)
+            throw new NotSupportedException("Stream does not support writing");
+
+        if (isDisposed)
+            throw new ObjectDisposedException(nameof(EmailDBFileStream));
+
+        lock (writeLock)
+        {
+            var segment = new SegmentContent
+            {
+                SegmentData = new byte[count],
+                FileOffset = position,
+                ContentLength = count,
+                SegmentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Version = 1
+            };
+
+            Buffer.BlockCopy(buffer, offset, segment.SegmentData, 0, count);
+
+            // Write segment and update metadata
+            var segmentOffset = segmentManager.WriteSegment(segment);
+            var metadata = segmentManager.GetMetadata();
+
+            // If there was a previous segment, mark it as outdated
+            if (metadata.SegmentOffsets.TryGetValue(path, out var oldOffset))
+            {
+                metadata.OutdatedOffsets.Add(oldOffset);
+            }
+
+            metadata.SegmentOffsets[path] = segmentOffset;
+            segmentManager.UpdateMetadata(metadata);
+
+            segments.Clear();
+            segments.Add(segment);
+            position += count;
+        }
+    }
+
+    public int Read(byte[] buffer, int offset, int count)
+    {
+        if (!CanRead)
+            throw new NotSupportedException("Stream does not support reading");
+
+        if (isDisposed)
+            throw new ObjectDisposedException(nameof(EmailDBFileStream));
+
+        if (!segments.Any() || position >= segments[0].ContentLength)
+            return 0;
+
+        var segment = segments[0];
+        var available = segment.ContentLength - position;
+        var toRead = Math.Min(count, available);
+
+        Buffer.BlockCopy(segment.SegmentData, (int)position, buffer, offset, (int)toRead);
+        position += toRead;
+        return (int)toRead;
+    }
+
+    // Basic IFileStream implementation
+    public bool CanRead => access.HasFlag(FileAccess.Read);
+    public bool CanWrite => access.HasFlag(FileAccess.Write);
+    public bool CanSeek => true;
+    public long Length => segments.Sum(s => s.ContentLength);
+    public long Position
+    {
+        get => position;
+        set
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException(nameof(value));
+            position = value;
+        }
+    }
+
+    public string FilePath => throw new NotImplementedException();
+
+    public bool CanTimeout => false;
+
+    public int ReadTimeout
+    {
+        get => throw new InvalidOperationException("Timeouts are not supported");
+        set => throw new InvalidOperationException("Timeouts are not supported");
+    }
+
+    public int WriteTimeout
+    {
+        get => throw new InvalidOperationException("Timeouts are not supported");
+        set => throw new InvalidOperationException("Timeouts are not supported");
+    }
+
+    public bool CanBeReused(FileAccess requiredAccess) =>
+        !isDisposed && (access == requiredAccess || access == FileAccess.ReadWrite);
+
+    public void Dispose()
+    {
+        if (!isDisposed)
+        {
+            isDisposed = true;
+            segments.Clear();
+        }
+    }
+
+    public void Flush() { }
+    public long Seek(long offset, SeekOrigin origin)
+    {
+        switch (origin)
+        {
+            case SeekOrigin.Begin:
+                Position = offset;
+                break;
+            case SeekOrigin.Current:
+                Position += offset;
+                break;
+            case SeekOrigin.End:
+                Position = Length + offset;
+                break;
+        }
+        return Position;
+    }
+    public void SetLength(long value) { }
+
+    public IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+    {
+        var task = ReadAsync(buffer, offset, count);
+        if (callback != null)
+        {
+            task.ContinueWith(t => callback(t), TaskScheduler.Default);
+        }
+        return task;
+    }
+
+    public IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+    {
+        var task = WriteAsync(buffer, offset, count);
+        if (callback != null)
+        {
+            task.ContinueWith(t => callback(t), TaskScheduler.Default);
+        }
+        return task;
+    }
+
+    public void Close()
+    {
+        Dispose();
+    }
+
+
+    public void CopyTo(Stream destination, int bufferSize)
+    {
+        if (destination == null)
+            throw new ArgumentNullException(nameof(destination));
+        if (bufferSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(bufferSize));
+
+        var buffer = new byte[bufferSize];
+        int read;
+        while ((read = Read(buffer, 0, buffer.Length)) != 0)
+        {
+            destination.Write(buffer, 0, read);
+        }
+    }
+
+    public void CopyTo(Stream destination)
+    {
+        CopyTo(destination, 81920); // Default buffer size used by Stream.CopyTo
+    }
+
+    public Task CopyToAsync(Stream destination)
+    {
+        return CopyToAsync(destination, 81920);
+    }
+
+    public Task CopyToAsync(Stream destination, int bufferSize)
+    {
+        return CopyToAsync(destination, bufferSize, CancellationToken.None);
+    }
+
+    public Task CopyToAsync(Stream destination, CancellationToken cancellationToken)
+    {
+        return CopyToAsync(destination, 81920, cancellationToken);
+    }
+
+    public async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
+    {
+        if (destination == null)
+            throw new ArgumentNullException(nameof(destination));
+        if (bufferSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(bufferSize));
+
+        var buffer = new byte[bufferSize];
+        int read;
+        while ((read = await ReadAsync(buffer, 0, buffer.Length, cancellationToken)) != 0)
+        {
+            await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+        }
+    }
+
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!isDisposed)
+        {
+            isDisposed = true;
+            segments.Clear();
+            GC.SuppressFinalize(this);
+        }
+        await ValueTask.CompletedTask;
+    }
+
+    public int EndRead(IAsyncResult asyncResult)
+    {
+        if (asyncResult is Task<int> task)
+            return task.GetAwaiter().GetResult();
+        throw new ArgumentException("Invalid IAsyncResult", nameof(asyncResult));
+    }
+
+    public void EndWrite(IAsyncResult asyncResult)
+    {
+        if (asyncResult is Task task)
+            task.GetAwaiter().GetResult();
+        else
+            throw new ArgumentException("Invalid IAsyncResult", nameof(asyncResult));
+    }
+
+    public void Flush(bool flushToDisk)
+    {
+        // No-op as writes are already handled atomically
+    }
+
+    public Task FlushAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task FlushAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public int Read(Span<byte> buffer)
+    {
+        if (!CanRead)
+            throw new NotSupportedException("Stream does not support reading");
+
+        if (isDisposed)
+            throw new ObjectDisposedException(nameof(EmailDBFileStream));
+
+        if (!segments.Any() || position >= segments[0].ContentLength)
+            return 0;
+
+        var segment = segments[0];
+        var available = segment.ContentLength - position;
+        var toRead = Math.Min(buffer.Length, available);
+
+        segment.SegmentData.AsSpan((int)position, (int)toRead).CopyTo(buffer);
+        position += toRead;
+        return (int)toRead;
+    }
+
+    public int ReadFaster(byte[] buffer, int offset, int count)
+    {
+        return Read(buffer, offset, count); // Use standard Read implementation
+    }
+
+    public ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return new ValueTask<int>(Read(buffer.Span));
+        }
+        catch (Exception ex)
+        {
+            return new ValueTask<int>(Task.FromException<int>(ex));
+        }
+    }
+
+    public Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Task.FromResult(Read(buffer, offset, count));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromException<int>(ex);
+        }
+    }
+
+    public Task<int> ReadAsync(byte[] buffer, int offset, int count)
+    {
+        return ReadAsync(buffer, offset, count, CancellationToken.None);
+    }
+
+    public int ReadByte()
+    {
+        var buffer = new byte[1];
+        return Read(buffer, 0, 1) == 1 ? buffer[0] : -1;
+    }
+    public void Write(ReadOnlySpan<byte> buffer)
+    {
+        if (!CanWrite)
+            throw new NotSupportedException("Stream does not support writing");
+
+        if (isDisposed)
+            throw new ObjectDisposedException(nameof(EmailDBFileStream));
+
+        var array = buffer.ToArray();
+        Write(array, 0, array.Length);
+    }
+
+    public Task WriteAsync(byte[] buffer, int offset, int count)
+    {
+        return WriteAsync(buffer, offset, count, CancellationToken.None);
+    }
+
+    public Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        try
+        {
+            Write(buffer, offset, count);
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            return Task.FromException(ex);
+        }
+    }
+
+    public ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            Write(buffer.Span);
+            return ValueTask.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            return new ValueTask(Task.FromException(ex));
+        }
+    }
+
+    public void WriteByte(byte value)
+    {
+        Write(new[] { value }, 0, 1);
+    }
+
+    public Stream ToStream()
+    {
+        throw new NotImplementedException();
+    }
+}
+\RandomAccessDevice.cs
+using EmailDB.Format.Models;
+using Tenray.ZoneTree.Segments.Block;
+using Tenray.ZoneTree.Segments.RandomAccess;
+
+namespace EmailDB.Format.ZoneTree;
+
+public sealed class RandomAccessDevice : IRandomAccessDevice
+{
+    private readonly SegmentManager segmentManager;
+    private readonly long segmentId;
+    private readonly string category;
+    private long currentPosition;
+    private int deviceLength;
+    private volatile bool isDisposed;
+    private volatile bool isSealed;
+    private SegmentContent currentSegment;
+
+    public bool Writable { get; private set; }
+    public long Length => deviceLength;
+    public int ReadBufferCount => 0;
+    public string FilePath { get; }
+    public long SegmentId => segmentId;
+
+    public RandomAccessDevice(
+        SegmentManager segmentManager,       
+        long segmentId,
+        string category,
+        bool writable)
+    {
+        this.segmentManager = segmentManager;
+        
+        this.segmentId = segmentId;
+        this.category = category;
+        Writable = writable;
+        FilePath = $"{segmentId}_{category}";
+
+        if (!writable)
+        {
+            // For read-only device, load existing segment content
+            if(segmentManager.TryGetSegment(FilePath, out  SegmentContent segment))
+            {
+                currentSegment = segment;
+                deviceLength = segment.ContentLength;            }
+            
+            if (segment != null)
+            {
+                currentSegment = segment;
+                deviceLength = segment.ContentLength;
+            }
+        }
+        else
+        {
+            // For writable device, create new segment
+            currentSegment = new SegmentContent
+            {
+                SegmentId = segmentId,
+                SegmentData = new byte[0],
+                ContentLength = 0,
+                SegmentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Version = 1
+            };
+        }
+    }
+
+    public long AppendBytesReturnPosition(Memory<byte> bytes)
+    {
+        if (!Writable || isSealed || isDisposed)
+            throw new InvalidOperationException("Device is not writable, sealed or disposed");
+
+        var position = currentPosition;
+
+        // Create new byte array with appended data
+        var newData = new byte[currentSegment.SegmentData.Length + bytes.Length];
+        if (currentSegment.SegmentData.Length > 0)
+            currentSegment.SegmentData.CopyTo(newData, 0);
+        bytes.CopyTo(newData.AsMemory(currentSegment.SegmentData.Length));
+
+        // Update segment
+        currentSegment.SegmentData = newData;
+        currentSegment.ContentLength += bytes.Length;
+        deviceLength = currentSegment.ContentLength;
+        currentPosition += bytes.Length;
+
+        return position;
+    }
+
+    public Memory<byte> GetBytes(long offset, int length, SingleBlockPin blockPin = null)
+    {
+        if (offset >= deviceLength)
+            return Memory<byte>.Empty;
+
+        var available = deviceLength - offset;
+        var bytesToRead = Math.Min(length, available);
+
+        return new Memory<byte>(currentSegment.SegmentData, (int)offset, (int)bytesToRead);
+    }
+
+    public void ClearContent()
+    {
+        if (!Writable || isSealed || isDisposed)
+            throw new InvalidOperationException("Device is not writable, sealed or disposed");
+
+        currentSegment.SegmentData = new byte[0];
+        currentSegment.ContentLength = 0;
+        deviceLength = 0;
+        currentPosition = 0;
+    }
+
+    public void Close()
+    {
+        if (!isDisposed)
+        {
+            if (Writable && !isSealed)
+            {
+                // Write final segment data before closing
+                WriteSegment();
+            }
+            isDisposed = true;
+        }
+    }
+
+    private void WriteSegment()
+    {
+        segmentManager.WriteSegment(currentSegment);     
+    }
+
+    public void Delete()
+    {
+        if (Writable)
+        {
+            segmentManager.DeleteSegment(FilePath);
+        }
+        isDisposed = true;
+    }
+
+    public void Dispose()
+    {
+        Close();
+    }
+
+    public void SealDevice()
+    {
+        if (Writable && !isSealed)
+        {
+            WriteSegment();
+            isSealed = true;
+            Writable = false;
+        }
+    }
+
+    public int ReleaseInactiveCachedBuffers(long ticks)
+    {
+        // No caching implemented
+        return 0;
+    }
+}
+\RandomAccessDeviceManager.cs
+using Tenray.ZoneTree.AbstractFileStream;
+using Tenray.ZoneTree.Core;
+using Tenray.ZoneTree.Options;
+using Tenray.ZoneTree.Segments.RandomAccess;
+
+namespace EmailDB.Format.ZoneTree;
+
+public class RandomAccessDeviceManager : IRandomAccessDeviceManager
+{
+    private readonly SegmentManager storageManager;
+    private readonly string name;
+    private readonly Dictionary<string, IRandomAccessDevice> devices;
+
+    public RandomAccessDeviceManager(SegmentManager storageManager, string name)
+    {
+        this.storageManager = storageManager;
+        this.name = name;
+        this.devices = new Dictionary<string, IRandomAccessDevice>();
+    }
+
+    public int DeviceCount => devices.Count;
+    public int ReadOnlyDeviceCount => devices.Values.Count(d => !d.Writable);
+    public int WritableDeviceCount => devices.Values.Count(d => d.Writable);
+    public IFileStreamProvider FileStreamProvider => new EmailDBFileStreamProvider(storageManager);
+
+    public IRandomAccessDevice CreateWritableDevice(
+        long segmentId,
+        string category,
+        bool isCompressed,
+        int compressionBlockSize,
+        bool deleteIfExists,
+        bool backupIfDelete,
+        CompressionMethod compressionMethod,
+        int compressionLevel)
+    {
+        var key = GetDeviceKey(segmentId, category, isCompressed);
+
+        if (devices.TryGetValue(key, out var existing))
+        {
+            if (deleteIfExists)
+            {
+                if (backupIfDelete)
+                {
+                    // TODO: Implement backup
+                }
+                existing.Delete();
+                devices.Remove(key);
+            }
+            else
+            {
+                return existing;
+            }
+        }
+
+        var device = new RandomAccessDevice(storageManager, segmentId, category, true);
+        devices[key] = device;
+        return device;
+    }
+
+    public IRandomAccessDevice GetReadOnlyDevice(
+        long segmentId,
+        string category,
+        bool isCompressed,
+        int compressionBlockSize,
+        CompressionMethod compressionMethod,
+        int compressionLevel)
+    {
+        var key = GetDeviceKey(segmentId, category, isCompressed);
+
+        if (devices.TryGetValue(key, out var existing))
+        {
+            return existing;
+        }
+
+        var device = new RandomAccessDevice(storageManager, segmentId, category, false);
+        devices[key] = device;
+        return device;
+    }
+
+    public void DeleteDevice(long segmentId, string category, bool isCompressed)
+    {
+        var key = GetDeviceKey(segmentId, category, isCompressed);
+        if (devices.TryGetValue(key, out var device))
+        {
+            device.Delete();
+            devices.Remove(key);
+        }
+    }
+
+    public bool DeviceExists(long segmentId, string category, bool isCompressed)
+    {
+        var key = GetDeviceKey(segmentId, category, isCompressed);
+        return devices.ContainsKey(key);
+    }
+
+    public IReadOnlyList<IRandomAccessDevice> GetDevices()
+    {
+        return devices.Values.ToList();
+    }
+
+    public IReadOnlyList<IRandomAccessDevice> GetReadOnlyDevices()
+    {
+        return devices.Values.Where(d => !d.Writable).ToList();
+    }
+
+    public IReadOnlyList<IRandomAccessDevice> GetWritableDevices()
+    {
+        return devices.Values.Where(d => d.Writable).ToList();
+    }
+
+    public void RemoveReadOnlyDevice(long segmentId, string category)
+    {
+        var key = GetDeviceKey(segmentId, category, false);
+        if (devices.TryGetValue(key, out var device) && !device.Writable)
+        {
+            device.Close();
+            devices.Remove(key);
+        }
+    }
+
+    public void RemoveWritableDevice(long segmentId, string category)
+    {
+        var key = GetDeviceKey(segmentId, category, false);
+        if (devices.TryGetValue(key, out var device) && device.Writable)
+        {
+            device.Close();
+            devices.Remove(key);
+        }
+    }
+
+    public void CloseAllDevices()
+    {
+        foreach (var device in devices.Values)
+        {
+            device.Close();
+        }
+        devices.Clear();
+    }
+
+    public void DropStore()
+    {
+        foreach (var device in devices.Values)
+        {
+            device.Delete();
+        }
+        devices.Clear();
+    }
+
+    public string GetFilePath(long segmentId, string category)
+    {
+        return $"{name}_{category}_{segmentId}";
+    }
+
+    private string GetDeviceKey(long segmentId, string category, bool isCompressed)
+    {
+        return $"{segmentId}_{category}_{isCompressed}";
+    }
+}
+\WriteAheadLog.cs
+using EmailDB.Format.Models;
 using ProtoBuf;
 using System.Collections.Concurrent;
 using Tenray.ZoneTree.Exceptions.WAL;
@@ -1347,7 +4174,7 @@ namespace EmailDB.Format.ZoneTree;
 /// <summary>
 /// WriteAheadLog implementation using EmailDB storage
 /// </summary>
-public class EmailDBWriteAheadLog<TKey, TValue> : IWriteAheadLog<TKey, TValue>
+public class WriteAheadLog<TKey, TValue> : IWriteAheadLog<TKey, TValue> , IWriteAheadLogBase
 {
     private readonly StorageManager storageManager;
     private readonly string folderName;
@@ -1355,7 +4182,7 @@ public class EmailDBWriteAheadLog<TKey, TValue> : IWriteAheadLog<TKey, TValue>
     private readonly object writeLock = new object();
     private readonly ConcurrentDictionary<long, WALEntry<TKey, TValue>> entryCache;
 
-    public EmailDBWriteAheadLog(StorageManager storageManager, string name, long segmentId, string category)
+    public WriteAheadLog(StorageManager storageManager, string name, long segmentId, string category)
     {
         this.storageManager = storageManager;
         this.folderName = $"{name}_wal_{category}_{segmentId}";
@@ -1517,427 +4344,7 @@ public class EmailDBWriteAheadLog<TKey, TValue> : IWriteAheadLog<TKey, TValue>
     }
 }
 
-\RandomAccessDevice.cs
-using EmailDB.Format.Models;
-using EmailDB.Storage;
-using ProtoBuf;
-using System.Collections.Concurrent;
-using Tenray.ZoneTree.AbstractFileStream;
-using Tenray.ZoneTree.Exceptions.WAL;
-using Tenray.ZoneTree.Options;
-using Tenray.ZoneTree.Segments.Block;
-using Tenray.ZoneTree.Segments.RandomAccess;
-using Tenray.ZoneTree.WAL;
-
-namespace EmailDB.Format.ZoneTree;
-
-/// <summary>
-/// RandomAccessDevice implementation using EmailDB storage
-/// </summary>
-public class RandomAccessDevice : IRandomAccessDevice
-{
-    private readonly StorageManager storageManager;
-    private readonly string name;
-    private readonly long segmentId;
-    private readonly string category;
-    private readonly string folderName;
-    private long position;
-    private bool isDropped;
-    private readonly ConcurrentDictionary<long, byte[]> dataCache;
-    private readonly object writeLock = new object();
-
-    public RandomAccessDevice(StorageManager storageManager, string name, long segmentId, string category, bool writable)
-    {
-        this.storageManager = storageManager;
-        this.name = name;
-        this.segmentId = segmentId;
-        this.category = category;
-        this.folderName = $"{name}_{category}_{segmentId}";
-        Writable = writable;
-        dataCache = new ConcurrentDictionary<long, byte[]>();
-
-        // Create folder if writable
-        if (writable)
-        {
-            storageManager.CreateFolder(folderName);
-        }
-    }
-
-    public long SegmentId => segmentId;
-    public bool Writable { get; private set; }
-    public int ReadBufferCount => dataCache.Count;
-    public long Length => GetLength();
-
-    private long GetLength()
-    {
-        var folder = GetDeviceFolder();
-        if (folder == null) return 0;
-
-        long totalLength = 0;
-        foreach (var emailId in folder.EmailIds)
-        {
-            var segment = ReadSegmentById(emailId);
-            if (segment != null)
-            {
-                totalLength += segment.SegmentData.Length;
-            }
-        }
-        return totalLength;
-    }
-
-    public long AppendBytesReturnPosition(Memory<byte> bytes)
-    {
-        if (!Writable)
-            throw new InvalidOperationException("Device is not writable");
-
-        if (isDropped)
-            throw new ObjectDisposedException(nameof(RandomAccessDevice));
-
-        lock (writeLock)
-        {
-            var currentPosition = position;
-
-            // Create and store segment
-            var segment = new SegmentContent
-            {
-                SegmentId = GetNextSegmentId(),
-                SegmentData = bytes.ToArray(),
-                FileOffset = currentPosition,
-                ContentLength = bytes.Length,
-                SegmentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                Version = 1
-            };
-
-            StoreSegment(segment);
-            dataCache[currentPosition] = bytes.ToArray();
-            position += bytes.Length;
-
-            return currentPosition;
-        }
-    }
-
-    public Memory<byte> GetBytes(long offset, int length, SingleBlockPin blockPin = null)
-    {
-        if (isDropped)
-            throw new ObjectDisposedException(nameof(RandomAccessDevice));
-
-        // Try cache first
-        if (dataCache.TryGetValue(offset, out var cachedData))
-        {
-            return new Memory<byte>(cachedData, 0, Math.Min(length, cachedData.Length));
-        }
-
-        // Find segment containing the requested range
-        var folder = GetDeviceFolder();
-        if (folder == null)
-            return Memory<byte>.Empty;
-
-        long currentOffset = 0;
-        foreach (var emailId in folder.EmailIds)
-        {
-            var segment = ReadSegmentById(emailId);
-            if (segment == null) continue;
-
-            var segmentLength = segment.SegmentData.Length;
-
-            if (currentOffset <= offset && offset < currentOffset + segmentLength)
-            {
-                var segmentOffset = (int)(offset - currentOffset);
-                var available = segmentLength - segmentOffset;
-                var bytesToRead = Math.Min(length, available);
-
-                // Cache the data
-                dataCache[offset] = segment.SegmentData;
-
-                return new Memory<byte>(segment.SegmentData, segmentOffset, bytesToRead);
-            }
-
-            currentOffset += segmentLength;
-        }
-
-        return Memory<byte>.Empty;
-    }
-
-    public void ClearContent()
-    {
-        if (!Writable)
-            throw new InvalidOperationException("Device is not writable");
-
-        if (isDropped)
-            throw new ObjectDisposedException(nameof(RandomAccessDevice));
-
-        lock (writeLock)
-        {
-            storageManager.DeleteFolder(folderName, true);
-            storageManager.CreateFolder(folderName);
-            position = 0;
-            dataCache.Clear();
-        }
-    }
-
-    public void Close()
-    {
-        dataCache.Clear();
-    }
-
-    public void Delete()
-    {
-        if (isDropped) return;
-
-        lock (writeLock)
-        {
-            storageManager.DeleteFolder(folderName, true);
-            isDropped = true;
-            dataCache.Clear();
-        }
-    }
-
-    public void Drop()
-    {
-        Delete();
-    }
-
-    public void SealDevice()
-    {
-        Writable = false;
-    }
-
-    public int ReleaseInactiveCachedBuffers(long ticks)
-    {
-        var removed = 0;
-        var cutoff = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - ticks;
-
-        foreach (var key in dataCache.Keys)
-        {
-            if (dataCache.TryRemove(key, out _))
-            {
-                removed++;
-            }
-        }
-
-        return removed;
-    }
-
-    private FolderContent GetDeviceFolder()
-    {
-        foreach (var (_, block) in storageManager.WalkBlocks())
-        {
-            if (block.Content is FolderContent folder && folder.Name == folderName)
-            {
-                return folder;
-            }
-        }
-        return null;
-    }
-
-    private ulong GetNextSegmentId()
-    {
-        var folder = GetDeviceFolder();
-        return folder?.EmailIds.Count > 0 ? folder.EmailIds.Max() + 1 : 0;
-    }
-
-    private SegmentContent ReadSegmentById(ulong id)
-    {
-        foreach (var (_, block) in storageManager.WalkBlocks())
-        {
-            if (block.Content is SegmentContent segment && segment.SegmentId == id)
-            {
-                return segment;
-            }
-        }
-        return null;
-    }
-
-    private void StoreSegment(SegmentContent segment)
-    {
-        var block = new Block
-        {
-            Header = new BlockHeader
-            {
-                Type = BlockType.Segment,
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                Version = 1
-            },
-            Content = segment
-        };
-
-        using var ms = new MemoryStream();
-        Serializer.SerializeWithLengthPrefix(ms, block, PrefixStyle.Base128);
-        storageManager.AddEmailToFolder(folderName, ms.ToArray());
-    }
-
-    public void Dispose()
-    {
-        if (!isDropped)
-        {
-            Close();
-            isDropped = true;
-        }
-    }
-}
-
-
-\RandomAccessDeviceManager.cs
-using EmailDB.Storage;
-using Tenray.ZoneTree.AbstractFileStream;
-using Tenray.ZoneTree.Options;
-using Tenray.ZoneTree.Segments.RandomAccess;
-
-namespace EmailDB.Format.ZoneTree;
-
-public class RandomAccessDeviceManager : IRandomAccessDeviceManager
-{
-    private readonly StorageManager storageManager;
-    private readonly string name;
-    private readonly Dictionary<string, IRandomAccessDevice> devices;
-
-    public RandomAccessDeviceManager(StorageManager storageManager, string name)
-    {
-        this.storageManager = storageManager;
-        this.name = name;
-        this.devices = new Dictionary<string, IRandomAccessDevice>();
-    }
-
-    public int DeviceCount => devices.Count;
-    public int ReadOnlyDeviceCount => devices.Values.Count(d => !d.Writable);
-    public int WritableDeviceCount => devices.Values.Count(d => d.Writable);
-    public IFileStreamProvider FileStreamProvider => throw new NotSupportedException();
-
-    public IRandomAccessDevice CreateWritableDevice(
-        long segmentId,
-        string category,
-        bool isCompressed,
-        int compressionBlockSize,
-        bool deleteIfExists,
-        bool backupIfDelete,
-        CompressionMethod compressionMethod,
-        int compressionLevel)
-    {
-        var key = GetDeviceKey(segmentId, category, isCompressed);
-
-        if (devices.TryGetValue(key, out var existing))
-        {
-            if (deleteIfExists)
-            {
-                if (backupIfDelete)
-                {
-                    // TODO: Implement backup
-                }
-                existing.Delete();
-                devices.Remove(key);
-            }
-            else
-            {
-                return existing;
-            }
-        }
-
-        var device = new RandomAccessDevice(storageManager, name, segmentId, category, true);
-        devices[key] = device;
-        return device;
-    }
-
-    public IRandomAccessDevice GetReadOnlyDevice(
-        long segmentId,
-        string category,
-        bool isCompressed,
-        int compressionBlockSize,
-        CompressionMethod compressionMethod,
-        int compressionLevel)
-    {
-        var key = GetDeviceKey(segmentId, category, isCompressed);
-
-        if (devices.TryGetValue(key, out var existing))
-        {
-            return existing;
-        }
-
-        var device = new RandomAccessDevice(storageManager, name, segmentId, category, false);
-        devices[key] = device;
-        return device;
-    }
-
-    public void DeleteDevice(long segmentId, string category, bool isCompressed)
-    {
-        var key = GetDeviceKey(segmentId, category, isCompressed);
-        if (devices.TryGetValue(key, out var device))
-        {
-            device.Delete();
-            devices.Remove(key);
-        }
-    }
-
-    public bool DeviceExists(long segmentId, string category, bool isCompressed)
-    {
-        var key = GetDeviceKey(segmentId, category, isCompressed);
-        return devices.ContainsKey(key);
-    }
-
-    public IReadOnlyList<IRandomAccessDevice> GetDevices()
-    {
-        return devices.Values.ToList();
-    }
-
-    public IReadOnlyList<IRandomAccessDevice> GetReadOnlyDevices()
-    {
-        return devices.Values.Where(d => !d.Writable).ToList();
-    }
-
-    public IReadOnlyList<IRandomAccessDevice> GetWritableDevices()
-    {
-        return devices.Values.Where(d => d.Writable).ToList();
-    }
-
-    public void RemoveReadOnlyDevice(long segmentId, string category)
-    {
-        var key = GetDeviceKey(segmentId, category, false);
-        if (devices.TryGetValue(key, out var device) && !device.Writable)
-        {
-            device.Close();
-            devices.Remove(key);
-        }
-    }
-
-    public void RemoveWritableDevice(long segmentId, string category)
-    {
-        var key = GetDeviceKey(segmentId, category, false);
-        if (devices.TryGetValue(key, out var device) && device.Writable)
-        {
-            device.Close();
-            devices.Remove(key);
-        }
-    }
-
-    public void CloseAllDevices()
-    {
-        foreach (var device in devices.Values)
-        {
-            device.Close();
-        }
-        devices.Clear();
-    }
-
-    public void DropStore()
-    {
-        foreach (var device in devices.Values)
-        {
-            device.Delete();
-        }
-        devices.Clear();
-    }
-
-    public string GetFilePath(long segmentId, string category)
-    {
-        return $"{name}_{category}_{segmentId}";
-    }
-
-    private string GetDeviceKey(long segmentId, string category, bool isCompressed)
-    {
-        return $"{segmentId}_{category}_{isCompressed}";
-    }
-}
 \WriteAheadLogProvider.cs
-using EmailDB.Storage;
 using global::EmailDB.Format.Models;
 using ProtoBuf;
 using Tenray.ZoneTree.AbstractFileStream;
@@ -1951,14 +4358,14 @@ public class WriteAheadLogProvider : IWriteAheadLogProvider
 {
     private readonly StorageManager storageManager;
     private readonly string name;
-    private readonly Dictionary<string, IWriteAheadLog> logs;
+    private readonly Dictionary<string, IWriteAheadLogBase> logs;
     private long walBlockOffset = -1;
 
     public WriteAheadLogProvider(StorageManager storageManager, string name)
     {
         this.storageManager = storageManager;
         this.name = name;
-        this.logs = new Dictionary<string, IWriteAheadLog>();
+        this.logs = new Dictionary<string, IWriteAheadLogBase>();
 
         // Initialize WAL block if needed
         InitializeWAL();
@@ -1969,7 +4376,7 @@ public class WriteAheadLogProvider : IWriteAheadLogProvider
         var metadata = GetMetadataContent();
         if (metadata != null)
         {
-            walBlockOffset = metadata.NextWALOffset;
+            walBlockOffset = metadata.WALOffset;
             if (walBlockOffset == -1)
             {
                 // Create initial WAL block
@@ -1986,12 +4393,10 @@ public class WriteAheadLogProvider : IWriteAheadLogProvider
                 };
 
                 walBlockOffset = storageManager.WriteBlock(walBlock);
-                metadata.NextWALOffset = walBlockOffset;
-                storageManager.UpdateMetadata(m =>
-                {
-                    m.NextWALOffset = walBlockOffset;
-                    return m;
-                });
+                metadata.WALOffset = walBlockOffset;
+                var tmpMD = storageManager.segmentManager.GetMetadata();
+                tmpMD.WALOffset = walBlockOffset;
+                storageManager.segmentManager.UpdateMetadata(tmpMD);
             }
         }
     }
@@ -2006,29 +4411,31 @@ public class WriteAheadLogProvider : IWriteAheadLogProvider
         }
     }
 
-    public IWriteAheadLog<TKey, TValue> GetOrCreateWAL<TKey, TValue>(
-        long segmentId,
-        string category,
-        WriteAheadLogOptions options,
-        ISerializer<TKey> keySerializer,
-        ISerializer<TValue> valueSerializer)
+    public IWriteAheadLog<TK, TV> GetOrCreateWAL<TK, TV>(
+     long segmentId,
+     string category,
+     WriteAheadLogOptions options,
+     ISerializer<TK> keySerializer,
+     ISerializer<TV> valueSerializer)
     {
         var key = GetWALKey(segmentId, category);
+
         if (logs.TryGetValue(key, out var existing))
         {
-            return (IWriteAheadLog<TKey, TValue>)existing;
+            if (existing is IWriteAheadLog<TK, TV> typedExisting)
+            {
+                return typedExisting;
+            }
+            throw new InvalidOperationException($"Existing WAL for key '{key}' has incompatible types.");
         }
 
-        var wal = new EmailDBWriteAheadLog<TKey, TValue>(
+        var wal = new WriteAheadLog<TK, TV>(
             storageManager,
             name,
             segmentId,
-            category,
-            keySerializer,
-            valueSerializer,
-            this);
+            category);
 
-        logs[key] = wal;
+        logs[key] = wal; // Store the generic WAL
         return wal;
     }
 
@@ -2120,8 +4527,30 @@ public class WALEntry<TKey, TValue>
     [ProtoMember(3)]
     public long OpIndex { get; set; }
 }
+
+public class WriteAheadLogWrapper
+{
+    public object WriteAheadLog { get; }
+    public Type KeyType { get; }
+    public Type ValueType { get; }
+
+    public WriteAheadLogWrapper(object writeAheadLog, Type keyType, Type valueType)
+    {
+        WriteAheadLog = writeAheadLog;
+        KeyType = keyType;
+        ValueType = valueType;
+    }
+}
+
+public interface IWriteAheadLogBase : IDisposable
+{
+    string FilePath { get; }
+    bool EnableIncrementalBackup { get; set; }
+    int InitialLength { get; }
+    void Drop();
+    void MarkFrozen();
+}
 \ZoneTreeFactory.cs
-using EmailDB.Storage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -2130,17 +4559,26 @@ using System.Threading.Tasks;
 using Tenray.ZoneTree.Logger;
 using Tenray.ZoneTree.Options;
 using Tenray.ZoneTree;
+using Microsoft.Extensions.Options;
+using Tenray.ZoneTree.Exceptions;
+using Tenray.ZoneTree.Transactional;
+using Tenray.ZoneTree.Serializers;
+using Tenray.ZoneTree.Comparers;
+using ZoneTree.FullTextSearch.Model;
+using ZoneTree.FullTextSearch.QueryLanguage;
 
 namespace EmailDB.Format.ZoneTree;
 /// <summary>
 /// Factory for creating and managing ZoneTree instances integrated with EmailDB storage
 /// </summary>
-public class EmailDBZoneTreeFactory<TKey, TValue>
+public class EmailDBZoneTreeFactory<TKey, TValue> : IDisposable where TKey : ISerializer<TKey>,IRefComparer<TKey>,new() where TValue : ISerializer<TValue>,new()
+
 {
     private readonly StorageManager _storageManager;
     private readonly bool _enableCompression;
     private readonly CompressionMethod _compressionMethod;
     private readonly ILogger _logger;
+    private ZoneTreeFactory<TKey, TValue> Factory { get; set; }
 
     public EmailDBZoneTreeFactory(StorageManager storageManager,
         bool enableCompression = true,
@@ -2153,9 +4591,9 @@ public class EmailDBZoneTreeFactory<TKey, TValue>
         _logger = logger ?? new ConsoleLogger();
     }
 
-    public IZoneTree<TKey, TValue> CreateZoneTree(string name)
+    public bool CreateZoneTree(string name)
     {
-        var factory = new ZoneTreeFactory<TKey, TValue>();
+        Factory = new ZoneTreeFactory<TKey, TValue>();
 
         // Set up WAL configuration
         var walOptions = new WriteAheadLogOptions
@@ -2167,33 +4605,331 @@ public class EmailDBZoneTreeFactory<TKey, TValue>
         };
 
         // Configure options
-        factory.Configure(options =>
+        Factory.Configure(options =>
         {
             options.Logger = _logger;
             options.WriteAheadLogOptions = walOptions;
-            options.DiskSegmentOptions = new DiskSegmentOptions
-            {
-                CompressionMethod = _compressionMethod,
-                // Customize as needed
-                MaximumRecordCount = 1000000,
-                MinimumRecordCount = 100000,
-                CompressionBlockSize = 64 * 1024, // 64KB blocks
-                CompressionLevel = 1 // Fast compression
-            };
 
+            //options.DiskSegmentOptions = new DiskSegmentOptions
+            //{
+            //    CompressionMethod = _compressionMethod,
+            //    // Customize as needed
+            //    MaximumRecordCount = 2000000,
+            //    MinimumRecordCount = 100,
+            //    CompressionBlockSize = 64 * 1024, // 64KB blocks
+            //    CompressionLevel = 2 // Fast compression
+            //};
+            options.KeySerializer = new TKey();
+            options.ValueSerializer = new TValue();
+            options.Comparer = new TKey();
             // Set WAL provider to use EmailDB storage
             options.WriteAheadLogProvider = new WriteAheadLogProvider(_storageManager, name);
-
             // Set up device manager for segment storage
-            options.RandomAccessDeviceManager = new RandomAccessDeviceManager(_storageManager, name);
+            options.RandomAccessDeviceManager = new RandomAccessDeviceManager(_storageManager.segmentManager, name);
         });
 
-        return factory.OpenOrCreate();
+        return true;
+    }
+
+
+    public IZoneTree<TKey, TValue> OpenOrCreate()
+    {
+        return Factory.OpenOrCreate();
+    }
+
+    /// <summary>
+    /// Assigns key-value pair deletion query delegate.
+    /// </summary>
+    /// <param name="isDeleted">The key-value pair deleted query delagate.</param>
+    /// <returns>ZoneTree Factory</returns>
+    public EmailDBZoneTreeFactory<TKey, TValue>
+        SetIsDeletedDelegate(IsDeletedDelegate<TKey, TValue> isDeleted)
+    {
+
+        Factory.SetIsDeletedDelegate(isDeleted);
+        return this;
+    }
+
+    /// <summary>
+    /// Assigns value deletion marker delegate.
+    /// </summary>
+    /// <param name="markValueDeleted">The value deletion marker delegate</param>
+    /// <returns>ZoneTree Factory</returns>
+    public EmailDBZoneTreeFactory<TKey, TValue>
+        SetMarkValueDeletedDelegate(MarkValueDeletedDelegate<TValue> markValueDeleted)
+    {
+        Factory.SetMarkValueDeletedDelegate(markValueDeleted);
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the key serializer.
+    /// </summary>
+    /// <param name="keySerializer">The key serializer</param>
+    /// <returns>ZoneTree Factory</returns>
+    public EmailDBZoneTreeFactory<TKey, TValue>
+        SetKeySerializer(ISerializer<TKey> keySerializer)
+    {
+        Factory.SetKeySerializer(keySerializer);
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the key-comparer.
+    /// </summary>
+    /// <param name="comparer">The key-comparer.</param>
+    /// <returns>ZoneTree Factory</returns>
+    public EmailDBZoneTreeFactory<TKey, TValue> SetComparer(IRefComparer<TKey> comparer)
+    {
+        Factory.SetComparer(comparer);
+        return this;
+    }
+
+    public void Dispose()
+    {
+        return;
     }
 }
+\EmailDBTestSuite.cs
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text;
+using EmailDB.Format;
+using EmailDB.Format.Models;
+using EmailDB.Testing.Tests;
+using MimeKit;
+
+public class EmailDBTestSuite
+{
+    private const string TestFilePath = "test_email_store.dat";
+    private const string CompactedFilePath = "test_email_store_compacted.dat";
+    private readonly ITestLogger logger;
+    private readonly Dictionary<string, List<TestResult>> testResults = new();
+    private readonly Stopwatch stopwatch = new();
+
+    public EmailDBTestSuite(ITestLogger logger = null)
+    {
+        this.logger = logger ?? new ConsoleTestLogger();
+    }
+
+    public async Task RunAllTests()
+    {
+        CleanupTestFiles();
+
+        await RunTestGroup("Basic Operations", async () =>
+        {
+            await this.TestBasicFileOperations(TestFilePath);
+            await this.TestConcurrentAccess(TestFilePath);
+         //   await TestHeaderValidation();
+        });
+
+        //await RunTestGroup("Email Management", async () =>
+        //{
+        //    await TestEmailAddition();
+        //    await TestEmailRetrieval();
+        //    await TestEmailDeletion();
+        //    await TestEmailMovement();
+        //    await TestEmailSearch();
+        //});
+
+        //await RunTestGroup("Folder Management", async () =>
+        //{
+        //    await TestFolderCreation();
+        //    await TestFolderHierarchy();
+        //    await TestFolderRename();
+        //    await TestFolderDeletion();
+        //    await TestFolderLocking();
+        //});
+
+        //await RunTestGroup("Cache Management", async () =>
+        //{
+        //    await TestCacheHits();
+        //    await TestCacheMisses();
+        //    await TestCacheEviction();
+        //    await TestCacheInvalidation();
+        //});
+
+        //await RunTestGroup("Data Integrity", async () =>
+        //{
+        //    await TestChecksum();
+        //    await TestCorruptionRecovery();
+        //    await TestJournaling();
+        //    await TestTransactionRollback();
+        //});
+
+        //await RunTestGroup("Performance", async () =>
+        //{
+        //    await TestLargeFileHandling();
+        //    await TestBulkOperations();
+        //    await TestSearchPerformance();
+        //});
+
+        //await RunTestGroup("Error Handling", async () =>
+        //{
+        //    await TestInvalidOperations();
+        //    await TestResourceExhaustion();
+        //    await TestConcurrencyConflicts();
+        //});
+
+        ReportResults();
+    }
+
+   
+
+    public void AssertTrue(bool condition, string message)
+    {
+        if (!condition)
+            throw new TestException(message);
+    }
+
+    public void AssertNotNull(object obj, string message)
+    {
+        if (obj == null)
+            throw new TestException(message);
+    }
+
+    public void AssertEquals<T>(T expected, T actual, string message)
+    {
+        if (!EqualityComparer<T>.Default.Equals(expected, actual))
+            throw new TestException($"{message}. Expected: {expected}, Actual: {actual}");
+    }
+
+    public async Task RunTestGroup(string groupName, Func<Task> testFunc)
+    {
+        logger.LogGroupStart(groupName);
+        testResults[groupName] = new List<TestResult>();
+
+        try
+        {
+            await testFunc();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Test group {groupName} failed: {ex.Message}");
+            testResults[groupName].Add(new TestResult(groupName, "Group Execution", false, ex.Message));
+        }
+
+        logger.LogGroupEnd(groupName);
+    }
+
+    private void ReportResults()
+    {
+        logger.LogSection("Test Results Summary");
+
+        int totalTests = 0;
+        int passedTests = 0;
+
+        foreach (var group in testResults)
+        {
+            var groupResults = group.Value;
+            var groupPassed = groupResults.Count(r => r.Success);
+
+            logger.LogGroupResult(group.Key, groupPassed, groupResults.Count);
+            totalTests += groupResults.Count;
+            passedTests += groupPassed;
+        }
+
+        logger.LogFinalSummary(passedTests, totalTests);
+    }
+
+    public void CleanupTestFiles()
+    {
+        if (File.Exists(TestFilePath))
+            File.Delete(TestFilePath);
+        if (File.Exists(CompactedFilePath))
+            File.Delete(CompactedFilePath);
+    }
+
+    public FolderContent GetFolder(BlockManager blockManager, string folderName)
+    {
+        foreach (var (_, block) in blockManager.WalkBlocks())
+        {
+            if (block.Content is FolderContent folder && folder.Name == folderName)
+                return folder;
+        }
+        return null;
+    }
+
+    public void AddSampleEmail(StorageManager storage, string folderName)
+    {
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress("Sender", "sender@test.com"));
+        message.To.Add(new MailboxAddress("Recipient", "recipient@test.com"));
+        message.Subject = "Test Email";
+        message.Body = new TextPart("plain") { Text = "This is a test email." };
+
+        using var ms = new MemoryStream();
+        message.WriteTo(ms);
+        storage.AddEmailToFolder(folderName, ms.ToArray());
+    }
+}
+
+public interface ITestLogger
+{
+    void LogGroupStart(string groupName);
+    void LogGroupEnd(string groupName);
+    void LogTestResult(string testName, bool success, string message = null);
+    void LogError(string message);
+    void LogSection(string sectionName);
+    void LogGroupResult(string groupName, int passed, int total);
+    void LogFinalSummary(int totalPassed, int totalTests);
+}
+
+public class ConsoleTestLogger : ITestLogger
+{
+    public void LogGroupStart(string groupName) =>
+        Console.WriteLine($"\n=== Starting Test Group: {groupName} ===");
+
+    public void LogGroupEnd(string groupName) =>
+        Console.WriteLine($"=== Completed Test Group: {groupName} ===\n");
+
+    public void LogTestResult(string testName, bool success, string message = null)
+    {
+        var status = success ? "PASSED" : "FAILED";
+        Console.WriteLine($"{testName}: {status}");
+        if (!success && message != null)
+            Console.WriteLine($"  Error: {message}");
+    }
+
+    public void LogError(string message) =>
+        Console.WriteLine($"ERROR: {message}");
+
+    public void LogSection(string sectionName) =>
+        Console.WriteLine($"\n=== {sectionName} ===");
+
+    public void LogGroupResult(string groupName, int passed, int total) =>
+        Console.WriteLine($"{groupName}: {passed}/{total} tests passed");
+
+    public void LogFinalSummary(int totalPassed, int totalTests) =>
+        Console.WriteLine($"\nFinal Results: {totalPassed}/{totalTests} tests passed " +
+                         $"({(totalPassed * 100.0 / totalTests):F1}% success rate)");
+}
+
+public class TestResult
+{
+    public string GroupName { get; }
+    public string TestName { get; }
+    public bool Success { get; }
+    public string Message { get; }
+
+    public TestResult(string groupName, string testName, bool success, string message = null)
+    {
+        GroupName = groupName;
+        TestName = testName;
+        Success = success;
+        Message = message;
+    }
+}
+
+public class TestException : Exception
+{
+    public TestException(string message) : base(message) { }
+}
+
 \Program.cs
 using System.Diagnostics;
 using System.Text;
+using EmailDB.Format;
 using EmailDB.Format.Models;
 
 class Program
@@ -2240,6 +4976,7 @@ class Program
 
         // Create basic folder structure
         Console.WriteLine("Creating initial folder structure...");
+        storage.CreateFolder("Root");
         storage.CreateFolder("Inbox", "Root");
         storage.CreateFolder("Sent", "Root");
         storage.CreateFolder("Archive", "Root");
@@ -2249,7 +4986,7 @@ class Program
         AddSampleEmails(storage, "Inbox", 3);
         AddSampleEmails(storage, "Sent", 2);
 
-        DumpFileStructure(storage);
+        DumpFileStructure(storage.blockManager);
     }
 
     static void TestEmailOperations()
@@ -2273,12 +5010,12 @@ class Program
         stopwatch.Restart();
 
         // First access (uncached)
-        var folder = GetFolder(storage, "Inbox");
+        var folder = GetFolder(storage.blockManager, "Inbox");
         var firstAccessTime = stopwatch.ElapsedMilliseconds;
 
         // Second access (should be cached)
         stopwatch.Restart();
-        folder = GetFolder(storage, "Inbox");
+        folder = GetFolder(storage.blockManager, "Inbox");
         var secondAccessTime = stopwatch.ElapsedMilliseconds;
 
         Console.WriteLine($"First folder access: {firstAccessTime}ms");
@@ -2293,7 +5030,7 @@ class Program
             Console.WriteLine($"Moved email {emailToMove} from Inbox to Archive");
         }
 
-        DumpFileStructure(storage);
+        DumpFileStructure(storage.blockManager);
     }
 
     static void TestPerformance()
@@ -2308,7 +5045,7 @@ class Program
         for (int i = 0; i < 5; i++)
         {
             stopwatch.Restart();
-            var tree = GetLatestFolderTree(storage);
+            var tree = GetLatestFolderTree(storage.blockManager);
             Console.WriteLine($"Folder tree access #{i + 1}: {stopwatch.ElapsedMilliseconds}ms");
         }
 
@@ -2319,11 +5056,11 @@ class Program
         foreach (var folderName in folders)
         {
             stopwatch.Restart();
-            var folder = GetFolder(storage, folderName);
+            var folder = GetFolder(storage.blockManager, folderName);
             var firstAccess = stopwatch.ElapsedMilliseconds;
 
             stopwatch.Restart();
-            folder = GetFolder(storage, folderName);
+            folder = GetFolder(storage.blockManager, folderName);
             var secondAccess = stopwatch.ElapsedMilliseconds;
 
             Console.WriteLine($"Folder '{folderName}':");
@@ -2336,7 +5073,7 @@ class Program
         storage.InvalidateCache();
 
         stopwatch.Restart();
-        var folderAfterInvalidation = GetFolder(storage, "Inbox");
+        var folderAfterInvalidation = GetFolder(storage.blockManager, "Inbox");
         Console.WriteLine($"Folder access after cache invalidation: {stopwatch.ElapsedMilliseconds}ms");
     }
 
@@ -2352,7 +5089,7 @@ class Program
         {
             // Force cache invalidation to test recovery
             storage.InvalidateCache();
-            var folder = GetFolder(storage, "Inbox");
+            var folder = GetFolder(storage.blockManager, "Inbox");
             Console.WriteLine("Successfully recovered folder information after cache invalidation");
         }
         catch (Exception ex)
@@ -2397,11 +5134,11 @@ class Program
         // Test folder access performance
         Console.WriteLine("\nTesting folder access performance...");
         stopwatch.Restart();
-        var folder1 = GetFolder(storage, "Important");
+        var folder1 = GetFolder(storage.blockManager, "Important");
         var firstAccess = stopwatch.ElapsedMilliseconds;
 
         stopwatch.Restart();
-        var folder2 = GetFolder(storage, "Important");
+        var folder2 = GetFolder(storage.blockManager, "Important");
         var cachedAccess = stopwatch.ElapsedMilliseconds;
 
         Console.WriteLine($"First folder access: {firstAccess}ms");
@@ -2415,7 +5152,7 @@ class Program
         Console.WriteLine("\nTesting folder deletion with cleanup...");
         storage.DeleteFolder("Temporary", deleteEmails: true);
 
-        DumpFileStructure(storage);
+        DumpFileStructure(storage.blockManager);
     }
 
     static void TestCompaction()
@@ -2430,7 +5167,7 @@ class Program
         {
             AddSampleEmails(storage, "Inbox", 2);
             // Update some emails to create outdated content
-            var folder = GetFolder(storage, "Inbox");
+            var folder = GetFolder(storage.blockManager, "Inbox");
             if (folder?.EmailIds.Count > 0)
             {
                 var emailId = folder.EmailIds[0];
@@ -2440,7 +5177,7 @@ class Program
         }
 
         Console.WriteLine("\nFile structure before compaction:");
-        DumpFileStructure(storage);
+        DumpFileStructure(storage.blockManager);
 
         // Perform compaction
         Console.WriteLine("\nPerforming compaction...");
@@ -2462,7 +5199,7 @@ class Program
         Console.WriteLine("\nVerifying compacted file...");
         using (var compactedStorage = new StorageManager(compactedFilePath))
         {
-            DumpFileStructure(compactedStorage);
+            DumpFileStructure(compactedStorage.blockManager);
         }
     }
 
@@ -2499,8 +5236,8 @@ class Program
 
         // Test invalid email operations
         try
-        {
-            storage.MoveEmail(99999, "Inbox", "Archive");
+        {            
+            storage.MoveEmail(new EmailHashedID(), "Inbox", "Archive");
             Console.WriteLine("ERROR: Should not allow moving nonexistent email");
         }
         catch (Exception ex)
@@ -2513,7 +5250,7 @@ class Program
         storage.InvalidateCache();
         try
         {
-            var folder = GetFolder(storage, "Inbox");
+            var folder = GetFolder(storage.blockManager, "Inbox");
             Console.WriteLine("Successfully recovered from cache invalidation");
         }
         catch (Exception ex)
@@ -2543,7 +5280,7 @@ class Program
         }
     }
 
-    static FolderContent GetFolder(StorageManager storage, string folderName)
+    static FolderContent GetFolder(BlockManager storage, string folderName)
     {
         foreach (var (_, block) in storage.WalkBlocks())
         {
@@ -2555,7 +5292,7 @@ class Program
         return null;
     }
 
-    static FolderTreeContent GetLatestFolderTree(StorageManager storage)
+    static FolderTreeContent GetLatestFolderTree(BlockManager storage)
     {
         FolderTreeContent latest = null;
         foreach (var (_, block) in storage.WalkBlocks())
@@ -2568,14 +5305,14 @@ class Program
         return latest;
     }
 
-    static void DumpFileStructure(StorageManager storage)
+    static void DumpFileStructure(BlockManager storage)
     {
         Console.WriteLine("\n=== File Structure Summary ===");
         var stats = new Dictionary<BlockType, int>();
         var emailsByFolder = new Dictionary<string, int>();
         var totalEmails = 0;
         var totalEmailSize = 0L;
-        var uniqueSegments = new HashSet<ulong>();
+        var uniqueSegments = new HashSet<long>();
 
         foreach (var (_, block) in storage.WalkBlocks())
         {
@@ -2591,7 +5328,7 @@ class Program
                     break;
                 case SegmentContent segment:
                     uniqueSegments.Add(segment.SegmentId);
-                    totalEmailSize += segment.EmailContent.Length;
+                    totalEmailSize += segment.SegmentData.Length;
                     break;
             }
         }
@@ -2612,6 +5349,80 @@ class Program
         Console.WriteLine($"  Total emails: {totalEmails:N0}");
         Console.WriteLine($"  Unique segments: {uniqueSegments.Count:N0}");
         Console.WriteLine($"  Total email content size: {totalEmailSize / 1024.0:F2} KB");
-        Console.WriteLine($"  File size: {new FileInfo(storage.filePath).Length / 1024.0:F2} KB");
+        Console.WriteLine($"  File size: {new FileInfo(filePath).Length / 1024.0:F2} KB");
     }
 }
+\BasicFileTests.cs
+using EmailDB.Format;
+using EmailDB.Format.Models;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace EmailDB.Testing.Tests;
+
+public static class  BasicFileTests
+{
+
+    public static async Task TestBasicFileOperations(this EmailDBTestSuite suite, string TestFilePath)
+    {      
+        using StorageManager storage = new StorageManager(TestFilePath, createNew: true);
+        storage.InitializeNewFile();
+        storage.Dispose();
+
+        using FileStream fileStream = new FileStream(TestFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+
+        // Initialize components
+        var blockManager = new BlockManager(fileStream);
+        var cacheManager = new CacheManager(blockManager);
+        var metadataManager = new MetadataManager(blockManager);
+        var folderManager = new FolderManager(blockManager, metadataManager);
+
+        // Test file creation
+        suite.AssertTrue(File.Exists(TestFilePath), "Storage file should be created");
+
+        // Test header initialization
+        var header = cacheManager.GetHeader();
+        suite.AssertNotNull(header, "Header should be initialized");
+        suite.AssertEquals(1, header.FileVersion, "File version should be 1");
+
+        // Test basic folder operations
+        var folder = folderManager.GetSubfolders("/");
+
+        suite.AssertNotNull(folder, "Root folder should exist");
+    }
+
+    public static async Task TestConcurrentAccess(this EmailDBTestSuite suite, string TestFilePath)
+    {
+        using var storage = new StorageManager(TestFilePath);
+        var tasks = new List<Task>();
+        var errors = new ConcurrentBag<Exception>();
+
+        // Create multiple concurrent operations
+        for (int i = 0; i < 10; i++)
+        {
+            tasks.Add(Task.Run(() =>
+            {
+                try
+                {
+                    storage.CreateFolder($"TestFolder_{i}");
+                    suite.AddSampleEmail(storage, $"TestFolder_{i}");
+                }
+                catch (Exception ex)
+                {
+                    errors.Add(ex);
+                }
+            }));
+        }
+
+        await Task.WhenAll(tasks);
+        suite.AssertEquals(0, errors.Count, "No errors should occur during concurrent access");
+    }
+
+   
+}
+

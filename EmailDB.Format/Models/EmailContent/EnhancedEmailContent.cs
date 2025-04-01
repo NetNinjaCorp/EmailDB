@@ -4,9 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Tenray.ZoneTree.Serializers;
 
 [ProtoContract]
-public class EnhancedEmailContent
+public class EnhancedEmailContent : ISerializer<EnhancedEmailContent>
 {
     [ProtoMember(1)]
     public byte[] Subject { get; set; }
@@ -166,4 +167,17 @@ public class EnhancedEmailContent
     public int AttachmentCount { get; set; }
     [ProtoMember(11)]
     public byte[] RawEmailContent { get; set; }
+
+    public EnhancedEmailContent Deserialize(Memory<byte> bytes)
+    {
+        return ProtoBuf.Serializer.Deserialize<EnhancedEmailContent>(bytes.Span);
+
+    }
+
+    public Memory<byte> Serialize(in EnhancedEmailContent entry)
+    {
+        var memStream = new MemoryStream();
+        ProtoBuf.Serializer.Serialize(memStream, entry);
+        return memStream.ToArray();
+    }
 }

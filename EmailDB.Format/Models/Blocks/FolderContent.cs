@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EmailDB.Format.Models;
+namespace EmailDB.Format.Models.Blocks;
 [ProtoContract]
 public class FolderContent : BlockContent
 {
@@ -19,5 +19,5 @@ public class FolderContent : BlockContent
     public string Name { get; set; }
 
     [ProtoMember(2003)]
-    public List<ulong> EmailIds { get; set; } = new();
+    public List<EmailHashedID> EmailIds { get; set; } = new();
 }

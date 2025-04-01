@@ -1,12 +1,11 @@
-﻿using EmailDB.Format.ZoneTree;
-using ProtoBuf;
+﻿using ProtoBuf;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EmailDB.Format.Models;
+namespace EmailDB.Format.Protobuf.Models;
 [ProtoContract]
 public class WALContent : BlockContent
 {

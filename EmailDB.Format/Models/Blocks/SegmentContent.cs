@@ -5,12 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EmailDB.Format.Models;
+namespace EmailDB.Format.Models.Blocks;
 [ProtoContract]
 public class SegmentContent : BlockContent
 {
     [ProtoMember(4000)]
-    public ulong SegmentId { get; set; }
+    public long SegmentId { get; set; }
 
     [ProtoMember(4001)]
     public byte[] SegmentData { get; set; }
@@ -38,5 +38,5 @@ public class SegmentContent : BlockContent
     public Dictionary<string, string> Metadata { get; set; } = new();  // Optional metadata for the segment
 
     // Computed property to help with segment file organization
-    public ulong SegmentFileGroup => SegmentId / 1000;
+    public long SegmentFileGroup => SegmentId / 1000;
 }

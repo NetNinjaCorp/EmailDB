@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EmailDB.Format.Models;
+namespace EmailDB.Format.Protobuf.Models;
 [ProtoContract]
 public class FolderTreeContent : BlockContent
 {

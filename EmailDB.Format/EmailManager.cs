@@ -3,6 +3,9 @@ using Tenray.ZoneTree;
 using EmailDB.Format.Models;
 using EmailDB.Format.ZoneTree;
 using System.Collections.Concurrent;
+using ZoneTree.FullTextSearch.SearchEngines;
+using ZoneTree.FullTextSearch.Index;
+using Tenray.ZoneTree.Options;
 
 namespace EmailDB.Format;
 
@@ -11,6 +14,7 @@ public class EmailManager : IDisposable
     private readonly StorageManager storageManager;
     private readonly IZoneTree<EmailHashedID, EnhancedEmailContent> emailIndex;
     private readonly ConcurrentDictionary<string, EmailHashedID> emailCache;
+    private readonly HashedSearchEngine<EmailHashedID> emailSearchEngine;
     private readonly FolderManager folderManager;
     private readonly SegmentManager segmentManager;
     private readonly object writeLock = new object();
@@ -23,8 +27,16 @@ public class EmailManager : IDisposable
 
         // Initialize ZoneTree for email indexing
         var factory = new EmailDBZoneTreeFactory<EmailHashedID, EnhancedEmailContent>(storageManager);
-        this.emailIndex = factory.CreateZoneTree("email_index");
+
+        if (!factory.CreateZoneTree("email_index")) { throw new Exception("Problem Creating Email Index"); }
+        this.emailIndex = factory.OpenOrCreate();
         this.emailCache = new ConcurrentDictionary<string, EmailHashedID>();
+        var emailDBOptions = new AdvancedZoneTreeOptions<EmailHashedID, ulong>
+        {
+            FileStreamProvider = new EmailDBFileStreamProvider(segmentManager)
+        };
+        this.emailSearchEngine = new HashedSearchEngine<EmailHashedID>(
+            new IndexOfTokenRecordPreviousToken<EmailHashedID, ulong>(advancedOptions: emailDBOptions));
     }
 
     public async Task<EmailHashedID> AddEmailAsync(string emlFilePath, string folderName)
@@ -53,35 +65,45 @@ public class EmailManager : IDisposable
             var enhancedContent = CreateEnhancedEmailContent(message);
 
             // Store in ZoneTree
-            emailIndex.Put(emailId, enhancedContent);
-
-            // Store the raw email content in segments
-            using (var fileStream = File.OpenRead(emlFilePath))
-            {
-                var buffer = new byte[fileStream.Length];
-                fileStream.Read(buffer, 0, buffer.Length);
-
-                var segment = new SegmentContent
-                {
-                    SegmentId = BitConverter.ToUInt64(emailId.GetBytes(), 0), // Use first 8 bytes of hash as segment ID
-                    SegmentData = buffer,
-                    ContentLength = buffer.Length,
-                    SegmentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    Version = 1
-                };
-
-                var offset = segmentManager.WriteSegment(segment);
-
-                // Update metadata
-                storageManager.UpdateMetadata(metadata =>
-                {
-                    metadata.SegmentOffsets[emailId.ToString()] = offset;
-                    return metadata;
-                });
-            }
+            emailIndex.TryAdd(emailId, enhancedContent, out long OpIndex);
 
             // Add to folder
-            folderManager.AddEmailToFolder(folderName, BitConverter.ToUInt64(emailId.GetBytes(), 0));
+            folderManager.AddEmailToFolder(folderName, emailId).RunSynchronously();
+
+            // Cache the email ID
+            emailCache[message.MessageId] = emailId;
+
+            return emailId;
+        }
+    }
+    public async Task<EmailHashedID> AddEmailAsync(byte[] emlBytes, string folderName)
+    {
+
+        if (string.IsNullOrWhiteSpace(folderName))
+            throw new ArgumentException("Folder name cannot be empty", nameof(folderName));
+
+        // Read and parse the email
+        var message = new MimeMessage(new MemoryStream(emlBytes));
+        if (message == null)
+            throw new InvalidOperationException("Failed to read email from file");
+
+        lock (writeLock)
+        {
+            // Generate EmailHashedID
+            var emailId = new EmailHashedID(message);
+
+            // Check if email already exists
+            if (emailIndex.TryGet(emailId, out var _))
+                throw new InvalidOperationException("Email already exists in the system");
+
+            // Create enhanced email content
+            var enhancedContent = CreateEnhancedEmailContent(message);
+
+            // Store in ZoneTree
+            emailIndex.TryAdd(emailId, enhancedContent, out long OpIndex);
+
+            // Add to folder
+            folderManager.AddEmailToFolder(folderName, emailId).RunSynchronously();
 
             // Cache the email ID
             emailCache[message.MessageId] = emailId;
@@ -100,35 +122,23 @@ public class EmailManager : IDisposable
 
     public async Task<byte[]> GetRawEmailAsync(EmailHashedID emailId)
     {
-        var segmentId = BitConverter.ToUInt64(emailId.GetBytes(), 0);
-        var segment = segmentManager.GetLatestSegment(segmentId);
-
-        if (segment != null)
-            return segment.SegmentData;
-
-        throw new KeyNotFoundException("Raw email content not found");
+        if (emailIndex.TryGet(emailId, out var content))
+        {
+            return content.RawEmailContent;
+        }
+        else { return null; }
     }
+
+
 
     public async Task<List<EmailHashedID>> SearchEmailsAsync(string searchTerm, SearchField field)
     {
         var results = new List<EmailHashedID>();
 
         // Perform search through ZoneTree entries
-        foreach (var entry in emailIndex.GetEntries())
-        {
-            var content = entry.Value;
-            bool matches = field switch
-            {
-                SearchField.Subject => content.StrSubject.Contains(searchTerm, StringComparison.OrdinalIgnoreCase),
-                SearchField.From => content.StrFrom.Contains(searchTerm, StringComparison.OrdinalIgnoreCase),
-                SearchField.To => content.StrTo.Contains(searchTerm, StringComparison.OrdinalIgnoreCase),
-                SearchField.Content => content.StrTextContent.Contains(searchTerm, StringComparison.OrdinalIgnoreCase),
-                _ => false
-            };
 
-            if (matches)
-                results.Add(entry.Key);
-        }
+        //// Use the search engine to find matching email IDs
+
 
         return results;
     }
@@ -138,22 +148,13 @@ public class EmailManager : IDisposable
         lock (writeLock)
         {
             // Remove from ZoneTree
-            if(emailIndex.TryDelete(emailId, out var res))
+            if (emailIndex.TryDelete(emailId, out var res))
             {
 
             }
 
-            // Remove from folder
-            var segmentId = BitConverter.ToUInt64(emailId.GetBytes(), 0);
-            folderManager.RemoveEmailFromFolder(folderName, segmentId);
-
-            // Mark segment as deleted
-            var segmentOffsets = segmentManager.GetSegmentOffsets(segmentId);
-            storageManager.UpdateMetadata(metadata =>
-            {
-                metadata.OutdatedOffsets.AddRange(segmentOffsets);
-                return metadata;
-            });
+            // Remove from folder           
+            folderManager.RemoveEmailFromFolder(folderName, emailId);
 
             // Remove from cache
             foreach (var key in emailCache.Where(x => x.Value.Equals(emailId)))
@@ -165,8 +166,7 @@ public class EmailManager : IDisposable
 
     public async Task MoveEmailAsync(EmailHashedID emailId, string sourceFolder, string targetFolder)
     {
-        var segmentId = BitConverter.ToUInt64(emailId.GetBytes(), 0);
-        storageManager.MoveEmail(segmentId, sourceFolder, targetFolder);
+        storageManager.MoveEmail(emailId, sourceFolder, targetFolder);
     }
 
     private async Task<MimeMessage> ReadEmailFromFileAsync(string emlFilePath)

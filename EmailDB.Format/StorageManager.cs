@@ -1,18 +1,18 @@
-﻿using EmailDB.Format.Models;
-using EmailDB.Format.ZoneTree;
-
-
-namespace EmailDB.Format;
+﻿using EmailDB.Format;
+using EmailDB.Format.FileManagement;
+using EmailDB.Format.Models.Blocks;
 
 public class StorageManager : IStorageManager
 {
     private readonly string filePath;
     private readonly FileStream fileStream;
-    private readonly BlockManager blockManager;
-    private readonly CacheManager cacheManager;
-    private readonly FolderManager folderManager;
-    private readonly SegmentManager segmentManager;
-    private readonly MaintenanceManager maintenanceManager;
+    public readonly BlockManager blockManager;
+    public readonly CacheManager cacheManager;
+    public readonly MetadataManager metadataManager;
+    public readonly FolderManager folderManager;
+    public readonly SegmentManager segmentManager;
+    public readonly EmailManager emailManager;
+    public readonly MaintenanceManager maintenanceManager;
 
     public StorageManager(string path, bool createNew = false)
     {
@@ -23,10 +23,20 @@ public class StorageManager : IStorageManager
         // Initialize components
         blockManager = new BlockManager(fileStream);
         cacheManager = new CacheManager(blockManager);
-        folderManager = new FolderManager(blockManager);
-        segmentManager = new SegmentManager(blockManager, cacheManager, folderManager);
+        metadataManager = new MetadataManager(blockManager);
+        folderManager = new FolderManager(blockManager, metadataManager);
+        if (createNew)
+        {
+            InitializeNewFile();
+        }
+        else
+        {
+            cacheManager.LoadHeaderContent();
+        }
+      
+        segmentManager = new SegmentManager(blockManager, cacheManager);
+        emailManager = new EmailManager(this, folderManager, segmentManager);
         maintenanceManager = new MaintenanceManager(blockManager, cacheManager, folderManager, segmentManager);
-
 
         if (createNew)
         {
@@ -36,10 +46,6 @@ public class StorageManager : IStorageManager
         {
             cacheManager.LoadHeaderContent();
         }
-        var zt = new EmailDBZoneTreeFactory<ulong, string>(this, false);
-        var ztdb = zt.CreateZoneTree("emaildb");
-        ztdb.Dispose();
-        // Console.WriteLine(ztdb);    
     }
 
     public void InitializeNewFile()
@@ -68,203 +74,62 @@ public class StorageManager : IStorageManager
         folderManager.WriteFolderTree(new FolderTreeContent());
     }
 
-    public void AddEmailToFolder(string folderName, byte[] emailContent)
+    public async void AddEmailToFolder(string folderName, byte[] emailContent)
     {
-        lock (fileStream)
+        // The StorageManager now just coordinates between EmailManager and FolderManager
+        var emailId = await emailManager.AddEmailAsync(emailContent,folderName);
+        folderManager.AddEmailToFolder(folderName, emailId);
+    }
+
+    public void UpdateEmailContent(EmailHashedID emailId, byte[] newContent)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async void MoveEmail(EmailHashedID emailId, string sourceFolder, string targetFolder)
+    {
+        // Coordinate the move operation between managers       
+        await emailManager.MoveEmailAsync(emailId, sourceFolder, targetFolder);
+    }
+
+    public async void DeleteEmail(EmailHashedID emailId, string folderName)
+    {
+        // Coordinate deletion between managers
+        await emailManager.MoveEmailAsync(emailId, folderName, "Deleted Items");
+    }
+
+    public async void CreateFolder(string folderName, string parentFolderId = null)
+    {
+        if (parentFolderId == null)
         {
-            // Find max segment ID
-            ulong newId = segmentManager.GetMaxSegmentId() + 1;
+            folderManager.CreateFolder(folderName);
 
-            // Create and write new segment
-            var segment = new SegmentContent
+        }
+        else
+        {
+            var parentFolder = await folderManager.GetFolder(parentFolderId);
+            if (parentFolder == null)
             {
-                SegmentId = newId,
-                SegmentData = emailContent
-            };
-
-            long segmentOffset = segmentManager.WriteSegment(segment);
-
-            // Update folder
-            var folder = folderManager.GetFolder(folderName);
-            if (folder == null)
-            {
-                throw new InvalidOperationException($"Folder '{folderName}' not found");
+                throw new InvalidOperationException("Parent folder does not exist");
             }
-
-            folder.EmailIds.Add(newId);
-            long folderOffset = folderManager.WriteFolder(folder);
-
-            // Update metadata
-            segmentManager.UpdateMetadata(metadata =>
-            {
-                metadata.SegmentOffsets.Add(segmentOffset);
-                metadata.FolderOffsets[folderName] = folderOffset;
-                return metadata;
-            });
+            folderManager.CreateFolder($"{parentFolderId}\\{folderName}");
         }
     }
 
-    public void MoveEmail(ulong emailId, string sourceFolder, string targetFolder)
+    public async void DeleteFolder(string folderName, bool deleteEmails = false)
     {
-        lock (fileStream)
+        if (deleteEmails)
         {
-            var source = folderManager.GetFolder(sourceFolder);
-            var target = folderManager.GetFolder(targetFolder);
-
-            if (source == null || target == null)
+            var folder = folderManager.GetFolder(folderName).Result;
+            if (folder != null)
             {
-                throw new InvalidOperationException("Source or target folder not found");
-            }
-
-            if (!source.EmailIds.Contains(emailId))
-            {
-                throw new InvalidOperationException($"Email {emailId} not found in source folder");
-            }
-
-            source.EmailIds.Remove(emailId);
-            target.EmailIds.Add(emailId);
-
-            long sourceOffset = folderManager.WriteFolder(source);
-            long targetOffset = folderManager.WriteFolder(target);
-
-            segmentManager.UpdateMetadata(metadata =>
-            {
-                metadata.FolderOffsets[sourceFolder] = sourceOffset;
-                metadata.FolderOffsets[targetFolder] = targetOffset;
-                return metadata;
-            });
-        }
-    }
-
-    public void DeleteEmail(ulong emailId, string folderName)
-    {
-        lock (fileStream)
-        {
-            var folder = folderManager.GetFolder(folderName);
-            if (folder == null)
-            {
-                throw new InvalidOperationException($"Folder '{folderName}' not found");
-            }
-
-            if (!folder.EmailIds.Contains(emailId))
-            {
-                throw new InvalidOperationException($"Email {emailId} not found in folder");
-            }
-
-            folder.EmailIds.Remove(emailId);
-            long folderOffset = folderManager.WriteFolder(folder);
-
-            var segmentOffsets = segmentManager.GetSegmentOffsets(emailId);
-            segmentManager.UpdateMetadata(metadata =>
-            {
-                metadata.FolderOffsets[folderName] = folderOffset;
-                metadata.OutdatedOffsets.AddRange(segmentOffsets);
-                return metadata;
-            });
-        }
-    }
-
-    public void UpdateEmailContent(ulong emailId, byte[] newContent)
-    {
-        lock (fileStream)
-        {
-            var segment = new SegmentContent
-            {
-                SegmentId = emailId,
-                SegmentData = newContent
-            };
-
-            long newOffset = segmentManager.WriteSegment(segment);
-            var oldOffsets = segmentManager.GetSegmentOffsets(emailId);
-
-            segmentManager.UpdateMetadata(metadata =>
-            {
-                metadata.OutdatedOffsets.AddRange(oldOffsets);
-                metadata.SegmentOffsets.Add(newOffset);
-                return metadata;
-            });
-        }
-    }
-
-    public void CreateFolder(string folderName, string parentFolderId = null)
-    {
-        lock (fileStream)
-        {
-            if (folderManager.GetFolder(folderName) != null)
-            {
-                throw new InvalidOperationException($"Folder '{folderName}' already exists");
-            }
-
-            var folderId = Guid.NewGuid().ToString();
-            var folder = new FolderContent
-            {
-                FolderId = folderId,
-                Name = folderName,
-                EmailIds = new List<ulong>()
-            };
-
-            long folderOffset = folderManager.WriteFolder(folder);
-
-            segmentManager.UpdateMetadata(metadata =>
-            {
-                metadata.FolderOffsets[folderName] = folderOffset;
-                return metadata;
-            });
-
-            var tree = folderManager.GetLatestFolderTree();
-            if (parentFolderId == null)
-            {
-                parentFolderId = tree.RootFolderId ?? folderId;
-                if (tree.RootFolderId == null)
-                {
-                    tree.RootFolderId = folderId;
-                }
-            }
-            else if (!tree.FolderHierarchy.ContainsKey(parentFolderId))
-            {
-                throw new InvalidOperationException($"Parent folder ID '{parentFolderId}' not found");
-            }
-
-            tree.FolderHierarchy[folderId] = parentFolderId;
-            folderManager.WriteFolderTree(tree);
-        }
-    }
-
-    public void DeleteFolder(string folderName, bool deleteEmails = false)
-    {
-        lock (fileStream)
-        {
-            var folder = folderManager.GetFolder(folderName);
-            if (folder == null)
-            {
-                return;
-                throw new InvalidOperationException($"Folder '{folderName}' not found");
-            }
-
-            if (deleteEmails)
-            {
-                var segmentOffsets = new List<long>();
                 foreach (var emailId in folder.EmailIds)
                 {
-                    segmentOffsets.AddRange(segmentManager.GetSegmentOffsets(emailId));
+                    await emailManager.MoveEmailAsync(emailId, folderName, "Deleted Items");
                 }
-
-                segmentManager.UpdateMetadata(metadata =>
-                {
-                    metadata.OutdatedOffsets.AddRange(segmentOffsets);
-                    metadata.FolderOffsets.Remove(folderName);
-                    return metadata;
-                });
             }
-            else if (folder.EmailIds.Count > 0)
-            {
-                throw new InvalidOperationException("Cannot delete non-empty folder without deleteEmails flag");
-            }
-
-            var tree = folderManager.GetLatestFolderTree();
-            tree.FolderHierarchy.Remove(folder.FolderId);
-            folderManager.WriteFolderTree(tree);
         }
+        folderManager.DeleteFolder(folderName, deleteEmails);
     }
 
     public HeaderContent GetHeader()
@@ -272,25 +137,22 @@ public class StorageManager : IStorageManager
         return cacheManager.GetHeader();
     }
 
-    public Block ReadBlock(long offset)
+    // These methods should be internal and only used by other managers
+    internal Block ReadBlock(long offset)
     {
         return blockManager.ReadBlock(offset);
     }
 
-    public long WriteBlock(Block block, long? specificOffset = null)
+    internal long WriteBlock(Block block, long? specificOffset = null)
     {
         return blockManager.WriteBlock(block, specificOffset);
     }
 
-    public IEnumerable<(long Offset, Block Block)> WalkBlocks()
+    internal IEnumerable<(long Offset, Block Block)> WalkBlocks()
     {
         return blockManager.WalkBlocks();
     }
 
-    public void UpdateMetadata(Func<MetadataContent, MetadataContent> updateFunc)
-    {
-        segmentManager.UpdateMetadata(updateFunc);
-    }
     public void Compact(string outputPath)
     {
         lock (fileStream)
@@ -301,14 +163,14 @@ public class StorageManager : IStorageManager
 
     public void InvalidateCache()
     {
-        lock (fileStream)
-        {
-            cacheManager.InvalidateCache();
-        }
+        cacheManager.InvalidateCache();
     }
 
     public void Dispose()
     {
+        emailManager?.Dispose();
         fileStream?.Dispose();
     }
+
+
 }

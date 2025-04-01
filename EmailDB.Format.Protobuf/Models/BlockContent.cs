@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EmailDB.Format.Models;
+namespace EmailDB.Format.Protobuf.Models;
 [ProtoContract]
 [ProtoInclude(100, typeof(HeaderContent))]
 [ProtoInclude(101, typeof(FolderTreeContent))]

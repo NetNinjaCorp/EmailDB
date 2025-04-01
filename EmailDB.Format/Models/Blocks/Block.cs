@@ -5,11 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EmailDB.Format.Models;
+namespace EmailDB.Format.Models.Blocks;
 
 [ProtoContract]
 public class Block
 {
+    [ProtoMember(1)]
+    public uint Magic { get; set; } = 0xDEADBEEF;
     [ProtoMember(1)]
     public BlockHeader Header { get; set; }
 
