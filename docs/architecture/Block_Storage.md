@@ -6,28 +6,32 @@ This document details the components responsible for managing block storage with
 
 ### Responsibilities
 
--   Direct interaction with the physical EMDB file(s).
--   Reading raw byte sequences (`byte[]`) from a specified `BlockLocation`.
--   Writing raw byte sequences (`byte[]`) to the file, allocating space as needed, and returning the `BlockLocation` where the data was written.
--   Managing file-level concerns like file size, potentially handling file splitting or extensions if the format supports it.
--   Ensuring data integrity at the raw byte level (e.g., potentially using checksums if required by the low-level format, though often this is left to the `BlockManager`).
+-   Direct interaction with the physical EMDB file(s)
+-   Reading and writing complete blocks with headers, payload, and footers
+-   Managing block locations and maintaining an in-memory index
+-   Validating block integrity using CRC32 checksums
+-   Handling file-level operations like compaction and scanning
+-   Ensuring thread-safe access through reader-writer locks
 
 ### Interface (Conceptual)
 
 ```csharp
 interface IRawBlockManager
 {
-    Result<byte[]> ReadBlock(BlockLocation location);
-    Result<BlockLocation> WriteBlock(byte[] rawData);
-    // Potentially methods for deleting/reclaiming space, file management, etc.
+    Task<Result<Block>> ReadBlockAsync(long blockId, CancellationToken cancellationToken = default);
+    Task<Result<BlockLocation>> WriteBlockAsync(Block block, CancellationToken cancellationToken = default);
+    Task CompactAsync(CancellationToken cancellationToken = default);
+    IReadOnlyDictionary<long, BlockLocation> GetBlockLocations();
+    Task<List<long>> ScanFile();
 }
 ```
 
 ### Key Characteristics
 
--   **Low-Level:** Operates purely on byte arrays and file offsets/identifiers.
--   **Format Agnostic (Payload):** Does not know or care about the *content* of the blocks, only their raw byte representation.
--   **Stateful:** Manages the state of the underlying file(s).
+-   **Block-Aware:** Understands the complete block structure including magic numbers, checksums, and format
+-   **Thread-Safe:** Uses AsyncReaderWriterLock for safe concurrent access
+-   **Stateful:** Maintains block location index and current file position
+-   **Recovery-Capable:** Can scan files to rebuild block location index
 
 ## 2. Block Manager (`BlockManager`)
 
