@@ -2,14 +2,23 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace EmailDB.UnitTests;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
+        // Check if we're being called as RunHybridTests
+        if (args.Length > 0 && args[0] == "RunHybridTests")
+        {
+            await RunHybridTests();
+            return;
+        }
+
         Console.WriteLine("EmailDB Unit Tests Runner");
         Console.WriteLine("=========================\n");
         
@@ -20,6 +29,45 @@ public class Program
             Console.WriteLine("\nPress any key to exit...");
             Console.ReadKey();
         }
+    }
+
+    private static async Task RunHybridTests()
+    {
+        var output = new ConsoleOutputHelper();
+        
+        Console.WriteLine("\n=== Running Hybrid Store Folder Search Test ===\n");
+        
+        using (var folderTest = new HybridStoreFolderSearchTest(output))
+        {
+            try
+            {
+                await folderTest.Test_Folder_Index_Accuracy_And_Performance();
+                Console.WriteLine("\n✅ Folder Search Test Completed Successfully!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\n❌ Folder search test failed: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+            }
+        }
+        
+        Console.WriteLine("\n\n=== Running Hybrid Email Store Performance Test ===\n");
+        
+        using (var perfTest = new HybridEmailStorePerformanceTest(output))
+        {
+            try
+            {
+                await perfTest.Test_Hybrid_Store_Performance_And_Efficiency();
+                Console.WriteLine("\n✅ Performance Test Completed Successfully!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\n❌ Performance test failed: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+            }
+        }
+        
+        Console.WriteLine("\n\nAll tests completed!");
     }
     
     private static void RunBenchmarks(string[] args)
@@ -126,5 +174,18 @@ public class Program
         return testClass.GetMethods()
             .Where(m => m.GetCustomAttributes(typeof(FactAttribute), false).Length > 0)
             .ToList();
+    }
+}
+
+public class ConsoleOutputHelper : ITestOutputHelper
+{
+    public void WriteLine(string message)
+    {
+        Console.WriteLine(message);
+    }
+
+    public void WriteLine(string format, params object[] args)
+    {
+        Console.WriteLine(format, args);
     }
 }

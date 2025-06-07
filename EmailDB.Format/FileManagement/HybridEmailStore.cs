@@ -4,8 +4,10 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Linq;
 using Tenray.ZoneTree;
+using Tenray.ZoneTree.Serializers;
 using EmailDB.Format.Models;
 using EmailDB.Format.ZoneTree;
+using System.Text.Json;
 
 namespace EmailDB.Format.FileManagement;
 
@@ -36,21 +38,29 @@ public class HybridEmailStore : IDisposable
         // Initialize ZoneTree indexes
         _messageIdIndex = new ZoneTreeFactory<string, string>()
             .SetDataDirectory(Path.Combine(indexDirectory, "message_id"))
+            .SetKeySerializer(new Utf8StringSerializer())
+            .SetValueSerializer(new Utf8StringSerializer())
             .SetIsDeletedDelegate((in string key, in string value) => string.IsNullOrEmpty(value))
             .OpenOrCreate();
             
         _folderIndex = new ZoneTreeFactory<string, HashSet<string>>()
             .SetDataDirectory(Path.Combine(indexDirectory, "folders"))
+            .SetKeySerializer(new Utf8StringSerializer())
+            .SetValueSerializer(new HashSetSerializer())
             .SetIsDeletedDelegate((in string key, in HashSet<string> value) => value == null || value.Count == 0)
             .OpenOrCreate();
             
         _fullTextIndex = new ZoneTreeFactory<string, HashSet<string>>()
             .SetDataDirectory(Path.Combine(indexDirectory, "fulltext"))
+            .SetKeySerializer(new Utf8StringSerializer())
+            .SetValueSerializer(new HashSetSerializer())
             .SetIsDeletedDelegate((in string key, in HashSet<string> value) => value == null || value.Count == 0)
             .OpenOrCreate();
             
         _metadataIndex = new ZoneTreeFactory<string, EmailMetadata>()
             .SetDataDirectory(Path.Combine(indexDirectory, "metadata"))
+            .SetKeySerializer(new Utf8StringSerializer())
+            .SetValueSerializer(new EmailMetadataSerializer())
             .SetIsDeletedDelegate((in string key, in EmailMetadata value) => value == null)
             .OpenOrCreate();
     }
@@ -87,6 +97,11 @@ public class HybridEmailStore : IDisposable
         {
             folderEmails = new HashSet<string>();
         }
+        else
+        {
+            // Create a copy to avoid concurrent modification
+            folderEmails = new HashSet<string>(folderEmails);
+        }
         folderEmails.Add(emailIdStr);
         _folderIndex.Upsert(folder, folderEmails);
         
@@ -105,6 +120,11 @@ public class HybridEmailStore : IDisposable
                 {
                     emailsWithWord = new HashSet<string>();
                 }
+                else
+                {
+                    // Create a copy to avoid concurrent modification
+                    emailsWithWord = new HashSet<string>(emailsWithWord);
+                }
                 emailsWithWord.Add(emailIdStr);
                 _fullTextIndex.Upsert(word, emailsWithWord);
             }
@@ -116,12 +136,15 @@ public class HybridEmailStore : IDisposable
             EmailId = emailId,
             MessageId = messageId,
             Folder = folder,
-            Subject = subject,
-            From = from,
-            To = to,
-            Date = date ?? DateTime.UtcNow,
             Size = emailData.Length,
-            StoredAt = DateTime.UtcNow
+            StoredAt = DateTime.UtcNow,
+            CustomMetadata = new Dictionary<string, object>
+            {
+                { "Subject", subject ?? "" },
+                { "From", from ?? "" },
+                { "To", to ?? "" },
+                { "Date", (date ?? DateTime.UtcNow).ToString("O") }
+            }
         };
         _metadataIndex.Upsert(emailIdStr, metadata);
         
@@ -233,6 +256,8 @@ public class HybridEmailStore : IDisposable
         // Update folder index - remove from old folder
         if (_folderIndex.TryGet(oldFolder, out var oldFolderEmails))
         {
+            // Create a copy to avoid concurrent modification
+            oldFolderEmails = new HashSet<string>(oldFolderEmails);
             oldFolderEmails.Remove(emailIdStr);
             if (oldFolderEmails.Count == 0)
             {
@@ -248,6 +273,11 @@ public class HybridEmailStore : IDisposable
         if (!_folderIndex.TryGet(newFolder, out var newFolderEmails))
         {
             newFolderEmails = new HashSet<string>();
+        }
+        else
+        {
+            // Create a copy to avoid concurrent modification
+            newFolderEmails = new HashSet<string>(newFolderEmails);
         }
         newFolderEmails.Add(emailIdStr);
         _folderIndex.Upsert(newFolder, newFolderEmails);
@@ -275,6 +305,8 @@ public class HybridEmailStore : IDisposable
         // Remove from folder index
         if (_folderIndex.TryGet(metadata.Folder, out var folderEmails))
         {
+            // Create a copy to avoid concurrent modification
+            folderEmails = new HashSet<string>(folderEmails);
             folderEmails.Remove(emailIdStr);
             if (folderEmails.Count == 0)
             {
@@ -302,9 +334,18 @@ public class HybridEmailStore : IDisposable
         var folderCount = _folderIndex.Count();
         var indexedWords = _fullTextIndex.Count();
         
-        var dataFile = new FileInfo(_blockStore.GetType()
-            .GetField("_filePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-            ?.GetValue(_blockStore)?.ToString() ?? "");
+        // Get data file size using reflection to access private field
+        long dataFileSize = 0;
+        var filePathField = _blockStore.GetType()
+            .GetField("_filePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (filePathField != null)
+        {
+            var filePath = filePathField.GetValue(_blockStore)?.ToString();
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+            {
+                dataFileSize = new FileInfo(filePath).Length;
+            }
+        }
             
         var indexSize = GetDirectorySize(_indexDirectory);
         
@@ -313,9 +354,9 @@ public class HybridEmailStore : IDisposable
             EmailCount = emailCount,
             FolderCount = folderCount,
             IndexedWords = indexedWords,
-            DataFileSize = dataFile.Exists ? dataFile.Length : 0,
+            DataFileSize = dataFileSize,
             IndexSize = indexSize,
-            TotalSize = (dataFile.Exists ? dataFile.Length : 0) + indexSize
+            TotalSize = dataFileSize + indexSize
         };
     }
 
@@ -378,4 +419,47 @@ public class StorageStats
     public long DataFileSize { get; set; }
     public long IndexSize { get; set; }
     public long TotalSize { get; set; }
+}
+
+// Custom serializers for ZoneTree
+public class HashSetSerializer : ISerializer<HashSet<string>>
+{
+    public HashSet<string> Deserialize(Memory<byte> bytes)
+    {
+        if (bytes.Length == 0)
+            return new HashSet<string>();
+            
+        var json = System.Text.Encoding.UTF8.GetString(bytes.Span);
+        return JsonSerializer.Deserialize<HashSet<string>>(json) ?? new HashSet<string>();
+    }
+
+    public Memory<byte> Serialize(in HashSet<string> value)
+    {
+        if (value == null)
+            return Memory<byte>.Empty;
+            
+        var json = JsonSerializer.Serialize(value);
+        return System.Text.Encoding.UTF8.GetBytes(json).AsMemory();
+    }
+}
+
+public class EmailMetadataSerializer : ISerializer<EmailMetadata>
+{
+    public EmailMetadata Deserialize(Memory<byte> bytes)
+    {
+        if (bytes.Length == 0)
+            return null;
+            
+        var json = System.Text.Encoding.UTF8.GetString(bytes.Span);
+        return JsonSerializer.Deserialize<EmailMetadata>(json);
+    }
+
+    public Memory<byte> Serialize(in EmailMetadata value)
+    {
+        if (value == null)
+            return Memory<byte>.Empty;
+            
+        var json = JsonSerializer.Serialize(value);
+        return System.Text.Encoding.UTF8.GetBytes(json).AsMemory();
+    }
 }

@@ -97,9 +97,9 @@ public class AppendOnlyBlockStore : IDisposable
                 throw new ArgumentException($"Block {blockId} not found");
             }
             
-            // Read the block
+            // Read the block data (skip header, read only data portion)
             var blockData = new byte[blockIndex.Size];
-            _fileStream.Seek(blockIndex.Offset, SeekOrigin.Begin);
+            _fileStream.Seek(blockIndex.Offset + 28, SeekOrigin.Begin); // Skip header
             await _fileStream.ReadAsync(blockData, 0, blockData.Length);
             
             // Parse block and extract email
@@ -164,7 +164,7 @@ public class AppendOnlyBlockStore : IDisposable
         {
             BlockId = _currentBlock.BlockId,
             Offset = offset,
-            Size = blockData.Length + 32, // header + data + trailer
+            Size = blockData.Length, // just the data size
             EmailCount = _currentBlock.EmailCount
         };
         
