@@ -1,206 +1,179 @@
-﻿//using EmailDB.Format.Models.BlockTypes;
-//using global::EmailDB.Format.Models;
-//using ProtoBuf;
-//using Tenray.ZoneTree.AbstractFileStream;
-//using Tenray.ZoneTree.Options;
-//using Tenray.ZoneTree.Serializers;
-//using Tenray.ZoneTree.WAL;
+﻿using EmailDB.Format.FileManagement;
+using EmailDB.Format.Models;
+using EmailDB.Format.Models.BlockTypes;
+using Tenray.ZoneTree.Options;
+using Tenray.ZoneTree.Serializers;
+using Tenray.ZoneTree.WAL;
 
-//namespace EmailDB.Format.ZoneTree;
+namespace EmailDB.Format.ZoneTree;
 
-//public class WriteAheadLogProvider : IWriteAheadLogProvider
-//{
-//    private readonly StorageManager storageManager;
-//    private readonly string name;
-//    private readonly Dictionary<string, IWriteAheadLogBase> logs;
-//    private long walBlockOffset = -1;
+public class WriteAheadLogProvider : IWriteAheadLogProvider
+{
+    private readonly RawBlockManager _blockManager;
+    private readonly string _name;
+    private readonly Dictionary<string, object> _logs;
 
-//    public WriteAheadLogProvider(StorageManager storageManager, string name)
-//    {
-//        this.storageManager = storageManager;
-//        this.name = name;
-//        this.logs = new Dictionary<string, IWriteAheadLogBase>();
+    public WriteAheadLogProvider(RawBlockManager blockManager, string name)
+    {
+        _blockManager = blockManager;
+        _name = name;
+        _logs = new Dictionary<string, object>();
+    }
 
-//        // Initialize WAL block if needed
-//        InitializeWAL();
-//    }
+    public void InitCategory(string category)
+    {
+        // Initialize category if needed
+    }
 
-//    private void InitializeWAL()
-//    {
-//        var metadata = GetMetadataContent();
-//        if (metadata != null)
-//        {
-//            walBlockOffset = metadata.WALOffset;
-//            if (walBlockOffset == -1)
-//            {
-//                // Create initial WAL block
-//                var walContent = new WALContent();
-//                var walBlock = new Block
-//                {
-//                    Header = new BlockHeader
-//                    {
-//                        Type = BlockType.WAL,
-//                        Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-//                        Version = 1
-//                    },
-//                    Content = walContent
-//                };
+    public IWriteAheadLog<TK, TV> GetOrCreateWAL<TK, TV>(
+        long segmentId,
+        string category,
+        WriteAheadLogOptions options,
+        ISerializer<TK> keySerializer,
+        ISerializer<TV> valueSerializer)
+    {
+        var key = GetWALKey(segmentId, category);
 
-//                walBlockOffset = storageManager.WriteBlock(walBlock);
-//                metadata.WALOffset = walBlockOffset;
-//                var tmpMD = storageManager.segmentManager.GetMetadata();
-//                tmpMD.WALOffset = walBlockOffset;
-//                storageManager.segmentManager.UpdateMetadata(tmpMD);
-//            }
-//        }
-//    }
+        if (_logs.TryGetValue(key, out var existing))
+        {
+            if (existing is IWriteAheadLog<TK, TV> typedExisting)
+            {
+                return typedExisting;
+            }
+            throw new InvalidOperationException($"Existing WAL for key '{key}' has incompatible types.");
+        }
 
-//    public void InitCategory(string category)
-//    {
-//        var walContent = GetWALContent();
-//        if (!walContent.CategoryOffsets.ContainsKey(category))
-//        {
-//            walContent.CategoryOffsets[category] = -1;
-//            UpdateWALContent(walContent);
-//        }
-//    }
+        // WAL temporarily disabled
+        throw new NotImplementedException("WAL implementation temporarily disabled");
+    }
 
-//    public IWriteAheadLog<TK, TV> GetOrCreateWAL<TK, TV>(
-//     long segmentId,
-//     string category,
-//     WriteAheadLogOptions options,
-//     ISerializer<TK> keySerializer,
-//     ISerializer<TV> valueSerializer)
-//    {
-//        var key = GetWALKey(segmentId, category);
+    public IWriteAheadLog<TKey, TValue> GetWAL<TKey, TValue>(long segmentId, string category)
+    {
+        var key = GetWALKey(segmentId, category);
+        if (_logs.TryGetValue(key, out var wal))
+        {
+            return (IWriteAheadLog<TKey, TValue>)wal;
+        }
+        return null;
+    }
 
-//        if (logs.TryGetValue(key, out var existing))
-//        {
-//            if (existing is IWriteAheadLog<TK, TV> typedExisting)
-//            {
-//                return typedExisting;
-//            }
-//            throw new InvalidOperationException($"Existing WAL for key '{key}' has incompatible types.");
-//        }
+    public bool RemoveWAL(long segmentId, string category)
+    {
+        var key = GetWALKey(segmentId, category);
+        if (_logs.TryGetValue(key, out var wal))
+        {
+            return _logs.Remove(key);
+        }
+        return false;
+    }
 
-//        var wal = new WriteAheadLog<TK, TV>(
-//            storageManager,
-//            name,
-//            segmentId,
-//            category);
+    public void DropStore()
+    {
+        _logs.Clear();
+    }
 
-//        logs[key] = wal; // Store the generic WAL
-//        return wal;
-//    }
+    private string GetWALKey(long segmentId, string category)
+    {
+        return $"{segmentId}_{category}";
+    }
+}
 
-//    public IWriteAheadLog<TKey, TValue> GetWAL<TKey, TValue>(long segmentId, string category)
-//    {
-//        var key = GetWALKey(segmentId, category);
-//        if (logs.TryGetValue(key, out var wal))
-//        {
-//            return (IWriteAheadLog<TKey, TValue>)wal;
-//        }
-//        return null;
-//    }
+// Simple WAL implementation that stores entries in EmailDB blocks
+// Temporarily commented out due to interface compatibility issues
+/*public class WriteAheadLog<TKey, TValue> : IWriteAheadLog<TKey, TValue>, IWriteAheadLogBase
+{
+    private readonly RawBlockManager _blockManager;
+    private readonly string _name;
+    private readonly long _segmentId;
+    private readonly string _category;
+    private readonly int _blockId;
+    private readonly List<WALEntry<TKey, TValue>> _entries;
+    private bool _isDisposed;
 
-//    public bool RemoveWAL(long segmentId, string category)
-//    {
-//        var key = GetWALKey(segmentId, category);
-//        if (logs.TryGetValue(key, out var wal))
-//        {
-//            wal.Drop();
-//            return logs.Remove(key);
-//        }
-//        return false;
-//    }
+    public string FilePath { get; }
+    public bool EnableIncrementalBackup { get; set; }
+    public int InitialLength { get; private set; }
 
-//    public void DropStore()
-//    {
-//        foreach (var wal in logs.Values)
-//        {
-//            wal.Drop();
-//        }
-//        logs.Clear();
-//    }
+    public WriteAheadLog(RawBlockManager blockManager, string name, long segmentId, string category)
+    {
+        _blockManager = blockManager;
+        _name = name;
+        _segmentId = segmentId;
+        _category = category;
+        FilePath = $"{name}_wal_{segmentId}_{category}";
+        _blockId = FilePath.GetHashCode();
+        _entries = new List<WALEntry<TKey, TValue>>();
+        
+        LoadExistingEntries();
+    }
 
-//    internal WALContent GetWALContent()
-//    {
-//        if (walBlockOffset != -1)
-//        {
-//            var block = storageManager.ReadBlock(walBlockOffset);
-//            if (block?.Content is WALContent walContent)
-//            {
-//                return walContent;
-//            }
-//        }
-//        return new WALContent();
-//    }
+    private void LoadExistingEntries()
+    {
+        // For simplicity, we'll start with empty WAL each time
+        // In a full implementation, we'd deserialize existing WAL entries
+        InitialLength = 0;
+    }
 
-//    internal void UpdateWALContent(WALContent content)
-//    {
-//        var block = new Block
-//        {
-//            Header = new BlockHeader
-//            {
-//                Type = BlockType.WAL,
-//                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-//                Version = 1
-//            },
-//            Content = content
-//        };
+    public void Append(in TKey key, in TValue value, long opIndex)
+    {
+        _entries.Add(new WALEntry<TKey, TValue> { Key = key, Value = value, OpIndex = opIndex });
+    }
 
-//        storageManager.WriteBlock(block, walBlockOffset);
-//    }
+    public void Drop()
+    {
+        _entries.Clear();
+        _isDisposed = true;
+    }
 
-//    private string GetWALKey(long segmentId, string category)
-//    {
-//        return $"{segmentId}_{category}";
-//    }
+    public void MarkFrozen()
+    {
+        // Save current entries to EmailDB block
+        SaveEntriesToBlock();
+    }
 
-//    private MetadataContent GetMetadataContent()
-//    {
-//        var header = storageManager.GetHeader();
-//        if (header.FirstMetadataOffset != -1)
-//        {
-//            var block = storageManager.ReadBlock(header.FirstMetadataOffset);
-//            return block?.Content as MetadataContent;
-//        }
-//        return null;
-//    }
-//}
+    private void SaveEntriesToBlock()
+    {
+        // For simplicity, we'll serialize entries as JSON
+        // In a production implementation, you'd use a more efficient serialization
+        var serializedEntries = System.Text.Json.JsonSerializer.Serialize(_entries);
+        var entryBytes = System.Text.Encoding.UTF8.GetBytes(serializedEntries);
 
-//[ProtoContract]
-//public class WALEntry<TKey, TValue>
-//{
-//    [ProtoMember(1)]
-//    public TKey Key { get; set; }
+        var block = new Block
+        {
+            Version = 1,
+            Type = BlockType.WAL,
+            Flags = 0,
+            Encoding = PayloadEncoding.Json,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = _blockId,
+            Payload = entryBytes
+        };
 
-//    [ProtoMember(2)]
-//    public TValue Value { get; set; }
+        _blockManager.WriteBlockAsync(block).Wait();
+    }
 
-//    [ProtoMember(3)]
-//    public long OpIndex { get; set; }
-//}
+    public void Dispose()
+    {
+        if (!_isDisposed)
+        {
+            SaveEntriesToBlock();
+            _isDisposed = true;
+        }
+    }
+}
 
-//public class WriteAheadLogWrapper
-//{
-//    public object WriteAheadLog { get; }
-//    public Type KeyType { get; }
-//    public Type ValueType { get; }
+public class WALEntry<TKey, TValue>
+{
+    public TKey Key { get; set; }
+    public TValue Value { get; set; }
+    public long OpIndex { get; set; }
+}
 
-//    public WriteAheadLogWrapper(object writeAheadLog, Type keyType, Type valueType)
-//    {
-//        WriteAheadLog = writeAheadLog;
-//        KeyType = keyType;
-//        ValueType = valueType;
-//    }
-//}
-
-//public interface IWriteAheadLogBase : IDisposable
-//{
-//    string FilePath { get; }
-//    bool EnableIncrementalBackup { get; set; }
-//    int InitialLength { get; }
-//    void Drop();
-//    void MarkFrozen();
-//}
+public interface IWriteAheadLogBase : IDisposable
+{
+    string FilePath { get; }
+    bool EnableIncrementalBackup { get; set; }
+    int InitialLength { get; }
+    void Drop();
+    void MarkFrozen();
+}*/

@@ -70,16 +70,22 @@ public class RawBlockManager : IDisposable
     private long currentPosition;
     private bool isDisposed;
     private long latestMetadataBlockId = -1; // Initialize to invalid ID
+    private readonly bool isReadOnly;
 
     #endregion
 
     #region Constructor & Disposal
 
-    public RawBlockManager(string filePath, bool createIfNotExists = true)
+    public RawBlockManager(string filePath, bool createIfNotExists = true, bool isReadOnly = false)
     {
         this.filePath = filePath;
-        FileMode fileMode = createIfNotExists ? FileMode.OpenOrCreate : FileMode.Open;
-        fileStream = new FileStream(filePath, fileMode, FileAccess.ReadWrite, FileShare.Read);
+        this.isReadOnly = isReadOnly;
+        
+        FileMode fileMode = createIfNotExists && !isReadOnly ? FileMode.OpenOrCreate : FileMode.Open;
+        FileAccess fileAccess = isReadOnly ? FileAccess.Read : FileAccess.ReadWrite;
+        FileShare fileShare = isReadOnly ? FileShare.ReadWrite : FileShare.Read;
+        
+        fileStream = new FileStream(filePath, fileMode, fileAccess, fileShare);
         fileLock = new AsyncReaderWriterLock();
         blockLocations = new ConcurrentDictionary<long, BlockLocation>();
         currentPosition = fileStream.Length;
@@ -110,6 +116,11 @@ public class RawBlockManager : IDisposable
     public async Task<Result<BlockLocation>> WriteBlockAsync(Block block, CancellationToken cancellationToken = default, long? OverrideLocation = null)
     {
         ThrowIfDisposed();
+        
+        if (isReadOnly)
+        {
+            return Result<BlockLocation>.Failure("Cannot write to a read-only block manager");
+        }
 
         // Prepare the block data in memory first, outside the lock
         byte[] blockData;

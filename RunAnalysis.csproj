@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <StartupObject>EmailDB.UnitTests.RunStorageAnalysis</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="EmailDB.UnitTests/EmailDB.UnitTests.csproj" />
+  </ItemGroup>
+
+</Project>
