@@ -126,6 +126,7 @@ public class RawBlockManager : IDisposable
         {
             // Attempt to acquire the write lock
             await fileLock.AcquireWriterLock();
+            lockAcquired = true;
 
             // Actual write operation
             long blockStartPosition = currentPosition;
@@ -164,10 +165,10 @@ public class RawBlockManager : IDisposable
         }
         finally
         {
-
-           fileLock.ReleaseWriterLock();
-          
-
+            if (lockAcquired)
+            {
+                fileLock.ReleaseWriterLock();
+            }
         }
     }
 
@@ -187,9 +188,13 @@ public class RawBlockManager : IDisposable
         }
 
         byte[] buffer = new byte[location.Length];
-       await fileLock.AcquireReaderLock();
+        bool lockAcquired = false;
+        
         try
         {
+            await fileLock.AcquireReaderLock();
+            lockAcquired = true;
+            
             fileStream.Seek(location.Position, SeekOrigin.Begin);
 
             int bytesRead = await fileStream.ReadAsync(buffer, 0, (int)location.Length, cancellationToken);
@@ -214,8 +219,10 @@ public class RawBlockManager : IDisposable
         }
         finally
         {
-           
+            if (lockAcquired)
+            {
                 fileLock.ReleaseReaderLock();
+            }
         }
     }
 
@@ -585,7 +592,7 @@ public class RawBlockManager : IDisposable
 
         // Write footer
         writer.Write(FOOTER_MAGIC);
-        writer.Write(TotalFixedOverhead + (block.Payload?.Length ?? 0));
+        writer.Write((long)(TotalFixedOverhead + (block.Payload?.Length ?? 0)));
     }
 
     // Renamed to avoid conflict and clarify internal use with Result pattern

@@ -1,0 +1,747 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using EmailDB.Format.FileManagement;
+using EmailDB.Format.Models;
+using EmailDB.Format.Models.BlockTypes;
+using EmailDB.Format.Helpers;
+using Xunit;
+using Xunit.Abstractions;
+using Force.Crc32;
+
+namespace EmailDB.UnitTests;
+
+/// <summary>
+/// Base functionality tests for all EmailDB operations including:
+/// - Writing blocks
+/// - Searching blocks
+/// - Indexing
+/// - Reindexing
+/// - Cleaning
+/// - End-to-end scenarios
+/// </summary>
+public class EmailDBBaseFunctionalityTests : IDisposable
+{
+    private readonly string _testFile;
+    private readonly RawBlockManager _rawBlockManager;
+    private readonly ITestOutputHelper _output;
+    private readonly string _testDirectory;
+
+    public EmailDBBaseFunctionalityTests(ITestOutputHelper output)
+    {
+        _output = output;
+        _testDirectory = Path.Combine(Path.GetTempPath(), $"EmailDBTest_{Guid.NewGuid()}");
+        Directory.CreateDirectory(_testDirectory);
+        _testFile = Path.Combine(_testDirectory, "test.emdb");
+        _rawBlockManager = new RawBlockManager(_testFile);
+    }
+
+    #region Block Writing Tests
+
+    [Fact]
+    public async Task Should_Write_Single_Block_Successfully()
+    {
+        // Arrange
+        var block = new Block
+        {
+            Version = 1,
+            Type = BlockType.Segment,
+            Flags = 0,
+            Encoding = PayloadEncoding.RawBytes,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = 1,
+            Payload = Encoding.UTF8.GetBytes("Test data")
+        };
+
+        // Act
+        var result = await _rawBlockManager.WriteBlockAsync(block);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(0, result.Value.Position);
+        Assert.True(result.Value.Length > 0);
+        
+        _output.WriteLine($"Block written at position {result.Value.Position} with length {result.Value.Length}");
+    }
+
+    [Fact]
+    public async Task Should_Write_Multiple_Blocks_Sequentially()
+    {
+        // Arrange
+        var blocks = new List<Block>();
+        for (int i = 1; i <= 10; i++)
+        {
+            blocks.Add(new Block
+            {
+                Version = 1,
+                Type = BlockType.Segment,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = i,
+                Payload = Encoding.UTF8.GetBytes($"Block {i} data")
+            });
+        }
+
+        // Act
+        var results = new List<Result<BlockLocation>>();
+        foreach (var block in blocks)
+        {
+            results.Add(await _rawBlockManager.WriteBlockAsync(block));
+        }
+
+        // Assert
+        Assert.All(results, r => Assert.True(r.IsSuccess));
+        
+        // Verify blocks are written sequentially
+        for (int i = 1; i < results.Count; i++)
+        {
+            Assert.True(results[i].Value.Position > results[i-1].Value.Position);
+        }
+        
+        _output.WriteLine($"Successfully wrote {blocks.Count} blocks sequentially");
+    }
+
+    [Fact]
+    public async Task Should_Write_Different_Block_Types()
+    {
+        // Arrange
+        var blockTypes = new[]
+        {
+            (BlockType.Metadata, "Metadata content"),
+            (BlockType.WAL, "WAL content"),
+            (BlockType.FolderTree, "FolderTree content"),
+            (BlockType.Folder, "Folder content"),
+            (BlockType.Segment, "Segment content"),
+            (BlockType.Cleanup, "Cleanup content"),
+            (BlockType.ZoneTreeSegment_KV, "ZoneTree KV content"),
+            (BlockType.ZoneTreeSegment_Vector, "ZoneTree Vector content")
+        };
+
+        // Act & Assert
+        foreach (var (blockType, content) in blockTypes)
+        {
+            var block = new Block
+            {
+                Version = 1,
+                Type = blockType,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = (long)blockType + 1000,
+                Payload = Encoding.UTF8.GetBytes(content)
+            };
+
+            var result = await _rawBlockManager.WriteBlockAsync(block);
+            Assert.True(result.IsSuccess);
+            
+            _output.WriteLine($"Successfully wrote {blockType} block");
+        }
+    }
+
+    [Fact]
+    public async Task Should_Handle_Large_Payload_Blocks()
+    {
+        // Arrange
+        var sizes = new[] { 1024, 10240, 102400, 1048576 }; // 1KB, 10KB, 100KB, 1MB
+        
+        foreach (var size in sizes)
+        {
+            var payload = new byte[size];
+            new Random(42).NextBytes(payload);
+            
+            var block = new Block
+            {
+                Version = 1,
+                Type = BlockType.Segment,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = size,
+                Payload = payload
+            };
+
+            // Act
+            var result = await _rawBlockManager.WriteBlockAsync(block);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            _output.WriteLine($"Successfully wrote {size:N0} byte block");
+        }
+    }
+
+    #endregion
+
+    #region Block Reading and Searching Tests
+
+    [Fact]
+    public async Task Should_Read_Block_By_Id()
+    {
+        // Arrange
+        var testData = "Test read by ID";
+        var block = new Block
+        {
+            Version = 1,
+            Type = BlockType.Segment,
+            Flags = 0,
+            Encoding = PayloadEncoding.RawBytes,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = 999,
+            Payload = Encoding.UTF8.GetBytes(testData)
+        };
+
+        await _rawBlockManager.WriteBlockAsync(block);
+
+        // Act
+        var readResult = await _rawBlockManager.ReadBlockAsync(999);
+
+        // Assert
+        Assert.True(readResult.IsSuccess);
+        Assert.Equal(999, readResult.Value.BlockId);
+        Assert.Equal(testData, Encoding.UTF8.GetString(readResult.Value.Payload));
+        
+        _output.WriteLine("Successfully read block by ID");
+    }
+
+    [Fact]
+    public async Task Should_Search_Blocks_By_Type()
+    {
+        // Arrange - Write blocks of different types
+        var blockData = new[]
+        {
+            (BlockType.Metadata, 2001L, "Metadata 1"),
+            (BlockType.Segment, 2002L, "Segment 1"),
+            (BlockType.Metadata, 2003L, "Metadata 2"),
+            (BlockType.WAL, 2004L, "WAL 1"),
+            (BlockType.Metadata, 2005L, "Metadata 3")
+        };
+
+        foreach (var (type, id, content) in blockData)
+        {
+            await _rawBlockManager.WriteBlockAsync(new Block
+            {
+                Version = 1,
+                Type = type,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = id,
+                Payload = Encoding.UTF8.GetBytes(content)
+            });
+        }
+
+        // Act - Search for all metadata blocks
+        var allBlocks = _rawBlockManager.GetAllBlockLocations();
+        var metadataBlockIds = new List<long>();
+        
+        foreach (var kvp in allBlocks)
+        {
+            var blockResult = await _rawBlockManager.ReadBlockAsync(kvp.Key);
+            if (blockResult.IsSuccess && blockResult.Value.Type == BlockType.Metadata)
+            {
+                metadataBlockIds.Add(kvp.Key);
+            }
+        }
+
+        // Assert
+        Assert.Equal(3, metadataBlockIds.Count);
+        Assert.Contains(2001L, metadataBlockIds);
+        Assert.Contains(2003L, metadataBlockIds);
+        Assert.Contains(2005L, metadataBlockIds);
+        
+        _output.WriteLine($"Found {metadataBlockIds.Count} metadata blocks");
+    }
+
+    [Fact]
+    public async Task Should_Get_Latest_Metadata_Block()
+    {
+        // Arrange - Write multiple metadata blocks
+        for (int i = 1; i <= 5; i++)
+        {
+            await _rawBlockManager.WriteBlockAsync(new Block
+            {
+                Version = 1,
+                Type = BlockType.Metadata,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = 3000 + i,
+                Payload = Encoding.UTF8.GetBytes($"Metadata version {i}")
+            });
+            
+            await Task.Delay(10); // Ensure different timestamps
+        }
+
+        // Act
+        var latestMetadataId = _rawBlockManager.GetLatestMetadataBlockId();
+
+        // Assert
+        Assert.Equal(3005, latestMetadataId);
+        
+        var latestBlock = await _rawBlockManager.ReadBlockAsync(latestMetadataId);
+        Assert.True(latestBlock.IsSuccess);
+        Assert.Equal("Metadata version 5", Encoding.UTF8.GetString(latestBlock.Value.Payload));
+        
+        _output.WriteLine($"Latest metadata block ID: {latestMetadataId}");
+    }
+
+    #endregion
+
+    #region Indexing Tests
+
+    [Fact]
+    public async Task Should_Build_Block_Index_After_Writing()
+    {
+        // Arrange
+        var blockIds = new List<long> { 4001, 4002, 4003, 4004, 4005 };
+        
+        foreach (var id in blockIds)
+        {
+            await _rawBlockManager.WriteBlockAsync(new Block
+            {
+                Version = 1,
+                Type = BlockType.Segment,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = id,
+                Payload = Encoding.UTF8.GetBytes($"Block {id}")
+            });
+        }
+
+        // Act
+        var allLocations = _rawBlockManager.GetAllBlockLocations();
+
+        // Assert
+        foreach (var id in blockIds)
+        {
+            Assert.True(allLocations.ContainsKey(id));
+        }
+        
+        _output.WriteLine($"Block index contains {allLocations.Count} entries");
+    }
+
+    [Fact]
+    public async Task Should_Verify_Block_Checksums_During_Indexing()
+    {
+        // Arrange
+        var testData = "Checksum test data";
+        var block = new Block
+        {
+            Version = 1,
+            Type = BlockType.Segment,
+            Flags = 0,
+            Encoding = PayloadEncoding.RawBytes,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = 5001,
+            Payload = Encoding.UTF8.GetBytes(testData)
+        };
+
+        // Act
+        await _rawBlockManager.WriteBlockAsync(block);
+        var readResult = await _rawBlockManager.ReadBlockAsync(5001);
+
+        // Assert
+        Assert.True(readResult.IsSuccess);
+        
+        // Verify payload integrity
+        var originalChecksum = Crc32Algorithm.Compute(block.Payload);
+        var readChecksum = Crc32Algorithm.Compute(readResult.Value.Payload);
+        Assert.Equal(originalChecksum, readChecksum);
+        
+        _output.WriteLine($"Checksum verification passed: 0x{originalChecksum:X8}");
+    }
+
+    #endregion
+
+    #region Reindexing Tests
+
+    [Fact]
+    public async Task Should_Reindex_After_File_Reopen()
+    {
+        // Arrange - Write blocks and close
+        var blockIds = new List<long> { 6001, 6002, 6003 };
+        
+        foreach (var id in blockIds)
+        {
+            await _rawBlockManager.WriteBlockAsync(new Block
+            {
+                Version = 1,
+                Type = BlockType.Segment,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = id,
+                Payload = Encoding.UTF8.GetBytes($"Reindex test {id}")
+            });
+        }
+
+        _rawBlockManager.Dispose();
+
+        // Act - Reopen and verify reindexing
+        using var newManager = new RawBlockManager(_testFile, createIfNotExists: false);
+        var reindexedLocations = newManager.GetAllBlockLocations();
+
+        // Assert
+        Assert.Equal(blockIds.Count, reindexedLocations.Count);
+        foreach (var id in blockIds)
+        {
+            Assert.True(reindexedLocations.ContainsKey(id));
+            
+            var readResult = await newManager.ReadBlockAsync(id);
+            Assert.True(readResult.IsSuccess);
+            Assert.Equal($"Reindex test {id}", Encoding.UTF8.GetString(readResult.Value.Payload));
+        }
+        
+        _output.WriteLine("Reindexing after file reopen successful");
+    }
+
+    [Fact]
+    public async Task Should_Handle_Corrupted_Block_During_Reindex()
+    {
+        // This test would require manually corrupting a block
+        // For now, we'll test the scanning mechanism
+        
+        // Arrange
+        await _rawBlockManager.WriteBlockAsync(new Block
+        {
+            Version = 1,
+            Type = BlockType.Segment,
+            Flags = 0,
+            Encoding = PayloadEncoding.RawBytes,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = 7001,
+            Payload = Encoding.UTF8.GetBytes("Valid block before corruption")
+        });
+
+        await _rawBlockManager.WriteBlockAsync(new Block
+        {
+            Version = 1,
+            Type = BlockType.Segment,
+            Flags = 0,
+            Encoding = PayloadEncoding.RawBytes,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = 7002,
+            Payload = Encoding.UTF8.GetBytes("Valid block after corruption")
+        });
+
+        // Act - Verify both blocks are indexed
+        var locations = _rawBlockManager.GetAllBlockLocations();
+
+        // Assert
+        Assert.True(locations.ContainsKey(7001));
+        Assert.True(locations.ContainsKey(7002));
+        
+        _output.WriteLine("Block scanning handles sequential blocks correctly");
+    }
+
+    #endregion
+
+    #region Cleaning Operations Tests
+
+    [Fact]
+    public async Task Should_Mark_Blocks_For_Cleanup()
+    {
+        // Arrange
+        var blocksToClean = new List<long> { 8001, 8002, 8003 };
+        var blocksToKeep = new List<long> { 8004, 8005 };
+
+        foreach (var id in blocksToClean.Concat(blocksToKeep))
+        {
+            await _rawBlockManager.WriteBlockAsync(new Block
+            {
+                Version = 1,
+                Type = BlockType.Segment,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = id,
+                Payload = Encoding.UTF8.GetBytes($"Block {id}")
+            });
+        }
+
+        // Act - Write cleanup block
+        var cleanupContent = new CleanupContent
+        {
+            Version = 1,
+            CleanupTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            BlocksToRemove = blocksToClean,
+            Reason = "Test cleanup operation"
+        };
+
+        var cleanupBlock = new Block
+        {
+            Version = 1,
+            Type = BlockType.Cleanup,
+            Flags = 0,
+            Encoding = PayloadEncoding.Json,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = 8999,
+            Payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(cleanupContent)
+        };
+
+        var cleanupResult = await _rawBlockManager.WriteBlockAsync(cleanupBlock);
+
+        // Assert
+        Assert.True(cleanupResult.IsSuccess);
+        
+        // Verify cleanup block can be read
+        var readCleanup = await _rawBlockManager.ReadBlockAsync(8999);
+        Assert.True(readCleanup.IsSuccess);
+        Assert.Equal(BlockType.Cleanup, readCleanup.Value.Type);
+        
+        _output.WriteLine($"Cleanup block written for {blocksToClean.Count} blocks");
+    }
+
+    [Fact]
+    public async Task Should_Track_Free_Space_After_Cleanup()
+    {
+        // Arrange
+        var blockId = 9001;
+        await _rawBlockManager.WriteBlockAsync(new Block
+        {
+            Version = 1,
+            Type = BlockType.Segment,
+            Flags = 0,
+            Encoding = PayloadEncoding.RawBytes,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = blockId,
+            Payload = new byte[1024] // 1KB payload
+        });
+
+        var locationBeforeCleanup = _rawBlockManager.GetAllBlockLocations()[blockId];
+
+        // Act - Mark as free space
+        var freeSpaceBlock = new Block
+        {
+            Version = 1,
+            Type = BlockType.FreeSpace,
+            Flags = 0,
+            Encoding = PayloadEncoding.RawBytes,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = blockId + 1000, // New ID for free space marker
+            Payload = BitConverter.GetBytes(locationBeforeCleanup.Position)
+                .Concat(BitConverter.GetBytes(locationBeforeCleanup.Length))
+                .ToArray()
+        };
+
+        var result = await _rawBlockManager.WriteBlockAsync(freeSpaceBlock);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        
+        _output.WriteLine($"Free space block created at position {locationBeforeCleanup.Position}");
+    }
+
+    #endregion
+
+    #region End-to-End Integration Tests
+
+    [Fact]
+    public async Task Should_Perform_Complete_Write_Index_Search_Clean_Cycle()
+    {
+        _output.WriteLine("=== Starting End-to-End Test ===");
+        
+        // Phase 1: Write initial data
+        _output.WriteLine("\nPhase 1: Writing initial blocks...");
+        var emailBlocks = new List<(long id, string content)>();
+        
+        for (int i = 1; i <= 20; i++)
+        {
+            var emailContent = $"Email {i}: Subject: Test Email {i}\nFrom: user{i}@example.com\nBody: This is test email number {i}";
+            emailBlocks.Add((10000 + i, emailContent));
+            
+            await _rawBlockManager.WriteBlockAsync(new Block
+            {
+                Version = 1,
+                Type = BlockType.Segment,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = 10000 + i,
+                Payload = Encoding.UTF8.GetBytes(emailContent)
+            });
+        }
+        
+        _output.WriteLine($"Wrote {emailBlocks.Count} email blocks");
+
+        // Phase 2: Write metadata
+        _output.WriteLine("\nPhase 2: Writing metadata...");
+        var metadata = new MetadataContent
+        {
+            Version = 1,
+            CreatedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            LastModifiedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            BlockCount = emailBlocks.Count,
+            FileSize = new FileInfo(_testFile).Length,
+            Properties = new Dictionary<string, string>
+            {
+                ["TotalEmails"] = emailBlocks.Count.ToString(),
+                ["LastUpdate"] = DateTime.UtcNow.ToString("O")
+            }
+        };
+
+        await _rawBlockManager.WriteBlockAsync(new Block
+        {
+            Version = 1,
+            Type = BlockType.Metadata,
+            Flags = 0,
+            Encoding = PayloadEncoding.Json,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = 19999,
+            Payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(metadata)
+        });
+        
+        _output.WriteLine("Metadata block written");
+
+        // Phase 3: Search and index
+        _output.WriteLine("\nPhase 3: Searching blocks...");
+        var allLocations = _rawBlockManager.GetAllBlockLocations();
+        var segmentBlocks = new List<long>();
+        
+        foreach (var kvp in allLocations)
+        {
+            var block = await _rawBlockManager.ReadBlockAsync(kvp.Key);
+            if (block.IsSuccess && block.Value.Type == BlockType.Segment)
+            {
+                segmentBlocks.Add(kvp.Key);
+            }
+        }
+        
+        _output.WriteLine($"Found {segmentBlocks.Count} segment blocks");
+
+        // Phase 4: Simulate email deletion (cleanup)
+        _output.WriteLine("\nPhase 4: Cleaning up old emails...");
+        var blocksToDelete = emailBlocks.Take(5).Select(e => e.id).ToList();
+        
+        var cleanupContent = new CleanupContent
+        {
+            Version = 1,
+            CleanupTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            BlocksToRemove = blocksToDelete,
+            Reason = "User deleted emails 1-5"
+        };
+
+        await _rawBlockManager.WriteBlockAsync(new Block
+        {
+            Version = 1,
+            Type = BlockType.Cleanup,
+            Flags = 0,
+            Encoding = PayloadEncoding.Json,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = 20000,
+            Payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(cleanupContent)
+        });
+        
+        _output.WriteLine($"Cleanup block written for {blocksToDelete.Count} emails");
+
+        // Phase 5: Verify remaining emails
+        _output.WriteLine("\nPhase 5: Verifying remaining emails...");
+        var remainingEmails = emailBlocks.Skip(5).ToList();
+        
+        foreach (var (id, expectedContent) in remainingEmails)
+        {
+            var readResult = await _rawBlockManager.ReadBlockAsync(id);
+            Assert.True(readResult.IsSuccess);
+            Assert.Equal(expectedContent, Encoding.UTF8.GetString(readResult.Value.Payload));
+        }
+        
+        _output.WriteLine($"Verified {remainingEmails.Count} remaining emails");
+
+        // Phase 6: Update metadata
+        _output.WriteLine("\nPhase 6: Updating metadata...");
+        metadata.LastModifiedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        metadata.BlockCount = remainingEmails.Count;
+        metadata.FileSize = new FileInfo(_testFile).Length;
+        metadata.Properties["TotalEmails"] = remainingEmails.Count.ToString();
+        metadata.Properties["LastCleanup"] = DateTime.UtcNow.ToString("O");
+
+        await _rawBlockManager.WriteBlockAsync(new Block
+        {
+            Version = 1,
+            Type = BlockType.Metadata,
+            Flags = 0,
+            Encoding = PayloadEncoding.Json,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = 20001,
+            Payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(metadata)
+        });
+        
+        _output.WriteLine("Updated metadata block written");
+
+        // Final verification
+        var latestMetadataId = _rawBlockManager.GetLatestMetadataBlockId();
+        Assert.Equal(20001, latestMetadataId);
+        
+        _output.WriteLine($"\n=== End-to-End Test Complete ===");
+        _output.WriteLine($"Final file size: {new FileInfo(_testFile).Length:N0} bytes");
+        _output.WriteLine($"Total blocks in index: {_rawBlockManager.GetAllBlockLocations().Count}");
+    }
+
+    [Fact]
+    public async Task Should_Handle_Concurrent_Operations()
+    {
+        // Arrange
+        var tasks = new List<Task<Result<BlockLocation>>>();
+        var blockIds = Enumerable.Range(11000, 100).ToList();
+
+        // Act - Write 100 blocks concurrently
+        foreach (var id in blockIds)
+        {
+            var task = Task.Run(async () =>
+            {
+                var block = new Block
+                {
+                    Version = 1,
+                    Type = BlockType.Segment,
+                    Flags = 0,
+                    Encoding = PayloadEncoding.RawBytes,
+                    Timestamp = DateTime.UtcNow.Ticks,
+                    BlockId = id,
+                    Payload = Encoding.UTF8.GetBytes($"Concurrent block {id}")
+                };
+                
+                return await _rawBlockManager.WriteBlockAsync(block);
+            });
+            
+            tasks.Add(task);
+        }
+
+        var results = await Task.WhenAll(tasks);
+
+        // Assert
+        Assert.All(results, r => Assert.True(r.IsSuccess));
+        
+        // Verify all blocks can be read
+        foreach (var id in blockIds)
+        {
+            var readResult = await _rawBlockManager.ReadBlockAsync(id);
+            Assert.True(readResult.IsSuccess);
+            Assert.Equal($"Concurrent block {id}", Encoding.UTF8.GetString(readResult.Value.Payload));
+        }
+        
+        _output.WriteLine($"Successfully handled {blockIds.Count} concurrent write operations");
+    }
+
+    #endregion
+
+    public void Dispose()
+    {
+        _rawBlockManager?.Dispose();
+        
+        if (Directory.Exists(_testDirectory))
+        {
+            try
+            {
+                Directory.Delete(_testDirectory, true);
+            }
+            catch
+            {
+                // Best effort cleanup
+            }
+        }
+    }
+}

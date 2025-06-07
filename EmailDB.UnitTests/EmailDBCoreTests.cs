@@ -1,0 +1,373 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using EmailDB.Format;
+using EmailDB.Format.FileManagement;
+using EmailDB.Format.Models;
+using EmailDB.Format.Models.BlockTypes;
+using EmailDB.Format.Helpers;
+using Xunit;
+using Xunit.Abstractions;
+using Force.Crc32;
+
+namespace EmailDB.UnitTests;
+
+/// <summary>
+/// Core tests for EmailDB operations that work with the actual API
+/// </summary>
+public class EmailDBCoreTests : IDisposable
+{
+    private readonly string _testFile;
+    private readonly RawBlockManager _rawBlockManager;
+    private readonly ITestOutputHelper _output;
+
+    public EmailDBCoreTests(ITestOutputHelper output)
+    {
+        _output = output;
+        _testFile = Path.GetTempFileName();
+        _rawBlockManager = new RawBlockManager(_testFile);
+    }
+
+    #region Basic Block Operations
+
+    [Fact]
+    public async Task Should_Write_And_Read_Single_Block()
+    {
+        // Arrange
+        var block = new Block
+        {
+            Version = 1,
+            Type = BlockType.Segment,
+            Flags = 0,
+            Encoding = PayloadEncoding.RawBytes,
+            Timestamp = DateTime.UtcNow.Ticks,
+            BlockId = 1,
+            Payload = Encoding.UTF8.GetBytes("Test block data")
+        };
+
+        // Act
+        var writeResult = await _rawBlockManager.WriteBlockAsync(block);
+        var readResult = await _rawBlockManager.ReadBlockAsync(1);
+
+        // Assert
+        Assert.True(writeResult.IsSuccess);
+        Assert.True(readResult.IsSuccess);
+        Assert.Equal("Test block data", Encoding.UTF8.GetString(readResult.Value.Payload));
+        
+        _output.WriteLine("Basic write/read test passed");
+    }
+
+    [Fact]
+    public async Task Should_Handle_Multiple_Block_Types()
+    {
+        // Test different block types
+        var blockTypes = Enum.GetValues<BlockType>();
+        
+        foreach (var blockType in blockTypes)
+        {
+            var block = new Block
+            {
+                Version = 1,
+                Type = blockType,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = (long)blockType + 100,
+                Payload = Encoding.UTF8.GetBytes($"Block type: {blockType}")
+            };
+
+            var writeResult = await _rawBlockManager.WriteBlockAsync(block);
+            Assert.True(writeResult.IsSuccess);
+            
+            var readResult = await _rawBlockManager.ReadBlockAsync(block.BlockId);
+            Assert.True(readResult.IsSuccess);
+            Assert.Equal(blockType, readResult.Value.Type);
+            
+            _output.WriteLine($"Successfully handled {blockType} block");
+        }
+    }
+
+    [Fact]
+    public async Task Should_Handle_Different_Encodings()
+    {
+        var encodings = new[]
+        {
+            (PayloadEncoding.RawBytes, "Raw bytes test data"),
+            (PayloadEncoding.Json, "{\"test\":\"json data\"}")
+        };
+
+        foreach (var (encoding, data) in encodings)
+        {
+            var block = new Block
+            {
+                Version = 1,
+                Type = BlockType.Segment,
+                Flags = 0,
+                Encoding = encoding,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = 200 + (int)encoding,
+                Payload = Encoding.UTF8.GetBytes(data)
+            };
+
+            var writeResult = await _rawBlockManager.WriteBlockAsync(block);
+            Assert.True(writeResult.IsSuccess);
+            
+            var readResult = await _rawBlockManager.ReadBlockAsync(block.BlockId);
+            Assert.True(readResult.IsSuccess);
+            Assert.Equal(encoding, readResult.Value.Encoding);
+            Assert.Equal(data, Encoding.UTF8.GetString(readResult.Value.Payload));
+            
+            _output.WriteLine($"Successfully handled {encoding} encoding");
+        }
+    }
+
+    #endregion
+
+    #region CacheManager Tests
+
+    [Fact]
+    public async Task CacheManager_Should_Store_And_Retrieve_Metadata()
+    {
+        // Arrange
+        var cacheManager = new CacheManager(_rawBlockManager);
+        var metadata = new MetadataContent
+        {
+            WALOffset = 1000,
+            FolderTreeOffset = 2000,
+            SegmentOffsets = new Dictionary<string, long>
+            {
+                ["seg1"] = 3000,
+                ["seg2"] = 4000
+            }
+        };
+
+        // Act
+        var offset = await cacheManager.UpdateMetadata(metadata);
+        var retrieved = await cacheManager.GetMetadataAsync();
+
+        // Assert
+        Assert.True(offset > 0);
+        Assert.NotNull(retrieved);
+        Assert.Equal(1000, retrieved.WALOffset);
+        Assert.Equal(2000, retrieved.FolderTreeOffset);
+        Assert.Equal(2, retrieved.SegmentOffsets.Count);
+        
+        _output.WriteLine($"Metadata stored at offset {offset}");
+    }
+
+    [Fact]
+    public async Task CacheManager_Should_Handle_Segments()
+    {
+        // Arrange
+        var cacheManager = new CacheManager(_rawBlockManager);
+        var segment = new SegmentContent
+        {
+            SegmentId = 1001,
+            SegmentData = Encoding.UTF8.GetBytes("Test segment data"),
+            ContentLength = 17,
+            SegmentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Version = 1
+        };
+
+        // Act
+        var offset = await cacheManager.UpdateSegment("1001", segment);
+        var retrieved = await cacheManager.GetSegmentAsync(1001);
+
+        // Assert
+        Assert.True(offset > 0);
+        Assert.NotNull(retrieved);
+        Assert.Equal("Test segment data", Encoding.UTF8.GetString(retrieved.SegmentData));
+        
+        _output.WriteLine("Segment cache test passed");
+    }
+
+    #endregion
+
+    #region MetadataManager Tests
+
+    [Fact]
+    public async Task MetadataManager_Should_Track_Offsets()
+    {
+        // Arrange
+        var cacheManager = new CacheManager(_rawBlockManager);
+        var metadataManager = new MetadataManager(cacheManager);
+
+        // Act
+        await metadataManager.AddOrUpdateSegmentOffsetAsync("test1", 1000);
+        await metadataManager.AddOrUpdateSegmentOffsetAsync("test2", 2000);
+        
+        var offsets = await metadataManager.GetAllSegmentOffsetsAsync();
+
+        // Assert
+        Assert.Equal(2, offsets.Count);
+        Assert.Equal(1000, offsets["test1"]);
+        Assert.Equal(2000, offsets["test2"]);
+        
+        _output.WriteLine("Metadata offset tracking test passed");
+    }
+
+    [Fact]
+    public async Task MetadataManager_Should_Track_Outdated_Segments()
+    {
+        // Arrange
+        var cacheManager = new CacheManager(_rawBlockManager);
+        var metadataManager = new MetadataManager(cacheManager);
+        
+        await metadataManager.AddOrUpdateSegmentOffsetAsync("old1", 3000);
+        await metadataManager.AddOrUpdateSegmentOffsetAsync("old2", 4000);
+
+        // Act
+        await metadataManager.MarkSegmentOutdatedAsync("old1");
+        await metadataManager.MarkSegmentOutdatedAsync("old2");
+        
+        var outdated = await metadataManager.GetOutdatedSegmentOffsetsAsync();
+
+        // Assert
+        Assert.Contains(3000L, outdated);
+        Assert.Contains(4000L, outdated);
+        
+        _output.WriteLine($"Tracking {outdated.Count} outdated segments");
+    }
+
+    #endregion
+
+    #region Integration Scenarios
+
+    [Fact]
+    public async Task Should_Handle_Complete_Write_Read_Cycle()
+    {
+        // Arrange
+        var cacheManager = new CacheManager(_rawBlockManager);
+        var metadataManager = new MetadataManager(cacheManager);
+        var segmentManager = new SegmentManager(cacheManager, metadataManager);
+
+        // Act - Create segments
+        var segments = new List<SegmentContent>();
+        for (int i = 1; i <= 5; i++)
+        {
+            var segment = await segmentManager.CreateSegmentAsync(
+                Encoding.UTF8.GetBytes($"Email content {i}"),
+                new Dictionary<string, string> { ["index"] = i.ToString() }
+            );
+            segments.Add(segment);
+            _output.WriteLine($"Created segment {segment.SegmentId}");
+        }
+
+        // Verify - Read back segments
+        foreach (var segment in segments)
+        {
+            var retrieved = await segmentManager.GetSegmentAsync(segment.SegmentId);
+            Assert.NotNull(retrieved);
+            Assert.Equal(segment.SegmentId, retrieved.SegmentId);
+        }
+
+        // Update metadata
+        var metadata = new MetadataContent
+        {
+            WALOffset = -1,
+            FolderTreeOffset = -1,
+            SegmentOffsets = segments.ToDictionary(
+                s => s.SegmentId.ToString(),
+                s => (long)s.FileOffset
+            )
+        };
+        
+        await cacheManager.UpdateMetadata(metadata);
+        
+        _output.WriteLine($"Complete cycle test passed with {segments.Count} segments");
+    }
+
+    [Fact]
+    public async Task Should_Handle_Block_Deletion_Scenario()
+    {
+        // Arrange
+        var cacheManager = new CacheManager(_rawBlockManager);
+        var metadataManager = new MetadataManager(cacheManager);
+        var segmentManager = new SegmentManager(cacheManager, metadataManager);
+
+        // Create segments
+        var segmentIds = new List<long>();
+        for (int i = 1; i <= 3; i++)
+        {
+            var segment = await segmentManager.CreateSegmentAsync(
+                Encoding.UTF8.GetBytes($"Temporary segment {i}")
+            );
+            segmentIds.Add(segment.SegmentId);
+        }
+
+        // Act - Delete middle segment
+        var deleteResult = await segmentManager.DeleteSegmentAsync(segmentIds[1]);
+        Assert.True(deleteResult.IsSuccess);
+
+        // Verify
+        var isOutdated = await segmentManager.IsSegmentOutdatedAsync(segmentIds[1]);
+        Assert.True(isOutdated);
+
+        // Cleanup
+        var cleanupResult = await segmentManager.CleanupOutdatedSegmentsAsync();
+        Assert.True(cleanupResult.IsSuccess);
+        
+        _output.WriteLine("Block deletion scenario test passed");
+    }
+
+    #endregion
+
+    #region Performance Validation
+
+    [Fact]
+    public async Task Should_Handle_100_Blocks_Efficiently()
+    {
+        // Arrange
+        var blockCount = 100;
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        // Act - Write blocks
+        for (int i = 0; i < blockCount; i++)
+        {
+            var block = new Block
+            {
+                Version = 1,
+                Type = BlockType.Segment,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = 10000 + i,
+                Payload = Encoding.UTF8.GetBytes($"Performance test block {i}")
+            };
+
+            var result = await _rawBlockManager.WriteBlockAsync(block);
+            Assert.True(result.IsSuccess);
+        }
+
+        stopwatch.Stop();
+        
+        // Assert - Should complete reasonably quickly
+        Assert.True(stopwatch.ElapsedMilliseconds < 5000, 
+            $"Writing {blockCount} blocks took {stopwatch.ElapsedMilliseconds}ms");
+        
+        _output.WriteLine($"Wrote {blockCount} blocks in {stopwatch.ElapsedMilliseconds}ms");
+        _output.WriteLine($"Average: {stopwatch.ElapsedMilliseconds / (double)blockCount:F2}ms per block");
+    }
+
+    #endregion
+
+    public void Dispose()
+    {
+        _rawBlockManager?.Dispose();
+        
+        if (File.Exists(_testFile))
+        {
+            try
+            {
+                File.Delete(_testFile);
+            }
+            catch
+            {
+                // Best effort
+            }
+        }
+    }
+}
