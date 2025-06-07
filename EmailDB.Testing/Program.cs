@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using EmailDB.Format.FileManagement;
-using EmailDB.Format.Models.Blocks;
+using EmailDB.Format.Models.BlockTypes;
 
 class Program
 {

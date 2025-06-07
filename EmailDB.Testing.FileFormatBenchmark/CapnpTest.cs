@@ -3,7 +3,9 @@ using System;
 using System.IO;
 using Capnp;
 using EmailDB.Format.CapnProto;
-using EmailDB.Format.CapnProto.Models; // Add using for model types
+using EmailDB.Format.CapnProto.Models;
+using EmailDB.Format.FileManagement;
+using EmailDB.Format.Models; // Add using for model types
 namespace CapnpBenchmarkTest;
 
 [MemoryDiagnoser]

@@ -7,18 +7,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="ZoneTree\Interface\**" />
+    <Compile Remove="ZoneTree\IO\**" />
+    <EmbeddedResource Remove="ZoneTree\Interface\**" />
+    <EmbeddedResource Remove="ZoneTree\IO\**" />
+    <None Remove="ZoneTree\Interface\**" />
+    <None Remove="ZoneTree\IO\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="DragonHoard.InMemory" Version="2.1.3" />
     <PackageReference Include="MimeKit" Version="4.9.0" />
-    <PackageReference Include="protobuf-net" Version="3.2.45" />
     <PackageReference Include="SHA3" Version="1.0.0" />
     <PackageReference Include="SimpleBase" Version="4.0.2" />
     <PackageReference Include="ZoneTree.FullTextSearch" Version="1.0.8" />
     <PackageReference Include="Crc32.Net" Version="1.2.0" /> <!-- Added CRC32 -->
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="ZoneTree\IO\" />
-    <Folder Include="ZoneTree\Interface\" />
   </ItemGroup>
 
 </Project>

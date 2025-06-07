@@ -1,15 +1,12 @@
-﻿using ProtoBuf;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Tenray.ZoneTree.Serializers;
 
-[ProtoContract]
-public class EnhancedEmailContent : ISerializer<EnhancedEmailContent>
+public class EnhancedEmailContent 
 {
-    [ProtoMember(1)]
     public byte[] Subject { get; set; }
 
     public string StrSubject
@@ -31,7 +28,6 @@ public class EnhancedEmailContent : ISerializer<EnhancedEmailContent>
         }
     }
 
-    [ProtoMember(2)]
     public byte[] From { get; set; }
 
     public string StrFrom
@@ -52,7 +48,6 @@ public class EnhancedEmailContent : ISerializer<EnhancedEmailContent>
         }
     }
 
-    [ProtoMember(3)]
     public byte[] To { get; set; }
 
     public string StrTo
@@ -73,7 +68,6 @@ public class EnhancedEmailContent : ISerializer<EnhancedEmailContent>
         }
     }
 
-    [ProtoMember(4)]
     public byte[] Cc { get; set; }
 
     public string StrCc
@@ -94,7 +88,6 @@ public class EnhancedEmailContent : ISerializer<EnhancedEmailContent>
         }
     }
 
-    [ProtoMember(5)]
     public byte[] Bcc { get; set; }
 
     public string StrBcc
@@ -115,10 +108,8 @@ public class EnhancedEmailContent : ISerializer<EnhancedEmailContent>
         }
     }
 
-    [ProtoMember(6)]
     public DateTime Date { get; set; }
 
-    [ProtoMember(7)]
     public byte[] TextContent { get; set; }
 
     public string StrTextContent
@@ -139,7 +130,6 @@ public class EnhancedEmailContent : ISerializer<EnhancedEmailContent>
         }
     }
 
-    [ProtoMember(8)]
     public byte[] AttachmentContent { get; set; }
 
     public string StrAttachmentContent
@@ -160,24 +150,10 @@ public class EnhancedEmailContent : ISerializer<EnhancedEmailContent>
         }
     }
 
-    [ProtoMember(9)]
     public DateTime ProcessedTime { get; set; }
 
-    [ProtoMember(10)]
     public int AttachmentCount { get; set; }
-    [ProtoMember(11)]
     public byte[] RawEmailContent { get; set; }
 
-    public EnhancedEmailContent Deserialize(Memory<byte> bytes)
-    {
-        return ProtoBuf.Serializer.Deserialize<EnhancedEmailContent>(bytes.Span);
-
-    }
-
-    public Memory<byte> Serialize(in EnhancedEmailContent entry)
-    {
-        var memStream = new MemoryStream();
-        ProtoBuf.Serializer.Serialize(memStream, entry);
-        return memStream.ToArray();
-    }
+   
 }

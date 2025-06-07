@@ -13,9 +13,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Testing.FileFormatB
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Format.Protobuf", "EmailDB.Format.Protobuf\EmailDB.Format.Protobuf.csproj", "{4DD80CF9-5A18-4A61-B751-A54BCB2D09B8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Testing.CapnProtoFile", "EmailDB.Testing.CapnProtoFile\EmailDB.Testing.CapnProtoFile.csproj", "{1E9C60CA-BA07-47F4-83DA-885CBC1126FB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Testing.RawBlocks", "EmailDB.Testing.CapnProtoFile\EmailDB.Testing.RawBlocks.csproj", "{1E9C60CA-BA07-47F4-83DA-885CBC1126FB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.UnitTests", "EmailDB.UnitTests\EmailDB.UnitTests.csproj", "{6AF782D6-220B-4FEB-B94E-ED1055DEA807}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetNinja.Testing.BlockManager", "NetNinja.Testing.BlockManager\NetNinja.Testing.BlockManager.csproj", "{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -111,6 +113,18 @@ Global
 		{6AF782D6-220B-4FEB-B94E-ED1055DEA807}.Release|x64.Build.0 = Release|Any CPU
 		{6AF782D6-220B-4FEB-B94E-ED1055DEA807}.Release|x86.ActiveCfg = Release|Any CPU
 		{6AF782D6-220B-4FEB-B94E-ED1055DEA807}.Release|x86.Build.0 = Release|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Debug|x64.Build.0 = Debug|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Debug|x86.Build.0 = Debug|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Release|x64.ActiveCfg = Release|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Release|x64.Build.0 = Release|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Release|x86.ActiveCfg = Release|Any CPU
+		{805D431C-6C27-4BB4-99C8-CEA0DB5F12BB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

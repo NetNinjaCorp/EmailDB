@@ -1,7 +1,8 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-using EmailDB.Format.CapnProto;
-using EmailDB.Format.CapnProto.Models;
+using EmailDB.Format;
+using EmailDB.Format.FileManagement;
+using EmailDB.Format.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
@@ -12,7 +13,7 @@ const ulong ExpectedMagic = 0xEE411DBBD114EEUL;
 
 var SW = Stopwatch.StartNew();
 
-using var blockManager = new BlockManager("data.blk", true);
+var blockManager = new RawBlockManager("data.blk");
 
 // Write a block
 var blockmd = new Block
@@ -25,19 +26,21 @@ var blockmd = new Block
 };
 
 var location = await blockManager.WriteBlockAsync(blockmd);
+if (location.IsFailure) { Console.WriteLine("Location - " + location.Error); }
 // Write a block
 var blockwal = new Block
 {
     Version = 1,
     Type = BlockType.WAL,
-    BlockId = 1,
+    BlockId = 2,
     Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
     Payload = new byte[512]
 };
-_ = await blockManager.WriteBlockAsync(blockwal);
+var wal = await blockManager.WriteBlockAsync(blockwal);
+if (wal.IsFailure) { Console.WriteLine("WAL - " + wal.Error); }
 
 var randBytes = new byte[16384];
-for (int i = 0; i <= 100000; i++)
+for (int i = 0; i <= 1000; i++)
 {
     randBytes = new byte[Random.Shared.Next(4096, 65536)];
     Random.Shared.NextBytes(randBytes);
@@ -45,12 +48,13 @@ for (int i = 0; i <= 100000; i++)
     {
         Version = 1,
         Type = BlockType.Segment,
-        BlockId = 1,
+        BlockId = 3+i,
         Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
         Payload = randBytes
     };
-    _ = await blockManager.WriteBlockAsync(blockwal);
-
+    var res = await blockManager.WriteBlockAsync(blockwal);
+    if (res.IsFailure) { Console.WriteLine(res.Error);    }
+   
 }
 blockManager.Dispose();
 
@@ -60,10 +64,11 @@ Console.WriteLine($"Elapsed: {SW.ElapsedMilliseconds} ms");
 SW.Restart();
 
 
-var bm = new BlockManager("data.blk", false);
-var count = bm.ScanFile();
+var bm = new RawBlockManager("data.blk", false);
+var count = await bm.ScanFile();
 
 SW.Stop();
+
 Console.WriteLine("Found {0} blocks", count.Count);
 Console.WriteLine($"Elapsed: {SW.ElapsedMilliseconds} ms");
 

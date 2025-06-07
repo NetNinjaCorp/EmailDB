@@ -87,7 +87,7 @@ public class CacheManager : IDisposable
             (_, _) => (offset, folder, DateTime.UtcNow));
     }
 
-    public async Task< FolderTreeContent> GetCachedFolderTree()
+    public async Task<FolderTreeContent> GetCachedFolderTree()
     {
         ThrowIfDisposed();
         cacheLock.EnterReadLock();

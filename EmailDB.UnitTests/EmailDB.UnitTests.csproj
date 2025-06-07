@@ -22,12 +22,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <!-- Commented out references to main projects to avoid build errors -->
-  <!--
   <ItemGroup>
     <ProjectReference Include="..\EmailDB.Format\EmailDB.Format.csproj" />
-    <ProjectReference Include="..\EmailDB.Format.CapnProto\EmailDB.Format.CapnProto.csproj" />
   </ItemGroup>
-  -->
 
 </Project>
