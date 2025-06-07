@@ -15,13 +15,6 @@ public class BenchmarkRunner
 {
     private readonly ITestOutputHelper _output;
 
-    /// <summary>
-    /// Initializes a new instance of the BenchmarkRunner class
-    /// </summary>
-    public BenchmarkRunner()
-    {
-        // Default constructor for running from Program.cs
-    }
 
     /// <summary>
     /// Initializes a new instance of the BenchmarkRunner class with test output

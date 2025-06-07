@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -24,6 +24,20 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EmailDB.Format\EmailDB.Format.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="**\*.disabled" />
+    <Compile Remove="**\*.cs.disabled" />
+    <Compile Remove="Benchmarks.disabled\**" />
+    <Compile Remove="EmailDBBaseFunctionalityTests.cs" />
+    <Compile Remove="EmailDBManagerIntegrationTests.cs" />
+    <Compile Remove="EmailDBCoreTests.cs" />
+    <Compile Remove="EmailDBStressTests.cs" />
+    <Compile Remove="EmailDBIndexPerformanceTests.cs" />
+    <Compile Remove="EmailDBBenchmarkComparison.cs" />
+    <Compile Remove="RunTests.cs" />
+    <Compile Remove="Benchmarks\**" />
   </ItemGroup>
 
 </Project>

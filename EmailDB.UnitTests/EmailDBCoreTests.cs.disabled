@@ -244,16 +244,23 @@ public class EmailDBCoreTests : IDisposable
         var metadataManager = new MetadataManager(cacheManager);
         var segmentManager = new SegmentManager(cacheManager, metadataManager);
 
-        // Act - Create segments
+        // Act - Create segments with binary data
         var segments = new List<SegmentContent>();
         for (int i = 1; i <= 5; i++)
         {
+            // Generate binary data
+            var binaryData = new byte[256];
+            for (int j = 0; j < binaryData.Length; j++)
+            {
+                binaryData[j] = (byte)((i * 31 + j) % 256);
+            }
+            
             var segment = await segmentManager.CreateSegmentAsync(
-                Encoding.UTF8.GetBytes($"Email content {i}"),
+                binaryData,
                 new Dictionary<string, string> { ["index"] = i.ToString() }
             );
             segments.Add(segment);
-            _output.WriteLine($"Created segment {segment.SegmentId}");
+            _output.WriteLine($"Created segment {segment.SegmentId} with {binaryData.Length} bytes");
         }
 
         // Verify - Read back segments
@@ -262,6 +269,7 @@ public class EmailDBCoreTests : IDisposable
             var retrieved = await segmentManager.GetSegmentAsync(segment.SegmentId);
             Assert.NotNull(retrieved);
             Assert.Equal(segment.SegmentId, retrieved.SegmentId);
+            Assert.Equal(segment.SegmentData, retrieved.SegmentData);
         }
 
         // Update metadata
@@ -288,13 +296,16 @@ public class EmailDBCoreTests : IDisposable
         var metadataManager = new MetadataManager(cacheManager);
         var segmentManager = new SegmentManager(cacheManager, metadataManager);
 
-        // Create segments
+        // Create segments with binary data
         var segmentIds = new List<long>();
         for (int i = 1; i <= 3; i++)
         {
-            var segment = await segmentManager.CreateSegmentAsync(
-                Encoding.UTF8.GetBytes($"Temporary segment {i}")
-            );
+            // Generate random binary data
+            var random = new Random(i * 42);
+            var data = new byte[512];
+            random.NextBytes(data);
+            
+            var segment = await segmentManager.CreateSegmentAsync(data);
             segmentIds.Add(segment.SegmentId);
         }
 

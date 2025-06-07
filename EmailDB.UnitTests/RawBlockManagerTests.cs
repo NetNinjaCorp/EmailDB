@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using EmailDB.UnitTests.Models;
+using EmailDB.Format.Models;
 using Xunit;
 
 namespace EmailDB.UnitTests;
@@ -59,7 +60,7 @@ public class RawBlockManagerTests : IDisposable
         var originalBlock = new Block
         {
             BlockId = 2,
-            Type = BlockType.Email,
+            Type = BlockType.Segment,
             Version = 1,
             Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             Payload = new byte[] { 5, 6, 7, 8 }
@@ -86,7 +87,7 @@ public class RawBlockManagerTests : IDisposable
         var blocks = new List<Block>
         {
             new Block { BlockId = 3, Type = BlockType.Folder, Payload = new byte[] { 1, 2, 3 } },
-            new Block { BlockId = 4, Type = BlockType.Email, Payload = new byte[] { 4, 5, 6 } },
+            new Block { BlockId = 4, Type = BlockType.Segment, Payload = new byte[] { 4, 5, 6 } },
             new Block { BlockId = 5, Type = BlockType.Segment, Payload = new byte[] { 7, 8, 9 } }
         };
 

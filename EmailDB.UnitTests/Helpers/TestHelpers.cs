@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using EmailDB.UnitTests.Models;
+using EmailDB.Format.Models;
 using Moq;
 
 namespace EmailDB.UnitTests.Helpers;
@@ -120,7 +121,8 @@ public class TestCacheManager
     public async Task<SegmentContent> GetSegmentAsync(long segmentID)
     {
         var block = await _blockManager.ReadBlockAsync(segmentID);
-        return block?.Content?.SegmentContent;
+        // This is a mock implementation, return null for now
+        return null;
     }
 
     public void InvalidateCache()

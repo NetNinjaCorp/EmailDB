@@ -11,11 +11,6 @@ public class RunTests
 {
     private readonly ITestOutputHelper output;
 
-    // Default constructor for test discovery
-    public RunTests()
-    {
-        // Use Console.WriteLine for output when no ITestOutputHelper is provided
-    }
 
     public RunTests(ITestOutputHelper output)
     {

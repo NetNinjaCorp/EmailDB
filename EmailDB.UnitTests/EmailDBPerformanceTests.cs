@@ -409,10 +409,10 @@ public class EmailDBPerformanceTests : IDisposable
         using var newManager = new RawBlockManager(_testFile, createIfNotExists: false);
         sw.Stop();
         
-        var allLocations = newManager.GetAllBlockLocations();
+        var allLocations = newManager.GetBlockLocations();
         
         // Assert
-        Assert.Equal(blockCount, allLocations.Count);
+        Assert.Equal(blockCount, allLocations.Count());
         Assert.True(sw.ElapsedMilliseconds < 1000, $"Indexing {blockCount} blocks took {sw.ElapsedMilliseconds}ms");
         
         _output.WriteLine($"Index rebuild for {blockCount} blocks: {sw.ElapsedMilliseconds}ms");

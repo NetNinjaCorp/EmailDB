@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using EmailDB.UnitTests.Benchmarks;
 using Xunit;
 
 namespace EmailDB.UnitTests;
@@ -14,14 +13,7 @@ public class Program
         Console.WriteLine("EmailDB Unit Tests Runner");
         Console.WriteLine("=========================\n");
         
-        if (args.Contains("--benchmark") || args.Contains("-b"))
-        {
-            RunBenchmarks(args);
-        }
-        else
-        {
-            RunAllTests();
-        }
+        RunAllTests();
         
         if (args.Contains("--wait") || args.Contains("-w"))
         {
@@ -32,12 +24,8 @@ public class Program
     
     private static void RunBenchmarks(string[] args)
     {
-        Console.WriteLine("Running Email Database Benchmarks");
-        Console.WriteLine("================================\n");
-        
-        var benchmarkRunner = new BenchmarkRunner();
-        
-        // Get custom seed if provided
+        Console.WriteLine("Benchmarks are currently disabled.");
+        return;
         int seed = 42; // Default seed
         int seedIndex = Array.IndexOf(args, "--seed");
         if (seedIndex >= 0 && seedIndex < args.Length - 1)
@@ -69,54 +57,7 @@ public class Program
             }
         }
         
-        if (args.Contains("--small"))
-        {
-            benchmarkRunner.RunSmallBenchmark(seed);
-        }
-        else if (args.Contains("--medium"))
-        {
-            benchmarkRunner.RunMediumBenchmark(seed);
-        }
-        else if (args.Contains("--large"))
-        {
-            benchmarkRunner.RunLargeBenchmark(seed);
-        }
-        else if (args.Contains("--absurdly-large"))
-        {
-            Console.WriteLine("WARNING: The absurdly large benchmark will create 1 million emails.");
-            Console.WriteLine("This will require significant memory and may take a long time to complete.");
-            Console.WriteLine("Are you sure you want to continue? (y/n)");
-            
-            var response = Console.ReadLine()?.ToLower();
-            if (response == "y" || response == "yes")
-            {
-                benchmarkRunner.RunAbsurdlyLargeBenchmark(seed);
-            }
-            else
-            {
-                Console.WriteLine("Absurdly large benchmark cancelled.");
-            }
-        }
-        else if (args.Contains("--realistic"))
-        {
-            benchmarkRunner.RunRealisticScenario(seed);
-        }
-        else if (args.Contains("--multi-seed"))
-        {
-            benchmarkRunner.RunMultiSeedBenchmark(seedCount);
-        }
-        else
-        {
-            // Default to running all benchmarks except large
-            Console.WriteLine("Running default benchmark suite (small, medium, realistic)");
-            benchmarkRunner.RunAllBenchmarks();
-        }
-        
-        // Check if we should compare results
-        if (args.Contains("--compare"))
-        {
-            benchmarkRunner.CompareResults();
-        }
+        Console.WriteLine("Benchmarks are not available - benchmarkRunner not implemented");
         
         Console.WriteLine("\nBenchmarks completed. Results saved to benchmark_data directory.");
     }

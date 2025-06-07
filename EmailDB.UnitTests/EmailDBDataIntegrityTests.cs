@@ -30,11 +30,11 @@ public class EmailDBDataIntegrityTests : IDisposable
     }
 
     [Fact]
-    public async Task EmailDB_Should_Write_And_Read_Small_Text_Data()
+    public async Task EmailDB_Should_Write_And_Read_Small_Binary_Data()
     {
         // Arrange
-        var testData = "Hello EmailDB World!";
-        var payload = Encoding.UTF8.GetBytes(testData);
+        var payload = new byte[20];
+        new Random(42).NextBytes(payload);
         
         var block = new Block
         {
@@ -47,7 +47,7 @@ public class EmailDBDataIntegrityTests : IDisposable
             Payload = payload
         };
 
-        _output.WriteLine($"Writing text data: '{testData}' ({payload.Length} bytes)");
+        _output.WriteLine($"Writing binary data: {payload.Length} bytes");
 
         // Act - Write
         var writeResult = await _blockManager.WriteBlockAsync(block);
@@ -58,30 +58,27 @@ public class EmailDBDataIntegrityTests : IDisposable
         Assert.True(readResult.IsSuccess, $"Read failed: {readResult.Error}");
 
         // Assert
-        var readData = Encoding.UTF8.GetString(readResult.Value.Payload);
-        Assert.Equal(testData, readData);
+        Assert.Equal(payload, readResult.Value.Payload);
         Assert.Equal(block.Encoding, readResult.Value.Encoding);
         
-        _output.WriteLine($"Successfully read back: '{readData}'");
+        _output.WriteLine($"Successfully read back {payload.Length} bytes");
     }
 
     [Fact]
-    public async Task EmailDB_Should_Store_Multiple_Email_Blocks()
+    public async Task EmailDB_Should_Store_Multiple_Data_Blocks()
     {
-        var emails = new[]
-        {
-            new { Subject = "Test Email 1", From = "test1@example.com", Body = "This is test email 1 content." },
-            new { Subject = "Test Email 2", From = "test2@example.com", Body = "This is test email 2 content with more text." },
-            new { Subject = "Test Email 3", From = "test3@example.com", Body = "This is test email 3 with even more content and details." }
-        };
+        const int blockCount = 3;
+        var blockIds = new long[blockCount];
+        var payloads = new byte[blockCount][];
+        var random = new Random(123);
 
-        var blockIds = new long[emails.Length];
-
-        // Write all email blocks
-        for (int i = 0; i < emails.Length; i++)
+        // Write multiple data blocks with different sizes
+        for (int i = 0; i < blockCount; i++)
         {
-            var emailData = $"Subject: {emails[i].Subject}\nFrom: {emails[i].From}\n\n{emails[i].Body}";
-            var payload = Encoding.UTF8.GetBytes(emailData);
+            // Create binary data with varying sizes
+            var size = 100 + (i * 50); // 100, 150, 200 bytes
+            payloads[i] = new byte[size];
+            random.NextBytes(payloads[i]);
             
             var block = new Block
             {
@@ -91,28 +88,25 @@ public class EmailDBDataIntegrityTests : IDisposable
                 Encoding = PayloadEncoding.RawBytes,
                 Timestamp = DateTime.UtcNow.Ticks,
                 BlockId = 2000 + i,
-                Payload = payload
+                Payload = payloads[i]
             };
 
             var writeResult = await _blockManager.WriteBlockAsync(block);
             Assert.True(writeResult.IsSuccess);
             blockIds[i] = block.BlockId;
             
-            _output.WriteLine($"Wrote email {i + 1}: {emails[i].Subject} ({payload.Length} bytes)");
+            _output.WriteLine($"Wrote block {i + 1}: {size} bytes");
         }
 
-        // Read back all email blocks and verify
-        for (int i = 0; i < emails.Length; i++)
+        // Read back all blocks and verify
+        for (int i = 0; i < blockCount; i++)
         {
             var readResult = await _blockManager.ReadBlockAsync(blockIds[i]);
             Assert.True(readResult.IsSuccess);
             
-            var emailData = Encoding.UTF8.GetString(readResult.Value.Payload);
-            Assert.Contains(emails[i].Subject, emailData);
-            Assert.Contains(emails[i].From, emailData);
-            Assert.Contains(emails[i].Body, emailData);
+            Assert.Equal(payloads[i], readResult.Value.Payload);
             
-            _output.WriteLine($"Verified email {i + 1}: Data integrity confirmed");
+            _output.WriteLine($"Verified block {i + 1}: Data integrity confirmed");
         }
     }
 
@@ -155,18 +149,18 @@ public class EmailDBDataIntegrityTests : IDisposable
     }
 
     [Fact]
-    public async Task EmailDB_Should_Store_JSON_Encoded_Email_Metadata()
+    public async Task EmailDB_Should_Store_JSON_Encoded_Metadata()
     {
-        // Arrange - Create email metadata as JSON
+        // Arrange - Create generic metadata as JSON
         var metadata = new
         {
-            MessageId = "test@example.com",
-            Subject = "Important Meeting",
-            From = "boss@company.com",
-            To = new[] { "employee1@company.com", "employee2@company.com" },
-            Date = DateTime.UtcNow,
-            AttachmentCount = 2,
-            Size = 15678
+            Id = Guid.NewGuid().ToString(),
+            Type = "DataSegment",
+            Version = 1,
+            Attributes = new[] { "compressed", "encrypted" },
+            Timestamp = DateTime.UtcNow,
+            SegmentCount = 5,
+            TotalSize = 15678
         };
 
         var jsonPayloadEncoding = new JsonPayloadEncoding();
@@ -203,17 +197,15 @@ public class EmailDBDataIntegrityTests : IDisposable
     }
 
     [Fact]
-    public async Task EmailDB_Should_Handle_Large_Email_Content()
+    public async Task EmailDB_Should_Handle_Large_Binary_Content()
     {
-        // Arrange - Create large email content (simulating email with large attachment)
-        var largeContent = new StringBuilder();
-        for (int i = 0; i < 1000; i++)
-        {
-            largeContent.AppendLine($"Line {i}: This is a large email content to test EmailDB's ability to handle substantial amounts of data.");
-        }
-
-        var contentBytes = Encoding.UTF8.GetBytes(largeContent.ToString());
-        var originalSize = contentBytes.Length;
+        // Arrange - Create large binary content
+        var largeData = new byte[100 * 1024]; // 100KB
+        var random = new Random(456);
+        random.NextBytes(largeData);
+        
+        var originalSize = largeData.Length;
+        var originalChecksum = Crc32Algorithm.Compute(largeData);
 
         var block = new Block
         {
@@ -223,10 +215,10 @@ public class EmailDBDataIntegrityTests : IDisposable
             Encoding = PayloadEncoding.RawBytes,
             Timestamp = DateTime.UtcNow.Ticks,
             BlockId = 5001,
-            Payload = contentBytes
+            Payload = largeData
         };
 
-        _output.WriteLine($"Writing large content: {originalSize:N0} bytes");
+        _output.WriteLine($"Writing large binary data: {originalSize:N0} bytes");
 
         // Act
         var writeResult = await _blockManager.WriteBlockAsync(block);
@@ -237,11 +229,10 @@ public class EmailDBDataIntegrityTests : IDisposable
 
         // Assert
         Assert.Equal(originalSize, readResult.Value.Payload.Length);
-        var readContent = Encoding.UTF8.GetString(readResult.Value.Payload);
-        Assert.Contains("Line 0:", readContent);
-        Assert.Contains("Line 999:", readContent);
+        var readChecksum = Crc32Algorithm.Compute(readResult.Value.Payload);
+        Assert.Equal(originalChecksum, readChecksum);
         
-        _output.WriteLine($"Large content verified: {readResult.Value.Payload.Length:N0} bytes read back correctly");
+        _output.WriteLine($"Large binary data verified: {readResult.Value.Payload.Length:N0} bytes with matching checksum");
     }
 
     [Fact]
@@ -249,11 +240,15 @@ public class EmailDBDataIntegrityTests : IDisposable
     {
         var blockIds = new[] { 6001L, 6002L, 6003L, 6004L, 6005L };
         var writePositions = new long[blockIds.Length];
+        var payloads = new byte[blockIds.Length][];
+        var random = new Random(789);
 
-        // Write blocks sequentially
+        // Write blocks sequentially with binary data
         for (int i = 0; i < blockIds.Length; i++)
         {
-            var data = $"Block {i} content with some data to make it interesting.";
+            payloads[i] = new byte[64 + i * 16]; // Varying sizes
+            random.NextBytes(payloads[i]);
+            
             var block = new Block
             {
                 Version = 1,
@@ -262,7 +257,7 @@ public class EmailDBDataIntegrityTests : IDisposable
                 Encoding = PayloadEncoding.RawBytes,
                 Timestamp = DateTime.UtcNow.Ticks,
                 BlockId = blockIds[i],
-                Payload = Encoding.UTF8.GetBytes(data)
+                Payload = payloads[i]
             };
 
             var writeResult = await _blockManager.WriteBlockAsync(block);
@@ -285,8 +280,7 @@ public class EmailDBDataIntegrityTests : IDisposable
             var readResult = await _blockManager.ReadBlockAsync(blockIds[i]);
             Assert.True(readResult.IsSuccess);
             
-            var readData = Encoding.UTF8.GetString(readResult.Value.Payload);
-            Assert.Contains($"Block {i} content", readData);
+            Assert.Equal(payloads[i], readResult.Value.Payload);
         }
         
         _output.WriteLine("All blocks maintain correct order and can be read back");
@@ -295,8 +289,10 @@ public class EmailDBDataIntegrityTests : IDisposable
     [Fact]
     public async Task EmailDB_Should_Verify_File_Structure_Integrity()
     {
-        // Write a known block
-        var testData = "File structure integrity test";
+        // Write a known block with binary data
+        var binaryData = new byte[32];
+        new Random(111).NextBytes(binaryData);
+        
         var block = new Block
         {
             Version = 1,
@@ -305,7 +301,7 @@ public class EmailDBDataIntegrityTests : IDisposable
             Encoding = PayloadEncoding.RawBytes,
             Timestamp = DateTime.UtcNow.Ticks,
             BlockId = 7001,
-            Payload = Encoding.UTF8.GetBytes(testData)
+            Payload = binaryData
         };
 
         var writeResult = await _blockManager.WriteBlockAsync(block);
@@ -336,7 +332,7 @@ public class EmailDBDataIntegrityTests : IDisposable
         // Verify block can be read back correctly
         var readResult = await _blockManager.ReadBlockAsync(block.BlockId);
         Assert.True(readResult.IsSuccess);
-        Assert.Equal(testData, Encoding.UTF8.GetString(readResult.Value.Payload));
+        Assert.Equal(binaryData, readResult.Value.Payload);
     }
 
     [Theory]
@@ -344,19 +340,19 @@ public class EmailDBDataIntegrityTests : IDisposable
     [InlineData(PayloadEncoding.Json)]
     public async Task EmailDB_Should_Preserve_Encoding_Type(PayloadEncoding encoding)
     {
-        var testData = "Encoding preservation test";
         byte[] payload;
 
         if (encoding == PayloadEncoding.Json)
         {
             var jsonEncoder = new JsonPayloadEncoding();
-            var serializeResult = jsonEncoder.Serialize(new { message = testData });
+            var serializeResult = jsonEncoder.Serialize(new { id = 12345, data = "test", size = 1024 });
             Assert.True(serializeResult.IsSuccess);
             payload = serializeResult.Value;
         }
         else
         {
-            payload = Encoding.UTF8.GetBytes(testData);
+            payload = new byte[64];
+            new Random(222).NextBytes(payload);
         }
 
         var block = new Block
