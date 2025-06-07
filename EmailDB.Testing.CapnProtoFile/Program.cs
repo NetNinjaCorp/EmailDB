@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Reflection.PortableExecutable;
 using System.Text;
-const ulong ExpectedMagic = 0xEE411DBBD114EEUL;
+// const ulong ExpectedMagic = 0xEE411DBBD114EEUL; // Currently unused
 
 
 var SW = Stopwatch.StartNew();
