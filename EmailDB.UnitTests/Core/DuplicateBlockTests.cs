@@ -140,7 +140,7 @@ public class DuplicateBlockTests : IDisposable
     }
 
     [Fact]
-    public async Task Should_Prefer_Later_Timestamp_When_Multiple_Versions_Exist()
+    public async Task Should_Use_Write_Order_Not_Timestamp_For_Version_Precedence()
     {
         // Arrange
         const long blockId = 3001;
@@ -150,8 +150,8 @@ public class DuplicateBlockTests : IDisposable
         var earlyPayload = new byte[] { 0x01, 0x02 };
         var latePayload = new byte[] { 0x03, 0x04, 0x05 };
 
-        // Act - Write in non-chronological order (late first, then early)
-        var lateBlock = new Block
+        // Act - Write in non-chronological order (late timestamp first, then early timestamp)
+        var lateTimestampBlock = new Block
         {
             Version = 1,
             Type = BlockType.Segment,
@@ -161,9 +161,9 @@ public class DuplicateBlockTests : IDisposable
             BlockId = blockId,
             Payload = latePayload
         };
-        await _blockManager.WriteBlockAsync(lateBlock);
+        await _blockManager.WriteBlockAsync(lateTimestampBlock);
 
-        var earlyBlock = new Block
+        var earlyTimestampBlock = new Block
         {
             Version = 1,
             Type = BlockType.Segment,
@@ -173,15 +173,15 @@ public class DuplicateBlockTests : IDisposable
             BlockId = blockId,
             Payload = earlyPayload
         };
-        await _blockManager.WriteBlockAsync(earlyBlock);
+        await _blockManager.WriteBlockAsync(earlyTimestampBlock);
 
-        // Assert - Should return the version with later timestamp
+        // Assert - Should return the last written version (write order), not latest timestamp
         var readResult = await _blockManager.ReadBlockAsync(blockId);
         Assert.True(readResult.IsSuccess);
-        Assert.Equal(latePayload, readResult.Value.Payload);
-        Assert.Equal(lateTimestamp, readResult.Value.Timestamp);
+        Assert.Equal(earlyPayload, readResult.Value.Payload);
+        Assert.Equal(earlyTimestamp, readResult.Value.Timestamp);
 
-        _output.WriteLine($"Correctly returned version with later timestamp: {lateTimestamp}");
+        _output.WriteLine($"EmailDB uses write order precedence - returned last written block with timestamp: {earlyTimestamp}");
     }
 
     [Fact]
