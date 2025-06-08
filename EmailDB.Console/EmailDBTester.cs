@@ -224,8 +224,7 @@ public class EmailDBTester
                 return new HybridEmailStore(
                     Path.Combine(_testPath, "hybrid.db"),
                     Path.Combine(_testPath, "indexes"),
-                    blockSizeThreshold: _config.BlockSizeKB * 1024,
-                    enableHashChain: _config.EnableHashChain);
+                    blockSizeThreshold: _config.BlockSizeKB * 1024);
                 
             case StorageType.AppendOnly:
                 return new AppendOnlyBlockStore(
@@ -283,6 +282,8 @@ public class EmailDBTester
             .Take(editCount)
             .ToList();
         
+        var deleteCount = _generatedEmails.Count / 10; // Used in snapshot calculation
+        
         for (int i = 0; i < toEdit.Count; i++)
         {
             var newSize = GetEmailSize();
@@ -332,7 +333,7 @@ public class EmailDBTester
                 return content;
                 
             case AppendOnlyBlockStore appendOnly when id is EmailId emailId:
-                return await appendOnly.ReadEmailAsync(emailId);
+                return await appendOnly.ReadEmailAsync(emailId.BlockId, emailId.LocalId);
                 
             case RawBlockManager traditional when id is string messageId:
                 var result = await traditional.ReadBlockAsync(messageId.GetHashCode());
@@ -425,7 +426,9 @@ public class EmailDBTester
                 // For traditional/append-only, analyze block types
                 if (_config.StorageType == StorageType.Traditional)
                 {
-                    await AnalyzeTraditionalBlocks(file, ref data, ref metadata, blockCounts);
+                    var (blockData, blockMetadata) = await AnalyzeTraditionalBlocks(file, blockCounts);
+                    data += blockData;
+                    metadata += blockMetadata;
                 }
                 else
                 {
@@ -437,16 +440,19 @@ public class EmailDBTester
         return (total, data, index, metadata, blockCounts);
     }
 
-    private async Task AnalyzeTraditionalBlocks(string file, ref long data, ref long metadata, Dictionary<string, int> blockCounts)
+    private async Task<(long data, long metadata)> AnalyzeTraditionalBlocks(string file, Dictionary<string, int> blockCounts)
     {
+        long data = 0;
+        long metadata = 0;
+        
         try
         {
             using var manager = new RawBlockManager(file, isReadOnly: true);
-            var blocks = await manager.ScanFile();
+            var blockIds = await manager.ScanFile();
             
-            foreach (var location in blocks.Values)
+            foreach (var blockId in blockIds)
             {
-                var result = await manager.ReadBlockAsync(location.BlockId);
+                var result = await manager.ReadBlockAsync(blockId);
                 if (result.IsSuccess)
                 {
                     var block = result.Value;
@@ -459,7 +465,6 @@ public class EmailDBTester
                     switch (block.Type)
                     {
                         case BlockType.Segment:
-                        case BlockType.EmailContent:
                             data += block.Payload.Length + 64; // Include header
                             break;
                         case BlockType.Metadata:
@@ -472,6 +477,8 @@ public class EmailDBTester
             }
         }
         catch { }
+        
+        return (data, metadata);
     }
 
     private async Task PerformFinalAnalysis(object store)
