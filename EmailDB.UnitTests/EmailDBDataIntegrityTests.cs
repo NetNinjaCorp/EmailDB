@@ -163,8 +163,8 @@ public class EmailDBDataIntegrityTests : IDisposable
             TotalSize = 15678
         };
 
-        var jsonPayloadEncoding = new JsonPayloadEncoding();
-        var serializeResult = jsonPayloadEncoding.Serialize(metadata);
+        var jsonEncoding = new JsonPayloadEncoding();
+        var serializeResult = jsonEncoding.Serialize(metadata);
         Assert.True(serializeResult.IsSuccess);
 
         var block = new Block
@@ -190,7 +190,7 @@ public class EmailDBDataIntegrityTests : IDisposable
         // Assert
         Assert.Equal(PayloadEncoding.Json, readResult.Value.Encoding);
         
-        var deserializeResult = jsonPayloadEncoding.Deserialize<dynamic>(readResult.Value.Payload);
+        var deserializeResult = jsonEncoding.Deserialize<dynamic>(readResult.Value.Payload);
         Assert.True(deserializeResult.IsSuccess);
         
         _output.WriteLine("JSON metadata successfully round-tripped through EmailDB");

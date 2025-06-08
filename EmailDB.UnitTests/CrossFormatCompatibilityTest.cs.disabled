@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using EmailDB.Format.FileManagement;
 using EmailDB.Format.Models;
 using EmailDB.Format.Models.BlockTypes;
+using EmailDB.UnitTests.Helpers;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -40,33 +41,21 @@ public class CrossFormatCompatibilityTest : IDisposable
         _output.WriteLine("========================================");
         
         var rawPath = Path.Combine(_testDir, "raw_blocks.db");
-        using var rawManager = new RawBlockManager(rawPath, createNew: true);
+        using var rawManager = new RawBlockManager(rawPath, createIfNotExists: true);
         
         var blockIds = new List<long>();
         var blockData = new Dictionary<long, string>();
         
         for (int i = 0; i < 100; i++)
         {
-            var content = new SegmentContent
-            {
-                SegmentData = Encoding.UTF8.GetBytes($"Email content {i}: " + new string('x', _random.Next(1000, 5000)))
-            };
-            
-            var block = new Block
-            {
-                BlockId = i + 1000,
-                BlockType = BlockType.Segment,
-                PayloadEncoding = PayloadEncoding.Binary,
-                Timestamp = DateTime.UtcNow.Ticks,
-                Content = content,
-                PayloadLength = content.SegmentData.Length
-            };
+            var data = $"Email content {i}: " + new string('x', _random.Next(1000, 5000));
+            var block = BlockTestHelpers.CreateSegmentBlock(i + 1000, data);
             
             var result = await rawManager.WriteBlockAsync(block);
-            Assert.True(result.Success);
+            Assert.True(result.IsSuccess);
             
             blockIds.Add(block.BlockId);
-            blockData[block.BlockId] = Encoding.UTF8.GetString(content.SegmentData);
+            blockData[block.BlockId] = data;
         }
         
         rawManager.Dispose();
@@ -78,7 +67,7 @@ public class CrossFormatCompatibilityTest : IDisposable
         _output.WriteLine("\n📖 PHASE 2: VERIFY WITH NEW RAW BLOCK MANAGER");
         _output.WriteLine("=============================================");
         
-        using var rawReader = new RawBlockManager(rawPath, createNew: false);
+        using var rawReader = new RawBlockManager(rawPath, createIfNotExists: false);
         var locations = rawReader.GetBlockLocations();
         
         _output.WriteLine($"  Blocks found: {locations.Count}");
@@ -87,13 +76,13 @@ public class CrossFormatCompatibilityTest : IDisposable
         foreach (var blockId in blockIds.Take(10)) // Sample verification
         {
             var result = await rawReader.ReadBlockAsync(blockId);
-            if (!result.Success || result.Value == null)
+            if (!result.IsSuccess || result.Value == null)
             {
                 readErrors++;
                 continue;
             }
             
-            var content = result.Value.Content as SegmentContent;
+            var content = BlockTestHelpers.GetSegmentContent(result.Value);
             var data = Encoding.UTF8.GetString(content?.SegmentData ?? Array.Empty<byte>());
             
             if (data != blockData[blockId])
@@ -148,7 +137,7 @@ public class CrossFormatCompatibilityTest : IDisposable
             try
             {
                 var result = await rawReader.ReadBlockAsync(blockId);
-                if (!result.Success || result.Value == null) continue;
+                if (!result.IsSuccess || result.Value == null) continue;
                 
                 var content = result.Value.Content as SegmentContent;
                 if (content == null) continue;
@@ -249,14 +238,14 @@ public class CrossFormatCompatibilityTest : IDisposable
         _output.WriteLine("=====================================");
         
         var path = Path.Combine(_testDir, "encoding_test.db");
-        using var manager = new RawBlockManager(path, createNew: true);
+        using var manager = new RawBlockManager(path, createIfNotExists: true);
         
         var testData = new Dictionary<PayloadEncoding, (Block block, string expectedData)>();
         
         // Test different encoding types
         var encodings = new[]
         {
-            (PayloadEncoding.Binary, "Binary test data with special chars: \0\x01\x02"),
+            (PayloadEncoding.RawBytes, "Binary test data with special chars: \0\x01\x02"),
             (PayloadEncoding.Json, "{\"test\": \"JSON data\", \"value\": 123}"),
             (PayloadEncoding.MessagePack, "MessagePack compatible data"),
             (PayloadEncoding.Protobuf, "Protobuf compatible data"),
@@ -276,14 +265,14 @@ public class CrossFormatCompatibilityTest : IDisposable
             var block = new Block
             {
                 BlockId = (long)encoding,
-                BlockType = BlockType.Segment,
-                PayloadEncoding = encoding,
+                Type = BlockType.Segment,
+                Encoding = encoding,
                 Timestamp = DateTime.UtcNow.Ticks,
                 Content = content
             };
             
             var result = await manager.WriteBlockAsync(block);
-            Assert.True(result.Success);
+            Assert.True(result.IsSuccess);
             
             testData[encoding] = (block, data);
         }
@@ -291,17 +280,17 @@ public class CrossFormatCompatibilityTest : IDisposable
         manager.Dispose();
         
         // Read back with new instance
-        using var reader = new RawBlockManager(path, createNew: false);
+        using var reader = new RawBlockManager(path, createIfNotExists: false);
         
         var encodingErrors = 0;
         foreach (var (encoding, (originalBlock, expectedData)) in testData)
         {
             var result = await reader.ReadBlockAsync((long)encoding);
-            Assert.True(result.Success);
+            Assert.True(result.IsSuccess);
             
             var block = result.Value;
             Assert.NotNull(block);
-            Assert.Equal(encoding, block.PayloadEncoding);
+            Assert.Equal(encoding, block.Encoding);
             
             var content = block.Content as SegmentContent;
             var actualData = Encoding.UTF8.GetString(content?.SegmentData ?? Array.Empty<byte>());
@@ -327,7 +316,7 @@ public class CrossFormatCompatibilityTest : IDisposable
         _output.WriteLine("================================");
         
         var path = Path.Combine(_testDir, "blocktype_test.db");
-        using var manager = new RawBlockManager(path, createNew: true);
+        using var manager = new RawBlockManager(path, createIfNotExists: true);
         
         // Test all block types
         var blockTypes = new Dictionary<BlockType, BlockContent>
@@ -346,29 +335,29 @@ public class CrossFormatCompatibilityTest : IDisposable
             var block = new Block
             {
                 BlockId = (long)blockType,
-                BlockType = blockType,
-                PayloadEncoding = PayloadEncoding.Json,
+                Type = blockType,
+                Encoding = PayloadEncoding.Json,
                 Timestamp = DateTime.UtcNow.Ticks,
                 Content = content
             };
             
             var result = await manager.WriteBlockAsync(block);
-            Assert.True(result.Success);
+            Assert.True(result.IsSuccess);
         }
         
         manager.Dispose();
         
         // Read back and verify
-        using var reader = new RawBlockManager(path, createNew: false);
+        using var reader = new RawBlockManager(path, createIfNotExists: false);
         
         foreach (var (blockType, _) in blockTypes)
         {
             var result = await reader.ReadBlockAsync((long)blockType);
-            Assert.True(result.Success);
+            Assert.True(result.IsSuccess);
             
             var block = result.Value;
             Assert.NotNull(block);
-            Assert.Equal(blockType, block.BlockType);
+            Assert.Equal(blockType, block.Type);
             
             _output.WriteLine($"  ✅ {blockType} preserved correctly");
         }

@@ -97,10 +97,19 @@ public class RawBlockManager : IDisposable
     {
         if (!isDisposed)
         {
-            fileStream.Flush();
-            fileStream.Close();
-            fileLock.Dispose();
-            fileStream.Dispose();
+            if (fileStream != null && fileStream.CanWrite)
+            {
+                try
+                {
+                    fileStream.Flush();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Already disposed
+                }
+                fileStream.Dispose();
+            }
+            fileLock?.Dispose();
             isDisposed = true;
         }
     }

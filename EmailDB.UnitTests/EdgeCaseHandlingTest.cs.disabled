@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using EmailDB.Format.FileManagement;
 using EmailDB.Format.Models;
 using EmailDB.Format.Models.BlockTypes;
+using EmailDB.UnitTests.Helpers;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -91,7 +92,7 @@ public class EdgeCaseHandlingTest : IDisposable
         _output.WriteLine("===================");
         
         var path = Path.Combine(_testDir, "extreme_sizes.db");
-        using var manager = new RawBlockManager(path, createNew: true);
+        using var manager = new RawBlockManager(path, createIfNotExists: true);
         
         var testCases = new List<(string name, int size)>
         {
@@ -115,17 +116,17 @@ public class EdgeCaseHandlingTest : IDisposable
                 var block = new Block
                 {
                     BlockId = size,
-                    BlockType = BlockType.Segment,
-                    PayloadEncoding = PayloadEncoding.Binary,
+                    Type = BlockType.Segment,
+                    Encoding = PayloadEncoding.RawBytes,
                     Content = new SegmentContent { SegmentData = data },
                     Timestamp = DateTime.UtcNow.Ticks
                 };
                 
                 var writeResult = await manager.WriteBlockAsync(block);
-                Assert.True(writeResult.Success);
+                Assert.True(writeResult.IsSuccess);
                 
                 var readResult = await manager.ReadBlockAsync(size);
-                Assert.True(readResult.Success);
+                Assert.True(readResult.IsSuccess);
                 
                 var readData = (readResult.Value?.Content as SegmentContent)?.SegmentData;
                 Assert.Equal(size, readData?.Length ?? 0);
@@ -296,7 +297,7 @@ public class EdgeCaseHandlingTest : IDisposable
         _output.WriteLine("======================");
         
         var path = Path.Combine(_testDir, "blockid_edge.db");
-        using var manager = new RawBlockManager(path, createNew: true);
+        using var manager = new RawBlockManager(path, createIfNotExists: true);
         
         var edgeIds = new[]
         {
@@ -318,8 +319,8 @@ public class EdgeCaseHandlingTest : IDisposable
                 var block = new Block
                 {
                     BlockId = blockId,
-                    BlockType = BlockType.Segment,
-                    PayloadEncoding = PayloadEncoding.Binary,
+                    Type = BlockType.Segment,
+                    Encoding = PayloadEncoding.RawBytes,
                     Content = new SegmentContent 
                     { 
                         SegmentData = Encoding.UTF8.GetBytes($"Block ID: {blockId}")
@@ -330,11 +331,11 @@ public class EdgeCaseHandlingTest : IDisposable
                 var readResult = await manager.ReadBlockAsync(blockId);
                 
                 _output.WriteLine($"  Block ID {blockId,20}: " +
-                                $"Write={writeResult.Success}, Read={readResult.Success}");
+                                $"Write={writeResult.IsSuccess}, Read={readResult.IsSuccess}");
                 
-                if (writeResult.Success)
+                if (writeResult.IsSuccess)
                 {
-                    Assert.True(readResult.Success);
+                    Assert.True(readResult.IsSuccess);
                     Assert.Equal(blockId, readResult.Value?.BlockId);
                 }
             }
