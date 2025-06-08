@@ -334,7 +334,7 @@ public class RawBlockManager : IDisposable
         byte[] headerMagic = BitConverter.GetBytes(HEADER_MAGIC);
         try
         {
-           await fileLock.AcquireReaderLock();
+            await fileLock.AcquireReaderLock();
             using (var mmf = MemoryMappedFile.CreateFromFile(fileStream, null, 0, MemoryMappedFileAccess.Read, HandleInheritability.None, false))
             {
                 // 'position' is the start of the current chunk (excluding any overlap from a previous chunk).
@@ -403,10 +403,10 @@ public class RawBlockManager : IDisposable
     /// Scans the file to populate block locations and find the latest Metadata block ID.
     /// Should be called during initialization.
     /// </summary>
-    private async void ScanExistingBlocks()
+    private void ScanExistingBlocks()
     {
         // Use a read lock initially for scanning locations
-       await fileLock.AcquireReaderLock();
+        fileLock.AcquireReaderLock().Wait();
         try
         {
             var fileLength = fileStream.Length;

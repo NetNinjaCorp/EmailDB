@@ -29,23 +29,26 @@ public class EmailDatabase : IDisposable
     {
         _blockManager = new RawBlockManager(databasePath);
         
+        // Get the directory path for ZoneTree data files
+        var dataDirectory = Path.GetDirectoryName(databasePath);
+        
         // Initialize KV storage for emails
-        var emailFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager);
+        var emailFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager, dataDirectory: dataDirectory);
         emailFactory.CreateZoneTree("emails");
         _emailStore = emailFactory.OpenOrCreate();
 
         // Initialize full-text search index
-        var searchFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager);
+        var searchFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager, dataDirectory: dataDirectory);
         searchFactory.CreateZoneTree("search");
         _searchIndex = searchFactory.OpenOrCreate();
 
         // Initialize folder index
-        var folderFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager);
+        var folderFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager, dataDirectory: dataDirectory);
         folderFactory.CreateZoneTree("folders");
         _folderIndex = folderFactory.OpenOrCreate();
 
         // Initialize metadata store
-        var metadataFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager);
+        var metadataFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager, dataDirectory: dataDirectory);
         metadataFactory.CreateZoneTree("metadata");
         _metadataStore = metadataFactory.OpenOrCreate();
     }

@@ -10,6 +10,7 @@ using Tenray.ZoneTree.Serializers;
 using Tenray.ZoneTree.Comparers;
 using Tenray.ZoneTree.PresetTypes;
 using EmailDB.Format.FileManagement;
+using Tenray.ZoneTree.WAL;
 
 namespace EmailDB.Format.ZoneTree;
 
@@ -22,34 +23,36 @@ public class EmailDBZoneTreeFactory<TKey, TValue> : IDisposable
     private readonly bool _enableCompression;
     private readonly CompressionMethod _compressionMethod;
     private readonly ILogger _logger;
+    private readonly string _dataDirectory;
     private ZoneTreeFactory<TKey, TValue> Factory { get; set; }
 
     public EmailDBZoneTreeFactory(RawBlockManager blockManager,
         bool enableCompression = true,
         CompressionMethod compressionMethod = CompressionMethod.LZ4,
-        ILogger logger = null)
+        ILogger logger = null,
+        string dataDirectory = null)
     {
         _blockManager = blockManager;
         _enableCompression = enableCompression;
         _compressionMethod = compressionMethod;
         _logger = logger ?? new ConsoleLogger();
+        _dataDirectory = dataDirectory;
     }
 
     public bool CreateZoneTree(string name)
     {
         Factory = new ZoneTreeFactory<TKey, TValue>();
 
-        // Disable WAL completely to use only EmailDB storage
-        var walOptions = new WriteAheadLogOptions
-        {
-            WriteAheadLogMode = WriteAheadLogMode.None
-        };
-
         // Configure options
         Factory.Configure(options =>
         {
             options.Logger = _logger;
-            options.WriteAheadLogOptions = walOptions;
+            
+            // Note: ZoneTree will use its internal file paths based on segment names
+            // The data directory parameter is kept for future use but not used here
+            
+            // Use the null WAL provider to completely disable WAL
+            options.WriteAheadLogProvider = new NullWriteAheadLogProvider();
 
             // For string types, use our custom StringSerializer which implements both interfaces
             if (typeof(TKey) == typeof(string) && typeof(TValue) == typeof(string))

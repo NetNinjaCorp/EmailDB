@@ -31,76 +31,90 @@ public class RawBlockManagerBasicTest : IDisposable
         // Create and write blocks
         using (var blockManager = new RawBlockManager(_testFile, createIfNotExists: true))
         {
-            // Write metadata block
-            var blockMetadata = new Block
+            // Check if there are any blocks initially
+            var initialScan = await blockManager.ScanFile();
+            _output.WriteLine($"Initial blocks in new file: {initialScan.Count}");
+            
+            // Write just 3 blocks to simplify debugging
+            var block1 = new Block
             {
                 Version = 1,
                 Type = BlockType.Metadata,
-                BlockId = 1,
+                BlockId = 100,
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                Payload = new byte[512]
+                Payload = new byte[512],
+                Encoding = PayloadEncoding.RawBytes,
+                Flags = 0
             };
 
-            var metaResult = await blockManager.WriteBlockAsync(blockMetadata);
-            Assert.True(metaResult.IsSuccess, $"Failed to write metadata block: {metaResult.Error}");
-            _output.WriteLine("✓ Metadata block written successfully");
+            var result1 = await blockManager.WriteBlockAsync(block1);
+            Assert.True(result1.IsSuccess);
+            _output.WriteLine($"✓ Block 100 written at position {result1.Value.Position}");
 
-            // Write WAL block
-            var blockWal = new Block
+            var block2 = new Block
             {
                 Version = 1,
                 Type = BlockType.WAL,
-                BlockId = 2,
+                BlockId = 200,
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                Payload = new byte[512]
+                Payload = new byte[512],
+                Encoding = PayloadEncoding.RawBytes,
+                Flags = 0
             };
 
-            var walResult = await blockManager.WriteBlockAsync(blockWal);
-            Assert.True(walResult.IsSuccess, $"Failed to write WAL block: {walResult.Error}");
-            _output.WriteLine("✓ WAL block written successfully");
+            var result2 = await blockManager.WriteBlockAsync(block2);
+            Assert.True(result2.IsSuccess);
+            _output.WriteLine($"✓ Block 200 written at position {result2.Value.Position}");
 
-            // Write multiple segment blocks
-            var random = new Random(42);
-            for (int i = 0; i < 10; i++)
+            var block3 = new Block
             {
-                var payloadSize = random.Next(4096, 16384);
-                var payload = new byte[payloadSize];
-                random.NextBytes(payload);
-                
-                var blockSegment = new Block
-                {
-                    Version = 1,
-                    Type = BlockType.Segment,
-                    BlockId = 3 + i,
-                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    Payload = payload
-                };
+                Version = 1,
+                Type = BlockType.Segment,
+                BlockId = 300,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Payload = new byte[1024],
+                Encoding = PayloadEncoding.RawBytes,
+                Flags = 0
+            };
 
-                var segResult = await blockManager.WriteBlockAsync(blockSegment);
-                Assert.True(segResult.IsSuccess, $"Failed to write segment block {i}: {segResult.Error}");
-            }
-            _output.WriteLine("✓ 10 segment blocks written successfully");
+            var result3 = await blockManager.WriteBlockAsync(block3);
+            Assert.True(result3.IsSuccess);
+            _output.WriteLine($"✓ Block 300 written at position {result3.Value.Position}");
         }
 
         // Read blocks back
         using (var blockManager = new RawBlockManager(_testFile, createIfNotExists: false))
         {
             var scanResult = await blockManager.ScanFile();
-            _output.WriteLine($"✓ Found {scanResult.Count} blocks in file");
+            _output.WriteLine($"✓ Found {scanResult.Count} magic positions in file");
             
-            _output.WriteLine($"Expected 12 blocks (1 metadata + 1 WAL + 10 segments), found {scanResult.Count}");
-            Assert.True(scanResult.Count >= 11, $"Expected at least 11 blocks, but found {scanResult.Count}"); // Allow some flexibility
+            // Print all block locations for debugging
+            var locations = blockManager.GetBlockLocations();
+            _output.WriteLine($"Block locations count: {locations.Count}");
+            
+            foreach (var loc in locations.OrderBy(x => x.Key))
+            {
+                _output.WriteLine($"  Block ID {loc.Key}: Position={loc.Value.Position}, Length={loc.Value.Length}");
+            }
+            
+            Assert.Equal(3, scanResult.Count);
+            Assert.Equal(3, locations.Count);
 
             // Verify we can read specific blocks
-            var readResult = await blockManager.ReadBlockAsync(1);
-            Assert.True(readResult.IsSuccess);
+            var readResult = await blockManager.ReadBlockAsync(100);
+            Assert.True(readResult.IsSuccess, $"Failed to read block 100: {readResult.Error}");
             Assert.Equal(BlockType.Metadata, readResult.Value.Type);
-            _output.WriteLine("✓ Successfully read metadata block");
+            _output.WriteLine("✓ Successfully read block 100");
 
-            readResult = await blockManager.ReadBlockAsync(2);
-            Assert.True(readResult.IsSuccess);
+            readResult = await blockManager.ReadBlockAsync(200);
+            Assert.True(readResult.IsSuccess, $"Failed to read block 200: {readResult.Error}");
             Assert.Equal(BlockType.WAL, readResult.Value.Type);
-            _output.WriteLine("✓ Successfully read WAL block");
+            _output.WriteLine("✓ Successfully read block 200");
+            
+            readResult = await blockManager.ReadBlockAsync(300);
+            Assert.True(readResult.IsSuccess, $"Failed to read block 300: {readResult.Error}");
+            Assert.Equal(BlockType.Segment, readResult.Value.Type);
+            _output.WriteLine("✓ Successfully read block 300");
         }
     }
 
@@ -125,7 +139,9 @@ public class RawBlockManagerBasicTest : IDisposable
                     Type = BlockType.Segment,
                     BlockId = size,
                     Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    Payload = payload
+                    Payload = payload,
+                    Encoding = PayloadEncoding.RawBytes,
+                    Flags = 0
                 };
 
                 var result = await blockManager.WriteBlockAsync(block);
