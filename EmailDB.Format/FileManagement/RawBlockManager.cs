@@ -85,27 +85,50 @@ public class RawBlockManager : IDisposable
         FileAccess fileAccess = isReadOnly ? FileAccess.Read : FileAccess.ReadWrite;
         FileShare fileShare = isReadOnly ? FileShare.ReadWrite : FileShare.Read;
         
-        fileStream = new FileStream(filePath, fileMode, fileAccess, fileShare);
-        fileLock = new AsyncReaderWriterLock();
-        blockLocations = new ConcurrentDictionary<long, BlockLocation>();
-        currentPosition = fileStream.Length;
-        // Scan for existing blocks to populate locations and find latest metadata
-        ScanExistingBlocks();
+        try
+        {
+            fileStream = new FileStream(filePath, fileMode, fileAccess, fileShare);
+            fileLock = new AsyncReaderWriterLock();
+            blockLocations = new ConcurrentDictionary<long, BlockLocation>();
+            currentPosition = fileStream.Length;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to open file '{filePath}' with mode={fileMode}, access={fileAccess}, share={fileShare}: {ex.Message}", ex);
+        }
+        
+        // Only scan if file has content
+        if (fileStream.Length > 0)
+        {
+            try
+            {
+                // Scan for existing blocks to populate locations and find latest metadata
+                ScanExistingBlocks();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Failed to scan existing blocks during initialization: {ex.Message}");
+                // Continue anyway - the file might be empty or corrupted
+            }
+        }
     }
 
     public void Dispose()
     {
         if (!isDisposed)
         {
-            if (fileStream != null && fileStream.CanWrite)
+            if (fileStream != null)
             {
-                try
+                if (fileStream.CanWrite)
                 {
-                    fileStream.Flush();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // Already disposed
+                    try
+                    {
+                        fileStream.Flush();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Already disposed
+                    }
                 }
                 fileStream.Dispose();
             }
@@ -214,6 +237,22 @@ public class RawBlockManager : IDisposable
         {
             await fileLock.AcquireReaderLock();
             lockAcquired = true;
+            
+            // Check if fileStream is valid
+            if (fileStream == null)
+            {
+                return Result<Block>.Failure($"File stream is null for reading Block ID {blockId}.");
+            }
+            
+            if (fileStream.SafeFileHandle?.IsClosed == true)
+            {
+                return Result<Block>.Failure($"File stream handle is closed for reading Block ID {blockId}.");
+            }
+            
+            if (!fileStream.CanRead)
+            {
+                return Result<Block>.Failure($"File stream cannot read (CanRead=false) for Block ID {blockId}.");
+            }
             
             fileStream.Seek(location.Position, SeekOrigin.Begin);
 
@@ -332,10 +371,12 @@ public class RawBlockManager : IDisposable
         byte[] buffer = new byte[chunkSize + overlap];
         long lastProcessedAbsolute = -1;
         byte[] headerMagic = BitConverter.GetBytes(HEADER_MAGIC);
+        bool lockAcquired = false;
         try
         {
             await fileLock.AcquireReaderLock();
-            using (var mmf = MemoryMappedFile.CreateFromFile(fileStream, null, 0, MemoryMappedFileAccess.Read, HandleInheritability.None, false))
+            lockAcquired = true;
+            using (var mmf = MemoryMappedFile.CreateFromFile(fileStream, null, 0, MemoryMappedFileAccess.Read, HandleInheritability.None, true))
             {
                 // 'position' is the start of the current chunk (excluding any overlap from a previous chunk).
                 long position = 0;
@@ -365,7 +406,7 @@ public class RawBlockManager : IDisposable
 
                         // Compute the absolute position in the file.
                         long basePosition = position == 0 ? position : position - overlap;
-                        long absoluteIndex = basePosition + localOffset + index - 16;
+                        long absoluteIndex = basePosition + localOffset + index;
 
                         // Avoid duplicate processing (if an overlap causes the same index to appear again).
                         if (absoluteIndex > lastProcessedAbsolute)
@@ -393,7 +434,7 @@ public class RawBlockManager : IDisposable
         }
         finally
         {
-          
+            if (lockAcquired)
                 fileLock.ReleaseReaderLock();
         }
         return magicPositions;
@@ -405,10 +446,11 @@ public class RawBlockManager : IDisposable
     /// </summary>
     private void ScanExistingBlocks()
     {
-        // Use a read lock initially for scanning locations
-        fileLock.AcquireReaderLock().Wait();
+        // Don't use locks during initialization - we're in the constructor
+        // and no other threads can access this instance yet
         try
         {
+            
             var fileLength = fileStream.Length;
             if (fileLength == 0) return; // Nothing to scan
 
@@ -495,8 +537,11 @@ public class RawBlockManager : IDisposable
         }
         finally
         {
-            
-                fileLock.ReleaseReaderLock();
+            // Reset stream position after scanning
+            if (fileStream != null && fileStream.CanSeek)
+            {
+                fileStream.Position = 0;
+            }
         }
     }
 

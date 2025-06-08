@@ -82,9 +82,14 @@ public class RawBlockManagerBasicTest : IDisposable
             _output.WriteLine($"✓ Block 300 written at position {result3.Value.Position}");
         }
 
+        // Ensure file is not locked
+        await Task.Delay(100);
+        
         // Read blocks back
         using (var blockManager = new RawBlockManager(_testFile, createIfNotExists: false))
         {
+            _output.WriteLine("Created second RawBlockManager instance");
+            
             var scanResult = await blockManager.ScanFile();
             _output.WriteLine($"✓ Found {scanResult.Count} magic positions in file");
             
