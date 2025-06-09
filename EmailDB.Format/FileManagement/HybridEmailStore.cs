@@ -16,7 +16,7 @@ namespace EmailDB.Format.FileManagement;
 /// - Append-only blocks for email data (efficient storage)
 /// - ZoneTree for indexes (fast lookups and full-text search)
 /// </summary>
-public class HybridEmailStore : IDisposable
+public partial class HybridEmailStore : IDisposable
 {
     private readonly AppendOnlyBlockStore _blockStore;
     private readonly string _indexDirectory;

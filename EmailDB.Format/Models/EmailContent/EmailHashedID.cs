@@ -18,6 +18,12 @@ public struct EmailHashedID : IComparable<EmailHashedID>, IEquatable<EmailHashed
     public ulong Part2 => _part2;
     public ulong Part3 => _part3;
     public ulong Part4 => _part4;
+    
+    // Phase 2 properties for block storage
+    public long BlockId { get; set; }
+    public int LocalId { get; set; }
+    public byte[] EnvelopeHash { get; set; }
+    public byte[] ContentHash { get; set; }
 
     // Define a static default instance
     public static readonly EmailHashedID Empty = new EmailHashedID(new byte[32]);

@@ -1,19 +1,22 @@
-﻿using EmailDB.Format.FileManagement;
-using EmailDB.Format.Models;
+﻿using EmailDB.Format.Models;
 using EmailDB.Format.Models.BlockTypes;
 using System.Text.RegularExpressions;
 
-namespace EmailDB.Format;
+namespace EmailDB.Format.FileManagement;
 
 /// <summary>
 /// Manages folder operations including folder hierarchy, email organization, and persistence.
 /// </summary>
-public class FolderManager
+public partial class FolderManager
 {
-    private readonly CacheManager cacheManager;
-    private readonly MetadataManager metadataManager;
+    protected readonly CacheManager cacheManager;
+    protected readonly MetadataManager metadataManager;
     private readonly object folderTreeLock = new object();
-    private const char PathSeparator = '\\';
+    protected const char PathSeparator = '\\';
+    
+    // Phase 2 fields for block storage support
+    protected RawBlockManager _blockManager;
+    protected iBlockContentSerializer _serializer;
 
     /// <summary>
     /// Initializes a new instance of the FolderManager class.
@@ -24,6 +27,23 @@ public class FolderManager
     {
         this.cacheManager = cacheManager ?? throw new ArgumentNullException(nameof(cacheManager));
         this.metadataManager = metadataManager ?? throw new ArgumentNullException(nameof(metadataManager));
+    }
+    
+    /// <summary>
+    /// Initializes a new instance of the FolderManager class with block storage support.
+    /// </summary>
+    /// <param name="cacheManager">The cache manager for folder content caching.</param>
+    /// <param name="metadataManager">The metadata manager for system metadata operations.</param>
+    /// <param name="blockManager">The raw block manager for block storage.</param>
+    /// <param name="serializer">The block content serializer.</param>
+    public FolderManager(
+        CacheManager cacheManager, 
+        MetadataManager metadataManager,
+        RawBlockManager blockManager,
+        iBlockContentSerializer serializer) : this(cacheManager, metadataManager)
+    {
+        _blockManager = blockManager ?? throw new ArgumentNullException(nameof(blockManager));
+        _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
     }
 
     /// <summary>

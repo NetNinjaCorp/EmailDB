@@ -22,6 +22,8 @@
     <PackageReference Include="SimpleBase" Version="4.0.2" />
     <PackageReference Include="ZoneTree.FullTextSearch" Version="1.0.8" />
     <PackageReference Include="Crc32.Net" Version="1.2.0" /> <!-- Added CRC32 -->
+    <PackageReference Include="protobuf-net" Version="3.2.30" />
+    <PackageReference Include="K4os.Compression.LZ4" Version="1.3.8" />
   </ItemGroup>
 
 </Project>

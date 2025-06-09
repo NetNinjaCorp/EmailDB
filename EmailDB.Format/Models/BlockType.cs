@@ -16,7 +16,11 @@ public enum BlockType : byte
     Cleanup = 5,
     ZoneTreeSegment_KV = 6,      // ZoneTree Key-Value segment
     ZoneTreeSegment_Vector = 7,  // ZoneTree Vector index segment  
-    FreeSpace = 8                // Marked as free for reuse
+    FreeSpace = 8,               // Marked as free for reuse
+    FolderEnvelope = 9,          // Envelope blocks for fast folder listings
+    EmailBatch = 10,             // Batched email storage
+    KeyManager = 11,             // Encrypted key storage
+    KeyExchange = 12             // Key exchange methods
 }
 
 

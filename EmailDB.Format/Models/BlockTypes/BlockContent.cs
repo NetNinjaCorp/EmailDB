@@ -5,8 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace EmailDB.Format.Models.BlockTypes;
+
 public abstract class BlockContent 
 {
-    public BlockType Type { get; }
-    public object Content { get; }
+    public abstract BlockType GetBlockType();
 }
