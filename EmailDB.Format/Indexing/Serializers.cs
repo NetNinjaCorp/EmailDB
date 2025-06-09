@@ -8,23 +8,23 @@ using Tenray.ZoneTree.Serializers;
 namespace EmailDB.Format.Indexing;
 
 /// <summary>
-/// Serializer for BlockLocation objects.
+/// Serializer for EmailLocation objects.
 /// </summary>
-public class BlockLocationSerializer : ISerializer<BlockLocation>
+public class EmailLocationSerializer : ISerializer<EmailLocation>
 {
-    public BlockLocation Deserialize(Memory<byte> bytes)
+    public EmailLocation Deserialize(Memory<byte> bytes)
     {
         using var ms = new MemoryStream(bytes.ToArray());
         using var reader = new BinaryReader(ms);
         
-        return new BlockLocation
+        return new EmailLocation
         {
             BlockId = reader.ReadInt64(),
             LocalId = reader.ReadInt32()
         };
     }
     
-    public Memory<byte> Serialize(in BlockLocation value)
+    public Memory<byte> Serialize(in EmailLocation value)
     {
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);

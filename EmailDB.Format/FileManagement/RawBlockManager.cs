@@ -139,6 +139,12 @@ public class RawBlockManager : IDisposable
 
     #endregion
 
+    #region Public Properties
+
+    public string FilePath => filePath;
+
+    #endregion
+
     #region Public Methods
 
     /// <summary>

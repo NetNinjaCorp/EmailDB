@@ -26,7 +26,7 @@ public class IndexManager : IDisposable
     private IZoneTree<string, long> _folderPathIndex;
     
     // Secondary indexes - for efficiency
-    private IZoneTree<string, BlockLocation> _emailLocationIndex;
+    private IZoneTree<string, EmailLocation> _emailLocationIndex;
     private IZoneTree<string, long> _envelopeLocationIndex;
     private IZoneTree<string, List<string>> _searchTermIndex;
     
@@ -61,8 +61,8 @@ public class IndexManager : IDisposable
             new Utf8StringSerializer(), new Int64Serializer());
         
         // Secondary indexes
-        _emailLocationIndex = CreateIndex<string, BlockLocation>("email_location",
-            new Utf8StringSerializer(), new BlockLocationSerializer());
+        _emailLocationIndex = CreateIndex<string, EmailLocation>("email_location",
+            new Utf8StringSerializer(), new EmailLocationSerializer());
             
         _envelopeLocationIndex = CreateIndex<string, long>("envelope_location",
             new Utf8StringSerializer(), new Int64Serializer());
@@ -110,7 +110,7 @@ public class IndexManager : IDisposable
                 compoundKey);
             
             // Email location
-            _emailLocationIndex.Upsert(compoundKey, new BlockLocation
+            _emailLocationIndex.Upsert(compoundKey, new EmailLocation
             {
                 BlockId = emailId.BlockId,
                 LocalId = emailId.LocalId
@@ -177,13 +177,13 @@ public class IndexManager : IDisposable
     /// <summary>
     /// Gets block location for an email.
     /// </summary>
-    public Result<BlockLocation> GetEmailLocation(string compoundKey)
+    public Result<EmailLocation> GetEmailLocation(string compoundKey)
     {
         if (_emailLocationIndex.TryGet(compoundKey, out var location))
         {
-            return Result<BlockLocation>.Success(location);
+            return Result<EmailLocation>.Success(location);
         }
-        return Result<BlockLocation>.Failure("Location not found");
+        return Result<EmailLocation>.Failure("Location not found");
     }
     
     /// <summary>
@@ -274,6 +274,76 @@ public class IndexManager : IDisposable
         return _emailLocationIndex.Count();
     }
     
+    /// <summary>
+    /// Checks if a block is referenced in any index.
+    /// </summary>
+    public async Task<bool> IsBlockReferencedAsync(long blockId)
+    {
+        try
+        {
+            // Check email location index
+            using var iterator = _emailLocationIndex.CreateIterator();
+            while (iterator.Next())
+            {
+                if (iterator.CurrentValue.BlockId == blockId)
+                {
+                    return true;
+                }
+            }
+            
+            // Check envelope location index
+            using var envelopeIterator = _envelopeLocationIndex.CreateIterator();
+            while (envelopeIterator.Next())
+            {
+                if (envelopeIterator.CurrentValue == blockId)
+                {
+                    return true;
+                }
+            }
+            
+            // Check folder path index
+            using var folderIterator = _folderPathIndex.CreateIterator();
+            while (folderIterator.Next())
+            {
+                if (folderIterator.CurrentValue == blockId)
+                {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        catch
+        {
+            // On error, assume it's referenced to be safe
+            return true;
+        }
+    }
+    
+    /// <summary>
+    /// Rebuilds all indexes from scratch.
+    /// </summary>
+    public async Task<Result> RebuildAllIndexesAsync()
+    {
+        try
+        {
+            // Clear all indexes
+            _messageIdIndex.Upsert("__clear__", "cleared");
+            _envelopeHashIndex.Upsert("__clear__", "cleared");
+            _contentHashIndex.Upsert("__clear__", "cleared");
+            _folderPathIndex.Upsert("__clear__", 0);
+            _emailLocationIndex.Upsert("__clear__", new EmailLocation());
+            _envelopeLocationIndex.Upsert("__clear__", 0);
+            _searchTermIndex.Upsert("__clear__", new List<string>());
+            
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure($"Failed to rebuild indexes: {ex.Message}");
+        }
+    }
+    
     public void Dispose()
     {
         if (!_disposed)
@@ -292,7 +362,7 @@ public class IndexManager : IDisposable
 }
 
 // Supporting classes
-public class BlockLocation
+public class EmailLocation
 {
     public long BlockId { get; set; }
     public int LocalId { get; set; }

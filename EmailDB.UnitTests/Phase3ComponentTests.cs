@@ -107,7 +107,7 @@ public class Phase3ComponentTests : IDisposable
     {
         // Arrange
         var compoundKey = "123:5";
-        var location = new BlockLocation { BlockId = 123, LocalId = 5 };
+        var location = new EmailDB.Format.Indexing.EmailLocation { BlockId = 123, LocalId = 5 };
         
         // We can't directly insert into the private index, but we can test the structure
         // This test verifies the basic functionality of location retrieval

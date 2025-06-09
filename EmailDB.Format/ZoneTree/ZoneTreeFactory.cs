@@ -22,20 +22,20 @@ public class EmailDBZoneTreeFactory<TKey, TValue> : IDisposable
     private readonly RawBlockManager _blockManager;
     private readonly bool _enableCompression;
     private readonly CompressionMethod _compressionMethod;
-    private readonly ILogger _logger;
+    private readonly Tenray.ZoneTree.Logger.ILogger _logger;
     private readonly string _dataDirectory;
     private ZoneTreeFactory<TKey, TValue> Factory { get; set; }
 
     public EmailDBZoneTreeFactory(RawBlockManager blockManager,
         bool enableCompression = true,
         CompressionMethod compressionMethod = CompressionMethod.LZ4,
-        ILogger logger = null,
+        Tenray.ZoneTree.Logger.ILogger logger = null,
         string dataDirectory = null)
     {
         _blockManager = blockManager;
         _enableCompression = enableCompression;
         _compressionMethod = compressionMethod;
-        _logger = logger ?? new ConsoleLogger();
+        _logger = logger ?? new Tenray.ZoneTree.Logger.ConsoleLogger();
         _dataDirectory = dataDirectory;
     }
 
