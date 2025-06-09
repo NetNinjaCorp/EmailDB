@@ -1,0 +1,72 @@
+name: PR Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  quick-test:
+    name: Quick Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run Phase Tests
+      run: |
+        echo "::group::Phase 1 Tests"
+        dotnet test --no-build --configuration Release --filter "FullyQualifiedName~Phase1ComponentTests" --logger "console;verbosity=minimal"
+        echo "::endgroup::"
+        
+        echo "::group::Phase 2 Tests"
+        dotnet test --no-build --configuration Release --filter "FullyQualifiedName~Phase2ComponentTests" --logger "console;verbosity=minimal"
+        echo "::endgroup::"
+        
+        echo "::group::Phase 3 Tests"
+        dotnet test --no-build --configuration Release --filter "FullyQualifiedName~Phase3ComponentTests" --logger "console;verbosity=minimal"
+        echo "::endgroup::"
+        
+        echo "::group::Phase 4 Tests"
+        dotnet test --no-build --configuration Release --filter "FullyQualifiedName~Phase4ComponentTests" --logger "console;verbosity=minimal"
+        echo "::endgroup::"
+
+    - name: Check for test failures
+      if: failure()
+      run: |
+        echo "❌ Tests failed! Please fix the failing tests before merging." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Run tests locally with:" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+        echo "dotnet test --filter \"FullyQualifiedName~Phase\"" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+    - name: Success message
+      if: success()
+      run: |
+        echo "✅ All phase tests passed!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Phase 1: Block Format & Payload Encoding ✓" >> $GITHUB_STEP_SUMMARY
+        echo "- Phase 2: Manager Layer & Transactions ✓" >> $GITHUB_STEP_SUMMARY
+        echo "- Phase 3: Indexing & Search ✓" >> $GITHUB_STEP_SUMMARY
+        echo "- Phase 4: Maintenance & Cleanup ✓" >> $GITHUB_STEP_SUMMARY

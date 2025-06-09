@@ -1,5 +1,9 @@
 # EmailDB - High-Performance Email Storage System
 
+[![Tests](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/tests.yml/badge.svg)](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/tests.yml)
+[![PR Check](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/pr-check.yml/badge.svg)](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/pr-check.yml)
+[![Nightly Tests](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/nightly-tests.yml/badge.svg)](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/nightly-tests.yml)
+
 ## Overview
 
 EmailDB is a specialized database system designed for efficient email storage and retrieval. The latest version introduces a revolutionary hybrid architecture that combines append-only block storage with advanced indexing, achieving 99.6% storage efficiency while maintaining excellent query performance.
