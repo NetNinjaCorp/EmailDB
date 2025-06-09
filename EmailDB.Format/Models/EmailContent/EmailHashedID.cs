@@ -195,4 +195,25 @@ public struct EmailHashedID : IComparable<EmailHashedID>, IEquatable<EmailHashed
     {
         return x.CompareTo(y);
     }
+    
+    /// <summary>
+    /// Converts to compound key format "BlockId:LocalId".
+    /// </summary>
+    public string ToCompoundKey() => $"{BlockId}:{LocalId}";
+    
+    /// <summary>
+    /// Creates EmailHashedID from compound key format.
+    /// </summary>
+    public static EmailHashedID FromCompoundKey(string compoundKey)
+    {
+        var parts = compoundKey.Split(':');
+        if (parts.Length != 2)
+            throw new ArgumentException("Invalid compound key format", nameof(compoundKey));
+            
+        return new EmailHashedID
+        {
+            BlockId = long.Parse(parts[0]),
+            LocalId = int.Parse(parts[1])
+        };
+    }
 }

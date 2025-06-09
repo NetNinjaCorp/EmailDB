@@ -287,23 +287,7 @@ public partial class FolderManager
         }
     }
 
-    /// <summary>
-    /// Removes an email from a folder.
-    /// </summary>
-    /// <param name="path">The folder path.</param>
-    /// <param name="emailId">The email ID to remove.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task RemoveEmailFromFolderAsync(string path, EmailHashedID emailId)
-    {
-        var folder = await GetFolderAsync(path);
-        if (folder == null)
-            throw new InvalidOperationException($"Folder '{path}' not found");
-
-        if (folder.EmailIds.Remove(emailId))
-        {
-            await cacheManager.UpdateFolder(path, folder);
-        }
-    }
+    // RemoveEmailFromFolderAsync is now implemented in FolderManager.BlockStorage.cs
 
     /// <summary>
     /// Moves an email from one folder to another.

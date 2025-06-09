@@ -409,6 +409,14 @@ public partial class FolderManager
     /// <summary>
     /// Removes an email from a folder.
     /// </summary>
+    public async Task<Result> RemoveEmailFromFolderAsync(string folderPath, EmailHashedID emailId)
+    {
+        return await RemoveEmailFromFolderWithBlockStorageAsync(folderPath, emailId);
+    }
+    
+    /// <summary>
+    /// Removes an email from a folder using block storage.
+    /// </summary>
     public async Task<Result> RemoveEmailFromFolderWithBlockStorageAsync(string folderPath, EmailHashedID emailId)
     {
         try
