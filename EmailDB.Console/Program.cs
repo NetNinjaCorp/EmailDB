@@ -4,7 +4,11 @@ using EmailDB.Console;
 
 var rootCommand = new RootCommand("EmailDB Console - Test various storage schemes");
 
-// Options
+// Subcommands
+var testCommand = new Command("test", "Run storage tests");
+var demoCommand = new Command("demo", "Run full EmailDB demo with ZoneTree indexing");
+
+// Options for test command
 var emailCountOption = new Option<int>(
     name: "--emails",
     description: "Number of emails to generate",
@@ -59,21 +63,21 @@ var outputFileOption = new Option<string?>(
     name: "--output",
     description: "Output file for results (optional)");
 
-// Add all options to root command
-rootCommand.AddOption(emailCountOption);
-rootCommand.AddOption(blockSizeOption);
-rootCommand.AddOption(seedOption);
-rootCommand.AddOption(allowAddOption);
-rootCommand.AddOption(allowDeleteOption);
-rootCommand.AddOption(allowEditOption);
-rootCommand.AddOption(stepSizeOption);
-rootCommand.AddOption(performanceModeOption);
-rootCommand.AddOption(storageTypeOption);
-rootCommand.AddOption(enableHashChainOption);
-rootCommand.AddOption(outputFileOption);
+// Add all options to test command
+testCommand.AddOption(emailCountOption);
+testCommand.AddOption(blockSizeOption);
+testCommand.AddOption(seedOption);
+testCommand.AddOption(allowAddOption);
+testCommand.AddOption(allowDeleteOption);
+testCommand.AddOption(allowEditOption);
+testCommand.AddOption(stepSizeOption);
+testCommand.AddOption(performanceModeOption);
+testCommand.AddOption(storageTypeOption);
+testCommand.AddOption(enableHashChainOption);
+testCommand.AddOption(outputFileOption);
 
-// Set handler
-rootCommand.SetHandler(async (context) =>
+// Set handler for test command
+testCommand.SetHandler(async (context) =>
 {
     var config = new TestConfiguration
     {
@@ -93,6 +97,26 @@ rootCommand.SetHandler(async (context) =>
     var tester = new EmailDBTester(config);
     await tester.RunAsync();
 });
+
+// Options for demo command
+var dbPathOption = new Option<string>(
+    name: "--path",
+    description: "Database path",
+    getDefaultValue: () => Path.Combine(Path.GetTempPath(), $"emaildb_demo_{Guid.NewGuid():N}"));
+
+demoCommand.AddOption(dbPathOption);
+
+// Set handler for demo command
+demoCommand.SetHandler(async (context) =>
+{
+    var dbPath = context.ParseResult.GetValueForOption(dbPathOption);
+    var demo = new EmailDBSimpleDemo(dbPath);
+    await demo.RunDemoAsync();
+});
+
+// Add commands to root
+rootCommand.AddCommand(testCommand);
+rootCommand.AddCommand(demoCommand);
 
 // Execute
 return await rootCommand.InvokeAsync(args);
