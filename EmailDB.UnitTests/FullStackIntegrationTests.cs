@@ -20,7 +20,7 @@ namespace EmailDB.UnitTests;
 /// Full stack integration tests verifying that all stages (1, 2, 3) work together
 /// to implement the complete EmailDB file format.
 /// </summary>
-[TestCategory("Integration")]
+[Trait("Category", "Integration")]
 public class FullStackIntegrationTests : IDisposable
 {
     private readonly string _testDirectory;

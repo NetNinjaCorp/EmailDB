@@ -31,7 +31,7 @@ public partial class EmailDatabase : IDisposable
         _blockManager = new RawBlockManager(databasePath);
         
         // Initialize versioning system
-        _ = InitializeVersioningAsync(); // Fire and forget for now
+        InitializeVersioningAsync().GetAwaiter().GetResult();
         
         // Get the directory path for ZoneTree data files
         var dataDirectory = Path.GetDirectoryName(databasePath);
