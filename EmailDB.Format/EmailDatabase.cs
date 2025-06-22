@@ -27,30 +27,35 @@ public class EmailDatabase : IDisposable
 
     public EmailDatabase(string databasePath)
     {
+        Console.WriteLine($"🚀 EmailDatabase: Opening database at {databasePath}");
         _blockManager = new RawBlockManager(databasePath);
         
         // Get the directory path for ZoneTree data files
         var dataDirectory = Path.GetDirectoryName(databasePath);
         
         // Initialize KV storage for emails
+        Console.WriteLine("📦 Opening or creating emails ZoneTree...");
         var emailFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager, dataDirectory: dataDirectory);
-        emailFactory.CreateZoneTree("emails");
-        _emailStore = emailFactory.OpenOrCreate();
+        _emailStore = emailFactory.OpenOrCreateDirect("emails");
 
         // Initialize full-text search index
+        Console.WriteLine("📦 Opening or creating search ZoneTree...");
         var searchFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager, dataDirectory: dataDirectory);
-        searchFactory.CreateZoneTree("search");
-        _searchIndex = searchFactory.OpenOrCreate();
+        _searchIndex = searchFactory.OpenOrCreateDirect("search");
 
         // Initialize folder index
+        Console.WriteLine("📦 Opening or creating folders ZoneTree...");
         var folderFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager, dataDirectory: dataDirectory);
-        folderFactory.CreateZoneTree("folders");
-        _folderIndex = folderFactory.OpenOrCreate();
+        _folderIndex = folderFactory.OpenOrCreateDirect("folders");
 
         // Initialize metadata store
+        Console.WriteLine("📦 Opening or creating metadata ZoneTree...");
         var metadataFactory = new EmailDBZoneTreeFactory<string, string>(_blockManager, dataDirectory: dataDirectory);
-        metadataFactory.CreateZoneTree("metadata");
-        _metadataStore = metadataFactory.OpenOrCreate();
+        _metadataStore = metadataFactory.OpenOrCreateDirect("metadata");
+        
+        // Debug: Check if we can read the email_ids_index immediately after opening
+        var debugValue = GetEmailIdsIndexDebug();
+        Console.WriteLine($"📊 After opening, email_ids_index = {debugValue}");
     }
 
     /// <summary>
@@ -277,6 +282,19 @@ public class EmailDatabase : IDisposable
         // Store metadata
         await StoreEmailMetadataAsync(emailId, emailContent);
         
+        // Update email IDs index
+        await UpdateEmailIdsIndexAsync(emailId);
+        
+        // Debug: Verify it was stored
+        if (_metadataStore.TryGet("email_ids_index", out var storedValue))
+        {
+            Console.WriteLine($"✅ email_ids_index stored successfully: {storedValue.Substring(0, Math.Min(100, storedValue.Length))}...");
+        }
+        else
+        {
+            Console.WriteLine("❌ email_ids_index NOT stored in metadata!");
+        }
+        
         return emailId;
     }
 
@@ -353,11 +371,49 @@ public class EmailDatabase : IDisposable
         // Simplified folder count
         return 5; // Mock implementation
     }
+    
+    private async Task UpdateEmailIdsIndexAsync(EmailHashedID newEmailId)
+    {
+        var metadataKey = "email_ids_index";
+        var emailIds = new List<string>();
+        
+        // Get existing IDs
+        if (_metadataStore.TryGet(metadataKey, out var existingJson))
+        {
+            emailIds = System.Text.Json.JsonSerializer.Deserialize<List<string>>(existingJson) ?? new List<string>();
+        }
+        
+        // Add new ID if not already present
+        var newIdStr = newEmailId.ToString();
+        if (!emailIds.Contains(newIdStr))
+        {
+            emailIds.Add(newIdStr);
+            
+            // Update the index - use Upsert to ensure it's updated even if key exists
+            var updatedJson = System.Text.Json.JsonSerializer.Serialize(emailIds);
+            _metadataStore.Upsert(metadataKey, updatedJson);
+            
+            // Force immediate flush to ensure persistence
+            _metadataStore.Maintenance.MoveMutableSegmentForward();
+            _metadataStore.Maintenance.SaveMetaData();
+        }
+    }
 
     public void Dispose()
     {
         if (!_disposed)
         {
+            // Force maintenance to ensure all data is persisted
+            try
+            {
+                // Move mutable segments to read-only and merge to disk
+                FlushZoneTree(_emailStore);
+                FlushZoneTree(_searchIndex);
+                FlushZoneTree(_folderIndex);
+                FlushZoneTree(_metadataStore);
+            }
+            catch { }
+            
             _emailStore?.Dispose();
             _searchIndex?.Dispose();
             _folderIndex?.Dispose();
@@ -365,6 +421,35 @@ public class EmailDatabase : IDisposable
             _blockManager?.Dispose();
             _disposed = true;
         }
+    }
+    
+    private void FlushZoneTree(IZoneTree<string, string>? zoneTree)
+    {
+        if (zoneTree == null) return;
+        
+        try
+        {
+            // Move any pending writes to read-only segments
+            zoneTree.Maintenance.MoveMutableSegmentForward();
+            
+            // Start merge operation to persist to disk
+            var mergeThread = zoneTree.Maintenance.StartMergeOperation();
+            mergeThread?.Join(); // Wait for merge to complete
+            
+            // Save metadata
+            zoneTree.Maintenance.SaveMetaData();
+        }
+        catch { }
+    }
+    
+    // Debug method to check if data is loaded correctly
+    public string GetEmailIdsIndexDebug()
+    {
+        if (_metadataStore.TryGet("email_ids_index", out var value))
+        {
+            return value;
+        }
+        return "NOT_FOUND";
     }
 }
 

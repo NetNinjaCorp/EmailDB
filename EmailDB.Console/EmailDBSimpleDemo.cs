@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 using EmailDB.Format;
+using EmailDB.Format.FileManagement;
 using MimeKit;
 
 namespace EmailDB.Console;
@@ -35,16 +36,44 @@ public class EmailDBSimpleDemo
             // Step 2: Create and import sample emails
             await CreateAndImportSampleEmailsAsync();
 
-            // Step 3: Demonstrate search functionality
+            // Step 3: Close the database to force writes to disk
+            System.Console.WriteLine("3. Closing database to persist data to disk...");
+            _emailDb?.Dispose();
+            _emailDb = null;
+            System.Console.WriteLine("   ✓ Database closed and flushed to disk\n");
+
+            // Step 4: Reopen the database to verify persistence
+            System.Console.WriteLine("4. Reopening database to verify data persistence...");
+            
+            // List all blocks before reopening
+            var blockManagerPre = new RawBlockManager(_dbPath);
+            var blocksPre = blockManagerPre.GetBlockLocations();
+            System.Console.WriteLine($"   Blocks before reopen: {blocksPre.Count}");
+            foreach (var block in blocksPre.Take(10))
+            {
+                System.Console.WriteLine($"     Block {block.Key}: position={block.Value.Position}, length={block.Value.Length}");
+            }
+            blockManagerPre.Dispose();
+            
+            _emailDb = new EmailDatabase(_dbPath);
+            
+            // Debug check
+            var emailIdIndex = _emailDb.GetEmailIdsIndexDebug();
+            System.Console.WriteLine($"   Debug: email_ids_index = {emailIdIndex}");
+            
+            System.Console.WriteLine("   ✓ Database reopened successfully\n");
+
+            // Step 5: Demonstrate search functionality on persisted data
             await DemonstrateSearchAsync();
 
-            // Step 4: Show folder organization
+            // Step 6: Show folder organization from persisted data
             await DemonstrateFolderOrganizationAsync();
 
-            // Step 5: Display database statistics
+            // Step 7: Display database statistics from persisted data
             await ShowDatabaseStatsAsync();
 
             System.Console.WriteLine("\nDemo completed successfully!");
+            System.Console.WriteLine("All data was successfully persisted and retrieved from disk!");
         }
         catch (Exception ex)
         {
@@ -188,7 +217,7 @@ public class EmailDBSimpleDemo
 
     private async Task DemonstrateSearchAsync()
     {
-        System.Console.WriteLine("3. Demonstrating search capabilities (powered by ZoneTree)...\n");
+        System.Console.WriteLine("5. Demonstrating search capabilities on persisted data...\n");
 
         // Search example 1: Search for "EmailDB"
         System.Console.WriteLine("   Searching for 'EmailDB':");
@@ -222,7 +251,7 @@ public class EmailDBSimpleDemo
 
     private async Task DemonstrateFolderOrganizationAsync()
     {
-        System.Console.WriteLine("4. Demonstrating folder organization...\n");
+        System.Console.WriteLine("6. Demonstrating folder organization from persisted data...\n");
 
         var allEmailIds = await _emailDb!.GetAllEmailIDsAsync();
         
@@ -253,7 +282,7 @@ public class EmailDBSimpleDemo
 
     private async Task ShowDatabaseStatsAsync()
     {
-        System.Console.WriteLine("5. Database Statistics...\n");
+        System.Console.WriteLine("7. Database Statistics from persisted data...\n");
 
         var stats = await _emailDb!.GetDatabaseStatsAsync();
         

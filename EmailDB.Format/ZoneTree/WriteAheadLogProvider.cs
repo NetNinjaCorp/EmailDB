@@ -4,6 +4,8 @@ using EmailDB.Format.Models.BlockTypes;
 using Tenray.ZoneTree.Options;
 using Tenray.ZoneTree.Serializers;
 using Tenray.ZoneTree.WAL;
+using Tenray.ZoneTree.Exceptions.WAL;
+using System.Collections.Concurrent;
 
 namespace EmailDB.Format.ZoneTree;
 
@@ -43,8 +45,10 @@ public class WriteAheadLogProvider : IWriteAheadLogProvider
             throw new InvalidOperationException($"Existing WAL for key '{key}' has incompatible types.");
         }
 
-        // WAL temporarily disabled
-        throw new NotImplementedException("WAL implementation temporarily disabled");
+        // Create a simple in-memory WAL for metadata persistence
+        var wal = new InMemoryWriteAheadLog<TK, TV>(segmentId, category);
+        _logs[key] = wal;
+        return wal;
     }
 
     public IWriteAheadLog<TKey, TValue> GetWAL<TKey, TValue>(long segmentId, string category)
@@ -75,6 +79,86 @@ public class WriteAheadLogProvider : IWriteAheadLogProvider
     private string GetWALKey(long segmentId, string category)
     {
         return $"{segmentId}_{category}";
+    }
+}
+
+/// <summary>
+/// Simple in-memory WAL implementation that doesn't persist anything.
+/// This is used to satisfy ZoneTree's requirements while actual persistence
+/// is handled by the RandomAccessDevice and block storage.
+/// </summary>
+public class InMemoryWriteAheadLog<TKey, TValue> : IWriteAheadLog<TKey, TValue>
+{
+    private readonly long _segmentId;
+    private readonly string _category;
+    private readonly List<LogEntry> _entries = new();
+    private bool _isDisposed;
+
+    public string FilePath => $"memory://wal_{_segmentId}_{_category}";
+    public int InitialLength => 0;
+    public bool EnableIncrementalBackup { get; set; }
+
+    public InMemoryWriteAheadLog(long segmentId, string category)
+    {
+        _segmentId = segmentId;
+        _category = category;
+    }
+
+    public void Append(in TKey key, in TValue value, long opIndex)
+    {
+        // In-memory only, no persistence needed
+        _entries.Add(new LogEntry { OpIndex = opIndex });
+    }
+
+    public void Drop()
+    {
+        _entries.Clear();
+    }
+
+    public WriteAheadLogReadLogEntriesResult<TKey, TValue> ReadLogEntries(
+        bool stopReadOnException,
+        bool stopReadOnChecksumFailure,
+        bool sortByOpIndexes)
+    {
+        // Return empty result as we don't persist WAL entries
+        return new WriteAheadLogReadLogEntriesResult<TKey, TValue>
+        {
+            Success = true,
+            Keys = Array.Empty<TKey>(),
+            Values = Array.Empty<TValue>(),
+            MaximumOpIndex = 0
+        };
+    }
+
+    public long ReplaceWriteAheadLog(TKey[] keys, TValue[] values, bool disableBackup)
+    {
+        // Clear current entries and return 0 as we don't persist
+        _entries.Clear();
+        return 0;
+    }
+
+    public void TruncateIncompleteTailRecord(IncompleteTailRecordFoundException incompleteTailException)
+    {
+        // No-op for in-memory WAL
+    }
+
+    public void MarkFrozen()
+    {
+        // No-op for in-memory WAL
+    }
+
+    public void Dispose()
+    {
+        if (!_isDisposed)
+        {
+            _entries.Clear();
+            _isDisposed = true;
+        }
+    }
+
+    private class LogEntry
+    {
+        public long OpIndex { get; set; }
     }
 }
 

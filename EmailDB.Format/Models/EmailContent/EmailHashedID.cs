@@ -5,13 +5,19 @@ using MimeKit;
 using SimpleBase;
 using Tenray.ZoneTree.Comparers;
 using Tenray.ZoneTree.Serializers;
+using ProtoBuf;
 
+[ProtoContract]
 public struct EmailHashedID : IComparable<EmailHashedID>, IEquatable<EmailHashedID>, ISerializer<EmailHashedID>, IRefComparer<EmailHashedID>
 {
     // Store the full 256 bits (32 bytes) of the SHA3-256 hash
+    [ProtoMember(1)]
     private readonly ulong _part1; // First 8 bytes
+    [ProtoMember(2)]
     private readonly ulong _part2; // Second 8 bytes
+    [ProtoMember(3)]
     private readonly ulong _part3; // Third 8 bytes
+    [ProtoMember(4)]
     private readonly ulong _part4; // Fourth 8 bytes
 
     public ulong Part1 => _part1;
@@ -20,9 +26,13 @@ public struct EmailHashedID : IComparable<EmailHashedID>, IEquatable<EmailHashed
     public ulong Part4 => _part4;
     
     // Phase 2 properties for block storage
+    [ProtoMember(5)]
     public long BlockId { get; set; }
+    [ProtoMember(6)]
     public int LocalId { get; set; }
+    [ProtoMember(7)]
     public byte[] EnvelopeHash { get; set; }
+    [ProtoMember(8)]
     public byte[] ContentHash { get; set; }
 
     // Define a static default instance

@@ -22,11 +22,36 @@ public class EmailDBFileStreamProvider : IFileStreamProvider
     {
         lock (lockObj)
         {
+            var pathHash = path.GetHashCode();
+            ZoneTreeLogger.LogFileOperation("CreateFileStream", path, $"Mode: {mode}, Access: {access}, Share: {share}");
+            
+            // For metadata files, if mode is CreateNew and file exists, we should use OpenOrCreate mode instead
+            // This handles the case where ZoneTree is reopening an existing database
+            // ZoneTree metadata files typically include "meta.json" or segment-related patterns
+            if (mode == FileMode.CreateNew)
+            {
+                var locations = blockManager.GetBlockLocations();
+                ZoneTreeLogger.Log($"Checking block storage for existing file: locations.Count={locations.Count}");
+                if (locations.ContainsKey(pathHash))
+                {
+                    ZoneTreeLogger.LogFileOperation("FileExists", path, "Switching from CreateNew to OpenOrCreate");
+                    mode = FileMode.OpenOrCreate;
+                }
+                else
+                {
+                    ZoneTreeLogger.LogFileOperation("FileNotFound", path, "Will create new file");
+                }
+            }
+            
             if (openStreams.TryGetValue(path, out var existingStream))
             {
                 if (existingStream.CanBeReused(access))
+                {
+                    Console.WriteLine($"   Reusing existing stream for {path}");
                     return existingStream;
+                }
 
+                Console.WriteLine($"   Disposing existing stream for {path} before creating new one");
                 existingStream.Dispose();
                 openStreams.Remove(path);
             }
@@ -62,7 +87,9 @@ public class EmailDBFileStreamProvider : IFileStreamProvider
     {
         var pathHash = path.GetHashCode();
         var locations = blockManager.GetBlockLocations();
-        return locations.ContainsKey(pathHash);
+        var exists = locations.ContainsKey(pathHash);
+        Console.WriteLine($"🔍 FileExists check: path={path}, hash={pathHash}, exists={exists}");
+        return exists;
     }
 
     // Simple IFileStreamProvider implementation methods
@@ -87,11 +114,19 @@ public class EmailDBFileStreamProvider : IFileStreamProvider
     public string ReadAllText(string path)
     {
         var pathHash = path.GetHashCode();
+        Console.WriteLine($"📖 ReadAllText: path={path}, hash={pathHash}");
         var readResult = blockManager.ReadBlockAsync(pathHash).Result;
         if (readResult.IsSuccess)
         {
-            return System.Text.Encoding.UTF8.GetString(readResult.Value.Payload);
+            var text = System.Text.Encoding.UTF8.GetString(readResult.Value.Payload);
+            Console.WriteLine($"✅ ReadAllText success: {text.Length} chars");
+            if (path.Contains("meta") && text.Length < 1000)
+            {
+                Console.WriteLine($"   Content: {text}");
+            }
+            return text;
         }
+        Console.WriteLine($"❌ ReadAllText failed: File not found");
         throw new FileNotFoundException($"File not found: {path}");
     }
 
@@ -108,8 +143,91 @@ public class EmailDBFileStreamProvider : IFileStreamProvider
 
     public void Replace(string sourceFileName, string destinationFileName, string destinationBackupFileName)
     {
-        // For EmailDB implementation, this would involve updating block references
-        throw new NotImplementedException("Replace operation not implemented in EmailDB provider");
+        // ZoneTree uses Replace for atomic file updates (e.g., metadata files)
+        // We need to:
+        // 1. Read the source file content
+        // 2. Optionally backup the destination if it exists
+        // 3. Write the source content to the destination
+        // 4. Delete the source file
+        
+        ZoneTreeLogger.LogFileOperation("Replace", sourceFileName, $"Destination: {destinationFileName}, Backup: {destinationBackupFileName ?? "none"}");
+        
+        try
+        {
+            // First, ensure any open stream for the source file is flushed and closed
+            lock (lockObj)
+            {
+                if (openStreams.TryGetValue(sourceFileName, out var sourceStream))
+                {
+                    ZoneTreeLogger.Log("Flushing and closing source stream before replace");
+                    sourceStream.Dispose();
+                    openStreams.Remove(sourceFileName);
+                }
+            }
+            
+            // Read source content
+            var sourceHash = sourceFileName.GetHashCode();
+            Console.WriteLine($"   Reading source file with hash={sourceHash}");
+            var sourceResult = blockManager.ReadBlockAsync(sourceHash).Result;
+            if (!sourceResult.IsSuccess)
+            {
+                Console.WriteLine($"   ❌ Source file not found in block storage");
+                throw new FileNotFoundException($"Source file not found: {sourceFileName}");
+            }
+            Console.WriteLine($"   ✅ Read {sourceResult.Value.Payload.Length} bytes from source file");
+            
+            var sourceContent = sourceResult.Value.Payload;
+            
+            // If destination exists and backup is requested, copy it to backup
+            if (!string.IsNullOrEmpty(destinationBackupFileName))
+            {
+                var destHash = destinationFileName.GetHashCode();
+                var destResult = blockManager.ReadBlockAsync(destHash).Result;
+                if (destResult.IsSuccess)
+                {
+                    // Write backup
+                    var backupBlock = new Block
+                    {
+                        Version = 1,
+                        Type = BlockType.ZoneTreeSegment_KV,
+                        Flags = 0,
+                        Encoding = PayloadEncoding.RawBytes,
+                        Timestamp = DateTime.UtcNow.Ticks,
+                        BlockId = destinationBackupFileName.GetHashCode(),
+                        Payload = destResult.Value.Payload
+                    };
+                    blockManager.WriteBlockAsync(backupBlock).Wait();
+                }
+            }
+            
+            // Write source content to destination
+            var destBlock = new Block
+            {
+                Version = 1,
+                Type = BlockType.ZoneTreeSegment_KV,
+                Flags = 0,
+                Encoding = PayloadEncoding.RawBytes,
+                Timestamp = DateTime.UtcNow.Ticks,
+                BlockId = destinationFileName.GetHashCode(),
+                Payload = sourceContent
+            };
+            
+            var writeResult = blockManager.WriteBlockAsync(destBlock).Result;
+            if (!writeResult.IsSuccess)
+            {
+                throw new IOException($"Failed to write destination file: {destinationFileName}");
+            }
+            
+            // Note: We don't actually delete the source block as RawBlockManager doesn't support deletion
+            // This is OK for ZoneTree's purposes as it won't reference the old file anymore
+            
+            Console.WriteLine($"✅ Replace completed: {sourceFileName} -> {destinationFileName}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Replace failed: {ex.Message}");
+            throw;
+        }
     }
 }
 
@@ -134,6 +252,7 @@ public class EmailDBFileStream : IFileStream
         this.pathHash = path.GetHashCode();
         this.data = Array.Empty<byte>();
 
+        Console.WriteLine($"🔍 EmailDBFileStream created: path={path}, mode={mode}, access={access}");
         InitializeStream(mode);
     }
 
@@ -146,6 +265,12 @@ public class EmailDBFileStream : IFileStream
         if (hasExistingData)
         {
             data = readResult.Value.Payload;
+            ZoneTreeLogger.LogBlockOperation("ReadExisting", pathHash, data.Length, $"Loaded for {path}");
+            ZoneTreeLogger.LogData($"{path} content", data);
+        }
+        else
+        {
+            ZoneTreeLogger.LogBlockOperation("ReadMissing", pathHash, 0, $"No existing data for {path}");
         }
 
         switch (mode)
@@ -157,7 +282,23 @@ public class EmailDBFileStream : IFileStream
                 break;
             case FileMode.CreateNew:
                 if (hasExistingData)
-                    throw new IOException("File already exists");
+                {
+                    // CreateNew should fail if file exists
+                    throw new IOException($"File already exists: {path}");
+                }
+                else
+                {
+                    data = Array.Empty<byte>();
+                    isDirty = true;
+                }
+                break;
+            case FileMode.OpenOrCreate:
+                // If file doesn't exist, create it
+                if (!hasExistingData)
+                {
+                    data = Array.Empty<byte>();
+                    isDirty = true;
+                }
                 break;
             case FileMode.Open:
                 if (!hasExistingData)
@@ -192,6 +333,17 @@ public class EmailDBFileStream : IFileStream
             Buffer.BlockCopy(buffer, offset, data, (int)position, count);
             position += count;
             isDirty = true;
+            
+            // Debug: Log all writes to metadata files
+            if (path.EndsWith(".json_0") || path.EndsWith(".json_0.tmp"))
+            {
+                ZoneTreeLogger.LogFileOperation("Write", path, $"Position: {position - count}, Count: {count}, IsDirty: {isDirty}");
+                
+                // Log the actual data being written for analysis
+                var writtenData = new byte[count];
+                Buffer.BlockCopy(buffer, offset, writtenData, 0, count);
+                ZoneTreeLogger.LogData($"Written to {path}", writtenData);
+            }
         }
     }
 
@@ -211,6 +363,29 @@ public class EmailDBFileStream : IFileStream
 
         Buffer.BlockCopy(data, (int)position, buffer, offset, (int)toRead);
         position += toRead;
+        
+        // Debug: Log metadata reads
+        if ((path.Contains("meta") || path.Contains("wal") || path.EndsWith(".json_0")) && toRead > 0)
+        {
+            ZoneTreeLogger.LogFileOperation("Read", path, $"Position: {position-toRead}, Count: {toRead}, Total: {data.Length}");
+            
+            // Log the data being read
+            var readData = new byte[toRead];
+            Buffer.BlockCopy(buffer, offset, readData, 0, (int)toRead);
+            ZoneTreeLogger.LogData($"Read from {path}", readData);
+            
+            if (data.Length == 0)
+            {
+                ZoneTreeLogger.Log($"⚠️ WARNING: File {path} is empty!");
+            }
+            else
+            {
+                // Show hex dump of first 100 bytes to understand the format
+                var hexDump = BitConverter.ToString(data.Take(Math.Min(100, data.Length)).ToArray()).Replace("-", " ");
+                Console.WriteLine($"   Hex dump: {hexDump}");
+            }
+        }
+        
         return (int)toRead;
     }
 
@@ -218,6 +393,9 @@ public class EmailDBFileStream : IFileStream
     {
         if (isDirty && CanWrite)
         {
+            ZoneTreeLogger.LogFileOperation("Flush", path, $"DataLength: {data.Length}");
+            ZoneTreeLogger.LogData($"Flushing {path}", data);
+            
             var block = new Block
             {
                 Version = 1,
@@ -232,7 +410,12 @@ public class EmailDBFileStream : IFileStream
             var result = blockManager.WriteBlockAsync(block).Result;
             if (result.IsSuccess)
             {
+                ZoneTreeLogger.LogBlockOperation("FlushSuccess", pathHash, data.Length, $"Flushed {path}");
                 isDirty = false;
+            }
+            else
+            {
+                ZoneTreeLogger.LogBlockOperation("FlushFailed", pathHash, data.Length, $"Failed to flush {path}");
             }
         }
     }

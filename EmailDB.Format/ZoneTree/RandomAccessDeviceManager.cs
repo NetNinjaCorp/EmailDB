@@ -53,7 +53,7 @@ public class RandomAccessDeviceManager : IRandomAccessDeviceManager
             }
         }
 
-        Console.WriteLine($"🏭 RandomAccessDeviceManager.CreateWritableDevice: segmentId={segmentId}, category='{category}'");
+        ZoneTreeLogger.LogSegmentOperation("CreateWritableDevice", segmentId, category, 0, $"Key: {key}, IsCompressed: {isCompressed}");
         var device = new RandomAccessDevice(_blockManager, segmentId, category, true);
         _devices[key] = device;
         return device;

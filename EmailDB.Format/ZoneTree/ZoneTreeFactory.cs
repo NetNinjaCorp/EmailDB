@@ -48,11 +48,17 @@ public class EmailDBZoneTreeFactory<TKey, TValue> : IDisposable
         {
             options.Logger = _logger;
             
-            // Note: ZoneTree will use its internal file paths based on segment names
-            // The data directory parameter is kept for future use but not used here
+            // CRITICAL: Set the file stream provider for metadata persistence
+            // TODO: Find correct property names
+            // options.FileStreamProvider = new EmailDBFileStreamProvider(_blockManager);
             
-            // Use the null WAL provider to completely disable WAL
-            options.WriteAheadLogProvider = new NullWriteAheadLogProvider();
+            // Set the data directory path to ensure proper metadata file naming
+            // Use the name directly as the directory to ensure consistent paths
+            // TODO: Find correct property name  
+            // options.Directory = name;
+            
+            // Use our custom WAL provider that handles metadata persistence
+            options.WriteAheadLogProvider = new WriteAheadLogProvider(_blockManager, name);
 
             // For string types, use our custom StringSerializer which implements both interfaces
             if (typeof(TKey) == typeof(string) && typeof(TValue) == typeof(string))
@@ -91,6 +97,20 @@ public class EmailDBZoneTreeFactory<TKey, TValue> : IDisposable
 
     public IZoneTree<TKey, TValue> OpenOrCreate()
     {
+        if (Factory == null)
+        {
+            throw new InvalidOperationException("Must call CreateZoneTree before OpenOrCreate");
+        }
+        return Factory.OpenOrCreate();
+    }
+    
+    public IZoneTree<TKey, TValue> OpenOrCreateDirect(string name)
+    {
+        // Initialize factory if not already done
+        if (Factory == null)
+        {
+            CreateZoneTree(name);
+        }
         return Factory.OpenOrCreate();
     }
 

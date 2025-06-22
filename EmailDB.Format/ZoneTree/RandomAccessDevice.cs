@@ -38,31 +38,32 @@ public sealed class RandomAccessDevice : IRandomAccessDevice
         FilePath = $"{segmentId}_{category}";
         _blockId = FilePath.GetHashCode(); // Use consistent hash for block ID
 
-        if (!writable)
+        // Always try to load existing data first
+        LoadExistingData();
+        
+        // For writable devices, set position to end of existing data
+        if (writable && _data.Length > 0)
         {
-            // For read-only device, load existing data
-            LoadExistingData();
-        }
-        else
-        {
-            // For writable device, start with empty data
-            _data = Array.Empty<byte>();
-            _deviceLength = 0;
+            _currentPosition = _data.Length;
         }
     }
 
     private void LoadExistingData()
     {
+        ZoneTreeLogger.LogSegmentOperation("LoadExistingData", _segmentId, _category, 0, $"BlockId: {_blockId}");
         var readResult = _blockManager.ReadBlockAsync(_blockId).Result;
         if (readResult.IsSuccess)
         {
             _data = readResult.Value.Payload;
             _deviceLength = _data.Length;
+            ZoneTreeLogger.LogSegmentOperation("LoadedExisting", _segmentId, _category, _deviceLength, $"BlockId: {_blockId}");
+            ZoneTreeLogger.LogData($"Segment {_segmentId}/{_category}", _data);
         }
         else
         {
             _data = Array.Empty<byte>();
             _deviceLength = 0;
+            ZoneTreeLogger.LogSegmentOperation("NoExistingData", _segmentId, _category, 0, $"BlockId: {_blockId}");
         }
     }
 
@@ -74,7 +75,7 @@ public sealed class RandomAccessDevice : IRandomAccessDevice
         var position = _currentPosition;
 
         // DEBUG: Log that we're being called
-        Console.WriteLine($"🔧 RandomAccessDevice.AppendBytesReturnPosition called: segmentId={_segmentId}, category='{_category}', bytes={bytes.Length}");
+        ZoneTreeLogger.LogSegmentOperation("AppendBytes", _segmentId, _category, bytes.Length, $"Position: {position}");
 
         // Extend data array
         var newData = new byte[_data.Length + bytes.Length];
@@ -127,7 +128,8 @@ public sealed class RandomAccessDevice : IRandomAccessDevice
 
     private void SaveData()
     {
-        Console.WriteLine($"🔧 RandomAccessDevice.SaveData called: segmentId={_segmentId}, category='{_category}', dataLength={_data.Length}");
+        ZoneTreeLogger.LogSegmentOperation("SaveData", _segmentId, _category, _data.Length, $"BlockId: {_blockId}");
+        ZoneTreeLogger.LogData($"Saving segment {_segmentId}/{_category}", _data);
         
         var block = new Block
         {
@@ -143,12 +145,12 @@ public sealed class RandomAccessDevice : IRandomAccessDevice
         var result = _blockManager.WriteBlockAsync(block).Result;
         if (result.IsSuccess)
         {
-            Console.WriteLine($"✅ RandomAccessDevice.SaveData: Successfully wrote block {_blockId} with {_data.Length} bytes");
+            ZoneTreeLogger.LogSegmentOperation("SaveSuccess", _segmentId, _category, _data.Length, $"BlockId: {_blockId}");
             _isDirty = false;
         }
         else
         {
-            Console.WriteLine($"❌ RandomAccessDevice.SaveData: Failed to write block {_blockId}");
+            ZoneTreeLogger.LogSegmentOperation("SaveFailed", _segmentId, _category, _data.Length, $"BlockId: {_blockId}");
         }
     }
 

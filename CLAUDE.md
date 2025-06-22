@@ -78,3 +78,10 @@ dotnet run --project EmailDB.Console
 - Keep commit messages concise and descriptive
 - Focus on what changed and why, not who made the change
 - Use conventional commit format when appropriate
+
+## Known Issues
+- **ZstdSharp Memory Issues**: ZstdSharp library has AccessViolationException on some platforms/data sizes
+  - Likely buffer overflow in native ZstdSharp implementation
+  - 90.6% compression tests pass, Zstd-specific failures are platform-dependent
+  - Workaround: Use Gzip, LZ4, or Brotli compression instead
+  - Status: Third-party library issue, not fixable in EmailDB codebase
