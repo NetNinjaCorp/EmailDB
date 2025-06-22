@@ -143,31 +143,167 @@ public class FormatVersionManager
         return Result<CompatibilityInfo>.Success(info);
     }
     
+    /// <summary>
+    /// Creates a proper header block for new databases.
+    /// </summary>
+    public async Task<Result<BlockLocation>> CreateHeaderBlockAsync()
+    {
+        try
+        {
+            var headerContent = new HeaderContent
+            {
+                FileVersion = EncodeVersion(DatabaseVersion.Current),
+                CreationTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                LastModifiedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                FirstMetadataOffset = -1, // Will be updated when metadata is created
+                FirstFolderTreeOffset = -1,
+                FirstCleanupOffset = -1,
+                Capabilities = DatabaseVersion.Current.Capabilities,
+                BlockFormatVersions = new Dictionary<BlockType, int>(DatabaseVersion.Current.BlockFormatVersions)
+            };
+            
+            // Add database metadata
+            headerContent.Metadata["created_by"] = "EmailDB.Format";
+            headerContent.Metadata["creation_time"] = DateTime.UtcNow.ToString("O");
+            headerContent.Metadata["format_version"] = DatabaseVersion.Current.ToString();
+            
+            // Serialize header content
+            var serializer = new DefaultBlockContentSerializer();
+            var serializeResult = serializer.Serialize(headerContent, PayloadEncoding.Json);
+            if (!serializeResult.IsSuccess)
+            {
+                return Result<BlockLocation>.Failure($"Failed to serialize header: {serializeResult.Error}");
+            }
+            
+            // Create metadata block with header content
+            var headerBlock = new Block
+            {
+                Type = BlockType.Metadata,
+                Encoding = PayloadEncoding.Json,
+                Payload = serializeResult.Value,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+            };
+            
+            var writeResult = await _blockManager.WriteBlockAsync(headerBlock);
+            if (!writeResult.IsSuccess)
+            {
+                return Result<BlockLocation>.Failure($"Failed to write header block: {writeResult.Error}");
+            }
+            
+            // Update cached header
+            lock (_versionLock)
+            {
+                _headerContent = headerContent;
+                _currentVersion = DatabaseVersion.Current;
+                _versionDetected = true;
+            }
+            
+            return Result<BlockLocation>.Success(writeResult.Value);
+        }
+        catch (Exception ex)
+        {
+            return Result<BlockLocation>.Failure($"Failed to create header block: {ex.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// Updates the header block with new information.
+    /// </summary>
+    public async Task<Result<bool>> UpdateHeaderAsync(Action<HeaderContent> updateAction)
+    {
+        try
+        {
+            if (_headerContent == null)
+            {
+                return Result<bool>.Failure("No header content to update");
+            }
+            
+            lock (_versionLock)
+            {
+                updateAction(_headerContent);
+                _headerContent.LastModifiedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            }
+            
+            // Find and update the header block
+            var blockLocations = _blockManager.GetBlockLocations();
+            foreach (var (offset, location) in blockLocations.Take(5))
+            {
+                var blockResult = await _blockManager.ReadBlockAsync(offset);
+                if (blockResult.IsSuccess && blockResult.Value.Type == BlockType.Metadata)
+                {
+                    // Serialize updated header
+                    var serializer = new DefaultBlockContentSerializer();
+                    var serializeResult = serializer.Serialize(_headerContent, PayloadEncoding.Json);
+                    if (!serializeResult.IsSuccess)
+                    {
+                        return Result<bool>.Failure($"Failed to serialize updated header: {serializeResult.Error}");
+                    }
+                    
+                    // Update the block
+                    var updatedBlock = new Block
+                    {
+                        Type = BlockType.Metadata,
+                        Encoding = PayloadEncoding.Json,
+                        Payload = serializeResult.Value,
+                        Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                    };
+                    
+                    var writeResult = await _blockManager.WriteBlockAsync(updatedBlock);
+                    return writeResult.IsSuccess 
+                        ? Result<bool>.Success(true)
+                        : Result<bool>.Failure($"Failed to write updated header: {writeResult.Error}");
+                }
+            }
+            
+            return Result<bool>.Failure("Header block not found for update");
+        }
+        catch (Exception ex)
+        {
+            return Result<bool>.Failure($"Failed to update header: {ex.Message}");
+        }
+    }
+    
     private async Task<Result<HeaderContent>> ReadHeaderBlockAsync()
     {
         try
         {
-            // Look for metadata block (acts as header for now)
+            // Look for metadata block that contains header information
             var blockLocations = _blockManager.GetBlockLocations();
             
-            // Find a metadata block by reading blocks
-            foreach (var (offset, location) in blockLocations.Take(5)) // Check first few blocks
+            // Check first few blocks for header content
+            foreach (var (offset, location) in blockLocations.Take(5))
             {
                 try
                 {
                     var blockResult = await _blockManager.ReadBlockAsync(offset);
                     if (blockResult.IsSuccess && blockResult.Value.Type == BlockType.Metadata)
                     {
-                        // Found a metadata block - treat as header
-                        var headerContent = new HeaderContent
-                        {
-                            FileVersion = EncodeVersion(DatabaseVersion.Current),
-                            FirstMetadataOffset = offset,
-                            FirstFolderTreeOffset = -1,
-                            FirstCleanupOffset = -1
-                        };
+                        // Try to deserialize as HeaderContent
+                        var serializer = new DefaultBlockContentSerializer();
+                        var deserializeResult = serializer.Deserialize<HeaderContent>(
+                            blockResult.Value.Payload, blockResult.Value.Encoding);
                         
-                        return Result<HeaderContent>.Success(headerContent);
+                        if (deserializeResult.IsSuccess)
+                        {
+                            // Found proper header content
+                            return Result<HeaderContent>.Success(deserializeResult.Value);
+                        }
+                        else
+                        {
+                            // Legacy metadata block - create basic header
+                            var legacyHeader = new HeaderContent
+                            {
+                                FileVersion = EncodeVersion(new DatabaseVersion(1, 0, 0)),
+                                CreationTimestamp = blockResult.Value.Timestamp,
+                                LastModifiedTimestamp = blockResult.Value.Timestamp,
+                                FirstMetadataOffset = offset,
+                                FirstFolderTreeOffset = -1,
+                                FirstCleanupOffset = -1,
+                                Capabilities = FeatureCapabilities.V1Capabilities
+                            };
+                            
+                            return Result<HeaderContent>.Success(legacyHeader);
+                        }
                     }
                 }
                 catch
@@ -191,10 +327,18 @@ public class FormatVersionManager
         {
             var version = DatabaseVersion.Current;
             
-            lock (_versionLock)
+            // Create proper header block for new database
+            var headerResult = await CreateHeaderBlockAsync();
+            if (!headerResult.IsSuccess)
             {
-                _currentVersion = version;
-                _versionDetected = true;
+                // Fall back to basic initialization
+                lock (_versionLock)
+                {
+                    _currentVersion = version;
+                    _versionDetected = true;
+                }
+                
+                return Result<DatabaseVersion>.Success(version);
             }
             
             return Result<DatabaseVersion>.Success(version);

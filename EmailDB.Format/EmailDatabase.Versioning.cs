@@ -10,6 +10,7 @@ namespace EmailDB.Format;
 public partial class EmailDatabase
 {
     private FormatVersionManager _versionManager;
+    private MigrationManager _migrationManager;
     private DatabaseVersion _databaseVersion;
     
     /// <summary>
@@ -25,6 +26,7 @@ public partial class EmailDatabase
         try
         {
             _versionManager = new FormatVersionManager(_blockManager);
+            _migrationManager = new MigrationManager(_blockManager, _versionManager);
             
             var versionResult = await _versionManager.DetectVersionAsync();
             if (versionResult.IsSuccess)
@@ -97,6 +99,54 @@ public partial class EmailDatabase
                 Message = $"Compatibility check failed: {ex.Message}"
             };
         }
+    }
+    
+    /// <summary>
+    /// Plans a migration to a target version.
+    /// </summary>
+    public async Task<Result<MigrationPlan>> PlanMigrationAsync(DatabaseVersion targetVersion)
+    {
+        if (_migrationManager == null)
+        {
+            return Result<MigrationPlan>.Failure("Migration manager not initialized");
+        }
+        
+        return await _migrationManager.CanMigrateAsync(_databaseVersion, targetVersion);
+    }
+    
+    /// <summary>
+    /// Performs a migration to a target version.
+    /// </summary>
+    public async Task<Result<MigrationResult>> MigrateAsync(DatabaseVersion targetVersion, IProgress<MigrationProgress> progress = null)
+    {
+        if (_migrationManager == null)
+        {
+            return Result<MigrationResult>.Failure("Migration manager not initialized");
+        }
+        
+        var result = await _migrationManager.MigrateAsync(targetVersion, progress);
+        
+        if (result.IsSuccess)
+        {
+            // Update cached version after successful migration
+            _databaseVersion = targetVersion;
+        }
+        
+        return result;
+    }
+    
+    /// <summary>
+    /// Checks if the database can be migrated to the current implementation version.
+    /// </summary>
+    public async Task<Result<bool>> CanUpgradeToCurrentAsync()
+    {
+        var planResult = await PlanMigrationAsync(DatabaseVersion.Current);
+        if (!planResult.IsSuccess)
+        {
+            return Result<bool>.Failure(planResult.Error);
+        }
+        
+        return Result<bool>.Success(planResult.Value.IsPossible);
     }
 }
 
