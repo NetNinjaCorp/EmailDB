@@ -71,3 +71,10 @@ dotnet run --project EmailDB.Console
 - Review PHASE1-7_IMPLEMENTATION_PLAN.md for detailed roadmaps
 - Follow Result<T> pattern for all fallible operations
 - Maintain append-only design for data integrity
+
+## Git Commit Guidelines
+- **NEVER include self-attribution in commit messages**
+- Do NOT add "Generated with Claude Code" or "Co-Authored-By: Claude" 
+- Keep commit messages concise and descriptive
+- Focus on what changed and why, not who made the change
+- Use conventional commit format when appropriate
