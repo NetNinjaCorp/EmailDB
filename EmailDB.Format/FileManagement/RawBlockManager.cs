@@ -1,5 +1,6 @@
 ﻿using EmailDB.Format.Helpers;
 using EmailDB.Format.Models;
+using EmailDB.Format.Compression;
 using Force.Crc32;
 using System;
 using System.Collections.Concurrent;
@@ -626,6 +627,48 @@ public class RawBlockManager : IDisposable
     {
         using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
 
+        // Process payload - compress if needed
+        byte[] finalPayload = block.Payload ?? Array.Empty<byte>();
+        ExtendedBlockHeader? extendedHeader = null;
+        
+        // Check if compression is enabled
+        var flags = (BlockFlags)block.Flags;
+        var compressionAlgorithm = flags.GetCompressionAlgorithm();
+        
+        if (compressionAlgorithm != CompressionAlgorithm.None && finalPayload.Length > 0)
+        {
+            try
+            {
+                var compressor = CompressionFactory.GetProvider(compressionAlgorithm);
+                var uncompressedSize = finalPayload.Length;
+                finalPayload = compressor.Compress(finalPayload);
+                
+                // Create extended header with compression info
+                extendedHeader = new ExtendedBlockHeader
+                {
+                    UncompressedSize = uncompressedSize
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Compression failed with algorithm {compressionAlgorithm}: {ex.Message}", ex);
+            }
+        }
+
+        // Prepare complete payload (extended header + actual payload)
+        byte[] completePayload;
+        if (extendedHeader != null)
+        {
+            var extendedHeaderBytes = extendedHeader.Serialize();
+            completePayload = new byte[extendedHeaderBytes.Length + finalPayload.Length];
+            Array.Copy(extendedHeaderBytes, 0, completePayload, 0, extendedHeaderBytes.Length);
+            Array.Copy(finalPayload, 0, completePayload, extendedHeaderBytes.Length, finalPayload.Length);
+        }
+        else
+        {
+            completePayload = finalPayload;
+        }
+
         // Write header
         using (var headerStream = new MemoryStream())
         {
@@ -639,7 +682,7 @@ public class RawBlockManager : IDisposable
                 headerWriter.Write(block.Timestamp);
                 headerWriter.Write(block.BlockId);
 
-                long payloadLen = block.Payload?.Length ?? 0;
+                long payloadLen = completePayload.Length;
                 headerWriter.Write(payloadLen);
             }
 
@@ -650,10 +693,10 @@ public class RawBlockManager : IDisposable
         }
 
         // Write payload and its checksum
-        if (block.Payload != null && block.Payload.Length > 0)
+        if (completePayload.Length > 0)
         {
-            writer.Write(block.Payload);
-            uint payloadChecksum = ComputeChecksum(block.Payload);
+            writer.Write(completePayload);
+            uint payloadChecksum = ComputeChecksum(completePayload);
             writer.Write(payloadChecksum);
         }
         else
@@ -663,7 +706,7 @@ public class RawBlockManager : IDisposable
 
         // Write footer
         writer.Write(FOOTER_MAGIC);
-        writer.Write((long)(TotalFixedOverhead + (block.Payload?.Length ?? 0)));
+        writer.Write((long)(TotalFixedOverhead + completePayload.Length));
     }
 
     // Renamed to avoid conflict and clarify internal use with Result pattern
@@ -710,17 +753,84 @@ public class RawBlockManager : IDisposable
             // Read payload if present
             if (payloadLength > 0)
             {
-                block.Payload = reader.ReadBytes((int)payloadLength);
-                if (block.Payload.Length != payloadLength)
+                byte[] rawPayload = reader.ReadBytes((int)payloadLength);
+                if (rawPayload.Length != payloadLength)
                 {
                     return Result<Block>.Failure($"Incomplete payload read for Block ID {blockIdForErrorMessage}");
                 }
 
                 uint storedPayloadChecksum = reader.ReadUInt32();
-                uint computedPayloadChecksum = ComputeChecksum(block.Payload);
+                uint computedPayloadChecksum = ComputeChecksum(rawPayload);
                 if (storedPayloadChecksum != computedPayloadChecksum)
                 {
                     return Result<Block>.Failure($"Payload checksum mismatch for Block ID {blockIdForErrorMessage}");
+                }
+
+                // Process payload - decompress if needed
+                var flags = (BlockFlags)block.Flags;
+                var compressionAlgorithm = flags.GetCompressionAlgorithm();
+                
+                if (compressionAlgorithm != CompressionAlgorithm.None)
+                {
+                    try
+                    {
+                        // Extract extended header first
+                        ExtendedBlockHeader? extendedHeader = null;
+                        byte[] actualPayload = rawPayload;
+                        
+                        if (rawPayload.Length > 1) // Must have at least the version byte
+                        {
+                            // Try to extract extended header
+                            // For simplicity, we'll parse just enough to get the uncompressed size
+                            using var extHeaderStream = new MemoryStream(rawPayload);
+                            using var extHeaderReader = new BinaryReader(extHeaderStream);
+                            
+                            var version = extHeaderReader.ReadByte();
+                            if (version == 1)
+                            {
+                                // Has uncompressed size?
+                                if (extHeaderReader.ReadBoolean())
+                                {
+                                    var uncompressedSize = extHeaderReader.ReadInt64();
+                                    extendedHeader = new ExtendedBlockHeader { UncompressedSize = uncompressedSize };
+                                    
+                                    // Skip encryption data if present
+                                    if (extHeaderReader.ReadBoolean())
+                                    {
+                                        var ivLength = extHeaderReader.ReadInt32();
+                                        extHeaderReader.ReadBytes(ivLength); // Skip IV
+                                        var authTagLength = extHeaderReader.ReadInt32();
+                                        extHeaderReader.ReadBytes(authTagLength); // Skip auth tag
+                                        extHeaderReader.ReadInt32(); // Skip key ID
+                                    }
+                                    
+                                    // Rest is the actual compressed payload
+                                    var remainingBytes = (int)(rawPayload.Length - extHeaderStream.Position);
+                                    actualPayload = extHeaderReader.ReadBytes(remainingBytes);
+                                }
+                            }
+                        }
+                        
+                        // Decompress the actual payload
+                        if (actualPayload.Length > 0)
+                        {
+                            var decompressor = CompressionFactory.GetProvider(compressionAlgorithm);
+                            block.Payload = decompressor.Decompress(actualPayload);
+                        }
+                        else
+                        {
+                            block.Payload = Array.Empty<byte>();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return Result<Block>.Failure($"Decompression failed for Block ID {blockIdForErrorMessage} with algorithm {compressionAlgorithm}: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    // No compression, use raw payload
+                    block.Payload = rawPayload;
                 }
             }
             else
@@ -730,6 +840,7 @@ public class RawBlockManager : IDisposable
                 {
                     return Result<Block>.Failure($"Payload checksum mismatch for empty payload for Block ID {blockIdForErrorMessage}");
                 }
+                block.Payload = Array.Empty<byte>();
             }
 
             // Verify footer
