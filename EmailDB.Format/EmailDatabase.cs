@@ -16,7 +16,7 @@ namespace EmailDB.Format;
 /// Provides simple methods for EML processing, storage, and full-text search
 /// using custom EmailDB block storage format.
 /// </summary>
-public class EmailDatabase : IDisposable
+public partial class EmailDatabase : IDisposable
 {
     private readonly RawBlockManager _blockManager;
     private readonly IZoneTree<string, string> _emailStore;      // KV storage for emails
@@ -29,6 +29,9 @@ public class EmailDatabase : IDisposable
     {
         Console.WriteLine($"🚀 EmailDatabase: Opening database at {databasePath}");
         _blockManager = new RawBlockManager(databasePath);
+        
+        // Initialize versioning system
+        _ = InitializeVersioningAsync(); // Fire and forget for now
         
         // Get the directory path for ZoneTree data files
         var dataDirectory = Path.GetDirectoryName(databasePath);
@@ -368,8 +371,20 @@ public class EmailDatabase : IDisposable
 
     private async Task<int> CountFoldersAsync()
     {
-        // Simplified folder count
-        return 5; // Mock implementation
+        // Count actual folders from metadata
+        var emailIds = await GetEmailIDsAsync();
+        var folderNames = new HashSet<string>();
+        
+        foreach (var emailId in emailIds)
+        {
+            var folders = await GetEmailFoldersAsync(emailId);
+            foreach (var folder in folders)
+            {
+                folderNames.Add(folder);
+            }
+        }
+        
+        return folderNames.Count;
     }
     
     private async Task UpdateEmailIdsIndexAsync(EmailHashedID newEmailId)
