@@ -76,10 +76,10 @@ public class KeyManagerContent : BlockContent
 public class BlockKeyInfo
 {
     /// <summary>
-    /// Unique key ID.
+    /// Block ID this key belongs to.
     /// </summary>
-    [JsonPropertyName("key_id")]
-    public long KeyId { get; set; }
+    [JsonPropertyName("block_id")]
+    public long BlockId { get; set; }
     
     /// <summary>
     /// The encryption algorithm this key is for.
@@ -88,34 +88,28 @@ public class BlockKeyInfo
     public EncryptionAlgorithm Algorithm { get; set; }
     
     /// <summary>
-    /// The actual encryption key (will be encrypted by master key).
+    /// The encrypted encryption key (encrypted by master key).
     /// </summary>
-    [JsonPropertyName("key_data")]
-    public byte[] KeyData { get; set; } = Array.Empty<byte>();
+    [JsonPropertyName("encrypted_key")]
+    public byte[] EncryptedKey { get; set; } = Array.Empty<byte>();
     
     /// <summary>
     /// When this key was created.
     /// </summary>
-    [JsonPropertyName("created_timestamp")]
-    public long CreatedTimestamp { get; set; }
+    [JsonPropertyName("created_at")]
+    public long CreatedAt { get; set; }
     
     /// <summary>
     /// Block type this key is intended for (optional metadata).
     /// </summary>
     [JsonPropertyName("block_type")]
-    public BlockType? BlockType { get; set; }
+    public BlockType BlockType { get; set; }
     
     /// <summary>
     /// Whether this key is currently active.
     /// </summary>
     [JsonPropertyName("is_active")]
     public bool IsActive { get; set; } = true;
-    
-    /// <summary>
-    /// Optional metadata about this key.
-    /// </summary>
-    [JsonPropertyName("metadata")]
-    public Dictionary<string, string> Metadata { get; set; } = new();
 }
 
 /// <summary>
@@ -154,183 +148,3 @@ public class KeyDerivationSettings
     public Dictionary<string, object> Parameters { get; set; } = new();
 }
 
-/// <summary>
-/// Manager for encryption keys that handles key generation, storage, and retrieval.
-/// </summary>
-public class EncryptionKeyManager
-{
-    private readonly Dictionary<long, BlockKeyInfo> _blockKeys = new();
-    private byte[] _masterKey = Array.Empty<byte>();
-    private bool _isUnlocked = false;
-    
-    /// <summary>
-    /// Whether the key manager is currently unlocked with master key.
-    /// </summary>
-    public bool IsUnlocked => _isUnlocked;
-    
-    /// <summary>
-    /// Number of keys currently managed.
-    /// </summary>
-    public int KeyCount => _blockKeys.Count;
-    
-    /// <summary>
-    /// Unlocks the key manager with the master key.
-    /// </summary>
-    /// <param name="masterKey">The master encryption key</param>
-    /// <param name="keyManagerContent">The encrypted key manager content</param>
-    /// <returns>Success if unlocked correctly</returns>
-    public Result<bool> Unlock(byte[] masterKey, KeyManagerContent keyManagerContent)
-    {
-        try
-        {
-            // Verify master key by checking verification hash
-            var verificationHash = System.Security.Cryptography.SHA256.HashData(masterKey.Concat(keyManagerContent.KeySalt).ToArray());
-            if (!verificationHash.AsSpan().SequenceEqual(keyManagerContent.VerificationHash))
-            {
-                return Result<bool>.Failure("Invalid master key");
-            }
-            
-            _masterKey = new byte[masterKey.Length];
-            Array.Copy(masterKey, _masterKey, masterKey.Length);
-            _isUnlocked = true;
-            
-            // Load all block keys
-            _blockKeys.Clear();
-            foreach (var kvp in keyManagerContent.BlockKeys)
-            {
-                _blockKeys[kvp.Key] = kvp.Value;
-            }
-            
-            return Result<bool>.Success(true);
-        }
-        catch (Exception ex)
-        {
-            return Result<bool>.Failure($"Failed to unlock key manager: {ex.Message}");
-        }
-    }
-    
-    /// <summary>
-    /// Locks the key manager and clears sensitive data.
-    /// </summary>
-    public void Lock()
-    {
-        if (_masterKey.Length > 0)
-        {
-            Array.Clear(_masterKey);
-        }
-        _isUnlocked = false;
-        _blockKeys.Clear();
-    }
-    
-    /// <summary>
-    /// Gets the encryption key for a specific block.
-    /// </summary>
-    /// <param name="blockId">The block ID</param>
-    /// <returns>The encryption key if found</returns>
-    public Result<byte[]> GetBlockKey(long blockId)
-    {
-        if (!_isUnlocked)
-            return Result<byte[]>.Failure("Key manager is locked");
-            
-        if (!_blockKeys.TryGetValue(blockId, out var keyInfo))
-            return Result<byte[]>.Failure($"No key found for block {blockId}");
-            
-        if (!keyInfo.IsActive)
-            return Result<byte[]>.Failure($"Key for block {blockId} is inactive");
-            
-        return Result<byte[]>.Success(keyInfo.KeyData);
-    }
-    
-    /// <summary>
-    /// Generates and stores a new encryption key for a block.
-    /// </summary>
-    /// <param name="blockId">The block ID</param>
-    /// <param name="algorithm">The encryption algorithm</param>
-    /// <param name="blockType">Optional block type for metadata</param>
-    /// <returns>The generated key</returns>
-    public Result<byte[]> GenerateBlockKey(long blockId, EncryptionAlgorithm algorithm, BlockType? blockType = null)
-    {
-        if (!_isUnlocked)
-            return Result<byte[]>.Failure("Key manager is locked");
-            
-        try
-        {
-            // Generate appropriate key for algorithm
-            var keySize = algorithm switch
-            {
-                EncryptionAlgorithm.AES256_GCM => 32,
-                EncryptionAlgorithm.ChaCha20_Poly1305 => 32,
-                EncryptionAlgorithm.AES256_CBC_HMAC => 64,
-                _ => 32
-            };
-            
-            var key = new byte[keySize];
-            using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
-            rng.GetBytes(key);
-            
-            var keyInfo = new BlockKeyInfo
-            {
-                KeyId = blockId,
-                Algorithm = algorithm,
-                KeyData = key,
-                CreatedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                BlockType = blockType,
-                IsActive = true
-            };
-            
-            _blockKeys[blockId] = keyInfo;
-            
-            return Result<byte[]>.Success(key);
-        }
-        catch (Exception ex)
-        {
-            return Result<byte[]>.Failure($"Failed to generate block key: {ex.Message}");
-        }
-    }
-    
-    /// <summary>
-    /// Revokes a key making it inactive.
-    /// </summary>
-    /// <param name="blockId">The block ID to revoke</param>
-    /// <returns>Success if revoked</returns>
-    public Result<bool> RevokeBlockKey(long blockId)
-    {
-        if (!_isUnlocked)
-            return Result<bool>.Failure("Key manager is locked");
-            
-        if (!_blockKeys.TryGetValue(blockId, out var keyInfo))
-            return Result<bool>.Failure($"No key found for block {blockId}");
-            
-        keyInfo.IsActive = false;
-        return Result<bool>.Success(true);
-    }
-    
-    /// <summary>
-    /// Creates a KeyManagerContent for serialization.
-    /// </summary>
-    /// <returns>The key manager content</returns>
-    public Result<KeyManagerContent> ToContent()
-    {
-        if (!_isUnlocked)
-            return Result<KeyManagerContent>.Failure("Key manager is locked");
-            
-        var content = new KeyManagerContent
-        {
-            Version = 1,
-            CreatedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            UpdatedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            BlockKeys = new Dictionary<long, BlockKeyInfo>(_blockKeys),
-            KeyDerivation = new KeyDerivationSettings(),
-            NextKeyId = _blockKeys.Count > 0 ? _blockKeys.Keys.Max() + 1 : 1
-        };
-        
-        // Generate salt and verification hash
-        content.KeySalt = new byte[32];
-        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
-        rng.GetBytes(content.KeySalt);
-        
-        content.VerificationHash = System.Security.Cryptography.SHA256.HashData(_masterKey.Concat(content.KeySalt).ToArray());
-        
-        return Result<KeyManagerContent>.Success(content);
-    }
-}

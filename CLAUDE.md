@@ -9,6 +9,8 @@ EmailDB is a high-performance, specialized database system for email storage and
 - **ZoneTree B+Tree Indexes**: Sub-millisecond lookups
 - **Hash Chain Integrity**: Cryptographic proof of authenticity
 - **Performance**: 50+ MB/s writes, 50,000+ queries/second
+- **Encryption**: Built-in encryption with key management (AES-256-GCM, ChaCha20-Poly1305, etc.)
+- **Format Versioning**: Version-aware database with migration support
 
 ## Essential Commands
 
@@ -32,12 +34,14 @@ dotnet run --project EmailDB.Console
 
 ### Component Hierarchy (bottom-up)
 1. **RawBlockManager**: Low-level block I/O with checksums
-2. **BlockManager**: Serialization layer (JSON/Protobuf)
+2. **BlockManager**: Serialization layer (JSON/Protobuf) with compression/encryption
 3. **CacheManager**: In-memory LRU caching
 4. **MetadataManager**: System metadata and configuration
 5. **FolderManager**: Email folder hierarchy
 6. **EmailManager**: High-level email operations
 7. **HybridEmailStore**: Top-level API combining all managers
+8. **EncryptionKeyManager**: Master key and data key management
+9. **EmailDatabase**: Version-aware database with migration support
 
 ### Key Design Patterns
 - **Result Pattern**: All operations return `Result<T>` for explicit error handling
@@ -53,24 +57,30 @@ dotnet run --project EmailDB.Console
 [Payload(variable)]
 ```
 
-### Current Architecture Enhancement (TODO.md)
+### Current Architecture Enhancement (Stages 1-5 COMPLETED)
 - All data in blocks (emails, folders, envelopes)
 - 127 compression + 127 encryption algorithms
 - Email batching with adaptive sizing (50MB-1GB)
 - Compound Email IDs (BlockId:LocalId)
-- In-band key management
+- In-band key management with EncryptionKeyManager
+- Format versioning with compatibility matrix
+- Version-aware search and migration framework
 
 ## Testing Strategy
 - Unit tests for each component
 - Integration tests for manager interactions
 - Performance benchmarks
 - Cross-platform CI/CD (Linux, Windows, macOS)
+- Encryption/compression round-trip tests
+- Version migration tests
 
 ## Development Notes
-- Check TODO.md for current implementation priorities
+- Check TODO.md for current implementation priorities (Phases 1-5 completed)
 - Review PHASE1-7_IMPLEMENTATION_PLAN.md for detailed roadmaps
 - Follow Result<T> pattern for all fallible operations
 - Maintain append-only design for data integrity
+- Encryption keys are never stored in plaintext
+- Use EncryptionKeyManager for all key operations
 
 ## Git Commit Guidelines
 - **NEVER include self-attribution in commit messages**

@@ -1,8 +1,8 @@
 # EmailDB - High-Performance Email Storage System
 
-[![Tests](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/tests.yml/badge.svg)](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/tests.yml)
-[![PR Check](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/pr-check.yml/badge.svg)](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/pr-check.yml)
-[![Nightly Tests](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/nightly-tests.yml/badge.svg)](https://github.com/YOUR_USERNAME/EmailDB/actions/workflows/nightly-tests.yml)
+[![Tests](https://github.com/emaildb/EmailDB/actions/workflows/tests.yml/badge.svg)](https://github.com/emaildb/EmailDB/actions/workflows/tests.yml)
+[![PR Check](https://github.com/emaildb/EmailDB/actions/workflows/pr-check.yml/badge.svg)](https://github.com/emaildb/EmailDB/actions/workflows/pr-check.yml)
+[![Nightly Tests](https://github.com/emaildb/EmailDB/actions/workflows/nightly-tests.yml/badge.svg)](https://github.com/emaildb/EmailDB/actions/workflows/nightly-tests.yml)
 
 ## Overview
 
@@ -15,6 +15,8 @@ EmailDB is a specialized database system designed for efficient email storage an
 - **ZoneTree Indexes**: Lightning-fast searches with B+Tree indexes
 - **Hash Chain Integrity**: Cryptographic proof of email authenticity for archival
 - **Checkpoint System**: Automated backup and recovery mechanisms
+- **Format Versioning**: Backward-compatible format evolution with migration support
+- **Encryption Support**: Built-in encryption key management with 127+ algorithms
 
 ### 📊 Performance Metrics
 - **Storage Efficiency**: 99.6% (only 0.4% overhead)
@@ -22,11 +24,13 @@ EmailDB is a specialized database system designed for efficient email storage an
 - **Read Latency**: < 0.1ms for indexed lookups
 - **Search Speed**: 50,000+ queries/second
 
-### 🔒 Data Integrity
+### 🔒 Data Integrity & Security
 - **Cryptographic Hash Chains**: Tamper-evident storage
 - **Immutable Blocks**: Write-once guarantee
 - **Existence Proofs**: Verifiable email timestamps
 - **Corruption Recovery**: Automatic detection and recovery
+- **Encryption**: AES-256, ChaCha20-Poly1305, and 125+ other algorithms
+- **Key Management**: Secure in-band key storage with rotation support
 
 ## Architecture
 
@@ -50,7 +54,7 @@ EmailDB is a specialized database system designed for efficient email storage an
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/EmailDB.git
+git clone https://github.com/emaildb/EmailDB.git
 cd EmailDB
 
 # Build the project
