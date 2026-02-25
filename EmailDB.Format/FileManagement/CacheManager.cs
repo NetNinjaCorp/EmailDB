@@ -1,221 +1,714 @@
-﻿using EmailDB.Format.Models.Blocks;
+﻿using EmailDB.Format.Encryption;
+using EmailDB.Format.Helpers;
+using EmailDB.Format.Models;
+using EmailDB.Format.Models.BlockTypes;
 using System.Collections.Concurrent;
 
 namespace EmailDB.Format.FileManagement;
 
+/// <summary>
+/// Provides an intelligent caching layer on top of the RawBlockManager,
+/// optimizing performance by reducing disk I/O operations and providing
+/// typed access to frequently used block content.
+/// </summary>
 public class CacheManager : IDisposable
 {
-    private readonly BlockManager blockManager;
-    private volatile HeaderContent cachedHeader;
-    private readonly ConcurrentDictionary<string, (long Offset, FolderContent Content, DateTime LastAccess)> folderCache;
-    private readonly ConcurrentDictionary<string, (MetadataContent Content, DateTime LastAccess)> metadataCache;
-    private volatile FolderTreeContent cachedFolderTree;
-    private readonly ReaderWriterLockSlim cacheLock;
+    // Raw Block Manager for low-level operations
+    private readonly RawBlockManager rawBlockManager;
+
+    // Optional encryption provider for block-level encryption/decryption
+    private readonly IBlockEncryptionProvider? encryptionProvider;
+
+
+    // Main index - by offset
+    private readonly ConcurrentDictionary<long, BlockIndexEntry> blocksByOffset;
+
+    // Secondary indices
+    private readonly ConcurrentDictionary<long, BlockIndexEntry> blocksById;
+    private readonly ConcurrentDictionary<string, BlockIndexEntry> blocksByKey;
+    private readonly ConcurrentDictionary<BlockType, ConcurrentBag<BlockIndexEntry>> blocksByType;
+
+    // Caches for different block types - Singular caches
+    private HeaderContent cachedHeader;
+    private FolderTreeContent cachedFolderTree;
+
+    // Async-safe cache lock (SemaphoreSlim supports both sync and async acquisition)
+    private readonly SemaphoreSlim cacheLock;
+
     private readonly int maxCacheSize;
     private readonly TimeSpan cacheTimeout;
     private readonly Timer cacheCleanupTimer;
     private bool isDisposed;
 
-    public CacheManager(BlockManager blockManager, int maxCacheSize = 1000, TimeSpan? cacheTimeout = null)
+    /// <summary>
+    /// Initializes a new instance of the CacheManager class.
+    /// </summary>
+    /// <param name="rawBlockManager">The underlying raw block manager.</param>
+    /// <param name="serializer">The serializer for block content.</param>
+    /// <param name="encryptionProvider">Optional encryption provider for block-level encryption/decryption. Pass null to disable encryption.</param>
+    /// <param name="maxCacheSize">Maximum number of items to cache.</param>
+    /// <param name="cacheTimeout">Time before cached items are expired.</param>
+    public CacheManager(
+        RawBlockManager rawBlockManager,
+        iBlockContentSerializer serializer,
+        IBlockEncryptionProvider? encryptionProvider = null,
+        int maxCacheSize = 1000,
+        TimeSpan? cacheTimeout = null)
     {
-        this.blockManager = blockManager ?? throw new ArgumentNullException(nameof(blockManager));
+        this.rawBlockManager = rawBlockManager ?? throw new ArgumentNullException(nameof(rawBlockManager));
+        this.Serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
+        this.encryptionProvider = encryptionProvider;
         this.maxCacheSize = maxCacheSize;
         this.cacheTimeout = cacheTimeout ?? TimeSpan.FromMinutes(30);
 
-        folderCache = new ConcurrentDictionary<string, (long, FolderContent, DateTime)>();
-        metadataCache = new ConcurrentDictionary<string, (MetadataContent, DateTime)>();
-        cacheLock = new ReaderWriterLockSlim();
+        // Initialize the unified cache structure
+        blocksByOffset = new ConcurrentDictionary<long, BlockIndexEntry>();
+        blocksById = new ConcurrentDictionary<long, BlockIndexEntry>();
+        blocksByKey = new ConcurrentDictionary<string, BlockIndexEntry>();
+        blocksByType = new ConcurrentDictionary<BlockType, ConcurrentBag<BlockIndexEntry>>();
+
+        cacheLock = new SemaphoreSlim(1, 1);
 
         // Start periodic cache cleanup
         cacheCleanupTimer = new Timer(CleanupCache, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
 
+        // Load initial header content
+        LoadHeaderContent();
     }
 
-    public FolderContent GetCachedFolder(string folderName)
+    /// <summary>
+    /// Loads the file header content from storage.
+    /// </summary>
+    public async Task<HeaderContent> LoadHeaderContent()
     {
         ThrowIfDisposed();
+
+        await cacheLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (cachedHeader != null)
+                return cachedHeader;
+
+            // Read the header block from position 0
+            var headerResult = await rawBlockManager.ReadBlockAsync(0);
+            if (headerResult.IsSuccess)
+            {
+                var block = headerResult.Value;
+                if (block.Payload != null && block.Type == BlockType.Metadata)
+                {
+                    var headerContent = Serializer.Deserialize<HeaderContent>(block.Payload);
+
+                    cachedHeader = headerContent;
+
+                    // Cache the header in the unified cache
+                    var entry = new BlockIndexEntry
+                    {
+                        BlockId = block.BlockId,
+                        Offset = 0, // Header is always at offset 0
+                        Type = BlockType.Metadata,
+                        Content = headerContent,
+                        LastAccess = DateTime.UtcNow,
+                        Key = "header" // Special key for header
+                    };
+
+                    blocksByOffset[0] = entry;
+                    blocksById[block.BlockId] = entry;
+                    blocksByKey["header"] = entry;
+
+                    AddToTypeIndex(entry);
+
+                    return headerContent;
+                }
+            }
+
+            // If we can't find or read the header, create a default one
+            var defaultHeader = new HeaderContent
+            {
+                FileVersion = 1,
+                FirstMetadataOffset = -1,
+                FirstFolderTreeOffset = -1,
+                FirstCleanupOffset = -1
+            };
+
+            cachedHeader = defaultHeader;
+
+            // Cache the default header
+            var entry2 = new BlockIndexEntry
+            {
+                BlockId = 0, // Default ID for header
+                Offset = 0,
+                Type = BlockType.Metadata,
+                Content = defaultHeader,
+                LastAccess = DateTime.UtcNow,
+                Key = "header"
+            };
+
+            blocksByOffset[0] = entry2;
+            blocksById[0] = entry2;
+            blocksByKey["header"] = entry2;
+
+            AddToTypeIndex(entry2);
+
+            return defaultHeader;
+        }
+        finally
+        {
+            cacheLock.Release();
+        }
+    }
+
+
+    /// <summary>
+    /// Gets a cached folder by name.
+    /// </summary>
+    /// <param name="folderName">Name of the folder to retrieve.</param>
+    /// <returns>The folder content, or null if not found or cache miss.</returns>
+    public async Task<FolderContent> GetCachedFolder(string folderName)
+    {
+        ThrowIfDisposed();
+
         if (string.IsNullOrWhiteSpace(folderName))
             throw new ArgumentException("Folder name cannot be null or empty", nameof(folderName));
 
-        if (folderCache.TryGetValue(folderName, out var cachedFolder))
+        // Try to get from cache first
+        if (blocksByKey.TryGetValue(folderName, out var entry))
         {
-            try
+            // Update last access time
+            entry.LastAccess = DateTime.UtcNow;
+            return entry.Content as FolderContent;
+        }
+
+        // Get folder tree to find the folder's offset
+        var folderTree = await GetCachedFolderTree();
+        if (folderTree == null)
+            return null;
+
+        // Find folder ID by name
+        if (!folderTree.FolderIDs.TryGetValue(folderName, out var folderId))
+            return null;
+
+        // Find offset by folder ID
+        if (!folderTree.FolderOffsets.TryGetValue(folderId, out var folderOffset))
+            return null;
+
+        // Read the folder from storage
+        var blockResult = await rawBlockManager.ReadBlockAsync(folderOffset);
+        if (!blockResult.IsSuccess)
+            return null;
+
+        var block = blockResult.Value;
+        if (block.Type != BlockType.Folder)
+            return null;
+
+        // Deserialize and cache
+        try
+        {
+            var folder = Serializer.Deserialize<FolderContent>(block.Payload);
+            if (folder != null)
             {
-                var block = blockManager.ReadBlock(cachedFolder.Offset);
-                if (block?.Content is FolderContent folder && folder.Name == folderName)
+                // Cache the folder
+                var newEntry = new BlockIndexEntry
                 {
-                    // Update last access time
-                    folderCache.TryUpdate(folderName,
-                        (cachedFolder.Offset, folder, DateTime.UtcNow),
-                        cachedFolder);
-                    return folder;
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log error if needed
-                folderCache.TryRemove(folderName, out _);
+                    BlockId = block.BlockId,
+                    Offset = folderOffset,
+                    Type = BlockType.Folder,
+                    Content = folder,
+                    LastAccess = DateTime.UtcNow,
+                    Key = folderName
+                };
+
+                blocksByOffset[folderOffset] = newEntry;
+                blocksById[block.BlockId] = newEntry;
+                blocksByKey[folderName] = newEntry;
+
+                AddToTypeIndex(newEntry);
+
+                return folder;
             }
         }
+        catch (Exception ex)
+        {
+            OnError?.Invoke($"Failed to deserialize folder '{folderName}' at offset {folderOffset}", ex);
+        }
+
         return null;
     }
 
-    public void CacheFolder(string folderName, long offset, FolderContent folder)
+    /// <summary>
+    /// Gets the cached folder tree.
+    /// </summary>
+    /// <returns>The folder tree content, or null if not found or cache miss.</returns>
+    public async Task<FolderTreeContent> GetCachedFolderTree()
     {
         ThrowIfDisposed();
-        if (string.IsNullOrWhiteSpace(folderName))
-            throw new ArgumentException("Folder name cannot be null or empty", nameof(folderName));
-        if (folder == null)
-            throw new ArgumentNullException(nameof(folder));
-        if (offset < 0)
-            throw new ArgumentException("Offset cannot be negative", nameof(offset));
 
-        // Implement LRU eviction if cache is full
-        if (folderCache.Count >= maxCacheSize)
+        // Check cache for folder tree by special key
+        if (blocksByKey.TryGetValue("folderTree", out var cachedEntry))
         {
-            var oldestEntry = folderCache
-                .OrderBy(x => x.Value.LastAccess)
-                .FirstOrDefault();
-
-            if (!string.IsNullOrEmpty(oldestEntry.Key))
-            {
-                folderCache.TryRemove(oldestEntry.Key, out _);
-            }
+            cachedEntry.LastAccess = DateTime.UtcNow;
+            return cachedEntry.Content as FolderTreeContent;
         }
 
-        folderCache.AddOrUpdate(folderName,
-            (offset, folder, DateTime.UtcNow),
-            (_, _) => (offset, folder, DateTime.UtcNow));
-    }
+        // Get header to find folder tree offset
+        var header = await LoadHeaderContent();
+        if (header.FirstFolderTreeOffset == -1)
+            return null;
 
-    public FolderTreeContent GetCachedFolderTree()
-    {
-        ThrowIfDisposed();
-        cacheLock.EnterReadLock();
+        // Read folder tree from storage
+        var blockResult = await rawBlockManager.ReadBlockAsync(header.FirstFolderTreeOffset);
+        if (!blockResult.IsSuccess)
+            return null;
+
+        var block = blockResult.Value;
+        if (block.Type != BlockType.FolderTree)
+            return null;
+
         try
         {
-            if (cachedFolderTree != null)
+            var folderTree = Serializer.Deserialize<FolderTreeContent>(block.Payload);
+            if (folderTree != null)
             {
-                return cachedFolderTree;
-            }
+                // Cache the folder tree
+                var newEntry = new BlockIndexEntry
+                {
+                    BlockId = block.BlockId,
+                    Offset = header.FirstFolderTreeOffset,
+                    Type = BlockType.FolderTree,
+                    Content = folderTree,
+                    LastAccess = DateTime.UtcNow,
+                    Key = "folderTree" // Special key for folder tree
+                };
 
-            if (cachedHeader.FirstFolderTreeOffset != -1)
-            {
-                try
-                {
-                    var block = blockManager.ReadBlock(cachedHeader.FirstFolderTreeOffset);
-                    if (block?.Content is FolderTreeContent tree)
-                    {
-                        cachedFolderTree = tree;
-                        return tree;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Log error if needed
-                }
+                blocksByOffset[header.FirstFolderTreeOffset] = newEntry;
+                blocksById[block.BlockId] = newEntry;
+                blocksByKey["folderTree"] = newEntry;
+
+                AddToTypeIndex(newEntry);
+
+                return folderTree;
             }
-            return null;
+        }
+        catch (Exception ex)
+        {
+            OnError?.Invoke($"Failed to deserialize folder tree at offset {header.FirstFolderTreeOffset}", ex);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Caches a folder tree.
+    /// </summary>
+    public void CacheFolderTree(FolderTreeContent folderTree)
+    {
+        ThrowIfDisposed();
+
+        if (folderTree == null)
+            throw new ArgumentNullException(nameof(folderTree));
+
+        cacheLock.Wait();
+        try
+        {
+            cachedFolderTree = folderTree;
         }
         finally
         {
-            cacheLock.ExitReadLock();
+            cacheLock.Release();
         }
     }
 
-    public void CacheFolderTree(FolderTreeContent tree)
+    /// Gets the cached metadata content.
+    /// </summary>
+    /// <returns>The metadata content, or null if not found or cache miss.</returns>
+    public async Task<MetadataContent> GetCachedMetadata()
     {
         ThrowIfDisposed();
-        if (tree == null) throw new ArgumentNullException(nameof(tree));
 
-        cacheLock.EnterWriteLock();
-        try
-        {
-            cachedFolderTree = tree;
-        }
-        finally
-        {
-            cacheLock.ExitWriteLock();
-        }
-    }
-
-    public MetadataContent GetCachedMetadata()
-    {
-        ThrowIfDisposed();
-        if (cachedHeader.FirstMetadataOffset == -1)
-        {
+        // Get header to find metadata offset
+        var header = await LoadHeaderContent();
+        if (header.FirstMetadataOffset == -1)
             return null;
+
+        var metadataKey = $"metadata:{header.FirstMetadataOffset}";
+
+        // Try to get from cache first
+        if (blocksByKey.TryGetValue(metadataKey, out var entry))
+        {
+            entry.LastAccess = DateTime.UtcNow;
+            return entry.Content as MetadataContent;
         }
 
-        var key = cachedHeader.FirstMetadataOffset.ToString();
-        if (metadataCache.TryGetValue(key, out var cached))
-        {
-            metadataCache.TryUpdate(key,
-                (cached.Content, DateTime.UtcNow),
-                cached);
-            return cached.Content;
-        }
+        // Read metadata from storage
+        var blockResult = await rawBlockManager.ReadBlockAsync(header.FirstMetadataOffset);
+        if (!blockResult.IsSuccess)
+            return null;
+
+        var block = blockResult.Value;
+        if (block.Type != BlockType.Metadata)
+            return null;
 
         try
         {
-            var block = blockManager.ReadBlock(cachedHeader.FirstMetadataOffset);
-            if (block?.Content is MetadataContent metadata)
+            var metadata = Serializer.Deserialize<MetadataContent>(block.Payload);
+            if (metadata != null)
             {
-                metadataCache.TryAdd(key, (metadata, DateTime.UtcNow));
+                // Cache the metadata
+                var newEntry = new BlockIndexEntry
+                {
+                    BlockId = block.BlockId,
+                    Offset = header.FirstMetadataOffset,
+                    Type = BlockType.Metadata,
+                    Content = metadata,
+                    LastAccess = DateTime.UtcNow,
+                    Key = metadataKey
+                };
+
+                blocksByOffset[header.FirstMetadataOffset] = newEntry;
+                blocksById[block.BlockId] = newEntry;
+                blocksByKey[metadataKey] = newEntry;
+
+                AddToTypeIndex(newEntry);
+
                 return metadata;
             }
         }
         catch (Exception ex)
         {
-            // Log error if needed
+            OnError?.Invoke($"Failed to deserialize metadata at offset {header.FirstMetadataOffset}", ex);
         }
+
         return null;
     }
 
+    /// <summary>
+    /// Gets a cached segment by ID.
+    /// </summary>
+    /// <param name="segmentId">ID of the segment to retrieve.</param>
+    /// <returns>The segment content, or null if not found or cache miss.</returns>
+    public async Task<SegmentContent> GetSegmentAsync(long segmentId)
+    {
+        ThrowIfDisposed();
+
+        string segmentKey = $"segment:{segmentId}";
+
+        // Try to get from cache first
+        if (blocksByKey.TryGetValue(segmentKey, out var entry))
+        {
+            entry.LastAccess = DateTime.UtcNow;
+            return entry.Content as SegmentContent;
+        }
+
+        // Get metadata to find segment offset
+        var metadata = await GetCachedMetadata();
+        if (metadata == null)
+            return null;
+
+        var segmentOffsetKey = segmentId.ToString();
+        if (!metadata.SegmentOffsets.TryGetValue(segmentOffsetKey, out var offset))
+            return null;
+
+        // Check if segment is outdated
+        if (metadata.OutdatedOffsets.Contains(offset))
+            return null;
+
+        // Read segment from storage
+        var blockResult = await rawBlockManager.ReadBlockAsync(offset);
+        if (!blockResult.IsSuccess)
+            return null;
+
+        var block = blockResult.Value;
+        if (block.Type != BlockType.Segment)
+            return null;
+
+        try
+        {
+            var segment = Serializer.Deserialize<SegmentContent>(block.Payload);
+            if (segment != null)
+            {
+                // Cache the segment
+                var newEntry = new BlockIndexEntry
+                {
+                    BlockId = block.BlockId,
+                    Offset = offset,
+                    Type = BlockType.Segment,
+                    Content = segment,
+                    LastAccess = DateTime.UtcNow,
+                    Key = segmentKey
+                };
+
+                blocksByOffset[offset] = newEntry;
+                blocksById[block.BlockId] = newEntry;
+                blocksByKey[segmentKey] = newEntry;
+
+                AddToTypeIndex(newEntry);
+
+                return segment;
+            }
+        }
+        catch (Exception ex)
+        {
+            OnError?.Invoke($"Failed to deserialize segment {segmentId} at offset {offset}", ex);
+        }
+
+        return null;
+    }
+
+    /// Reads a block using the underlying RawBlockManager.
+    /// </summary>
+    /// <param name="offset">The offset of the block.</param>
+    /// <returns>The block, or null if not found or error.</returns>
+    public async Task<Result<Block>> ReadBlockAsync(long offset)
+    {
+        ThrowIfDisposed();
+
+        // Try to get from cache first if we have it
+        if (blocksByOffset.TryGetValue(offset, out var entry))
+        {
+            entry.LastAccess = DateTime.UtcNow;
+
+            // We need to create a Block from the cached entry content
+            var block = new Block
+            {
+                BlockId = entry.BlockId,
+                Type = entry.Type,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Payload = Serializer.Serialize(entry.Content)
+            };
+
+            return Result<Block>.Success(block);
+        }
+
+        var result = await rawBlockManager.ReadBlockAsync(offset);
+
+        // Decrypt the payload on read if the block is encrypted and we have a provider
+        if (result.IsSuccess && result.Value.IsEncrypted
+            && encryptionProvider != null && encryptionProvider.IsEnabled)
+        {
+            var block = result.Value;
+            block.Payload = encryptionProvider.Decrypt(
+                block.Payload, block.Type, block.BlockId, block.KeyEpoch);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Writes a block using the underlying RawBlockManager.
+    /// </summary>
+    /// <param name="block">The block to write.</param>
+    /// <param name="specificOffset">Optional specific offset to write at, or -1 to append.</param>
+    /// <returns>The offset where the block was written.</returns>
+    public async Task<Result<BlockLocation>> WriteBlockAsync(Block block, long specificOffset = -1)
+    {
+        ThrowIfDisposed();
+
+        // Ensure the block has a valid ID
+        block.EnsureBlockId();
+
+        // Encrypt the payload if an encryption provider is configured and enabled
+        if (encryptionProvider != null && encryptionProvider.IsEnabled && encryptionProvider.ShouldEncrypt(block.Type))
+        {
+            block.Payload = encryptionProvider.Encrypt(block.Payload, block.Type, block.BlockId);
+            block.Flags |= Block.FlagEncrypted;
+            block.SetKeyEpoch((byte)encryptionProvider.ActiveEpoch);
+        }
+
+        var result = specificOffset >= 0
+            ? await rawBlockManager.WriteBlockAsync(block, CancellationToken.None)
+            : await rawBlockManager.WriteBlockAsync(block, CancellationToken.None);
+
+        if (result.IsSuccess)
+        {
+            var location = result.Value;
+
+            // Try to deserialize and cache the content
+            try
+            {
+                object content = null;
+                string key = null;
+
+                switch (block.Type)
+                {
+                    case BlockType.Metadata:
+                        content = Serializer.Deserialize<MetadataContent>(block.Payload);
+                        key = $"metadata:{location.Position}";
+                        InvalidateMetadataCache(); // Clear old metadata
+                        break;
+                    case BlockType.FolderTree:
+                        content = Serializer.Deserialize<FolderTreeContent>(block.Payload);
+                        key = "folderTree";
+                        RemoveFromCache("folderTree"); // Clear old folder tree
+                        break;
+                    case BlockType.Folder:
+                        var folder = Serializer.Deserialize<FolderContent>(block.Payload);
+                        content = folder;
+                        key = folder.Name; // Folder path is the key
+                        break;
+                    case BlockType.Segment:
+                        var segment = Serializer.Deserialize<SegmentContent>(block.Payload);
+                        content = segment;
+                        key = $"segment:{segment.SegmentId}";
+                        break;
+                }
+
+                if (content != null && key != null)
+                {
+                    var entry = new BlockIndexEntry
+                    {
+                        BlockId = block.BlockId,
+                        Offset = location.Position,
+                        Type = block.Type,
+                        Content = content,
+                        LastAccess = DateTime.UtcNow,
+                        Key = key
+                    };
+
+                    blocksByOffset[location.Position] = entry;
+                    blocksById[block.BlockId] = entry;
+                    blocksByKey[key] = entry;
+
+                    AddToTypeIndex(entry);
+                }
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke($"Failed to cache block {block.BlockId} (type: {block.Type}) after write at offset {location.Position}", ex);
+            }
+
+            return result;
+        }
+
+        throw new IOException($"Failed to write block: {result.Error}");
+    }
+
+
+    /// <summary>
+    /// Invalidates all cached content.
+    /// </summary>
     public void InvalidateCache()
     {
         ThrowIfDisposed();
-        cacheLock.EnterWriteLock();
+
+        cacheLock.Wait();
         try
         {
-            folderCache.Clear();
-            metadataCache.Clear();
-            cachedFolderTree = null;
+            blocksByOffset.Clear();
+            blocksById.Clear();
+            blocksByKey.Clear();
+            blocksByType.Clear();
+            cachedHeader = null;
         }
         finally
         {
-            cacheLock.ExitWriteLock();
+            cacheLock.Release();
         }
     }
 
+    /// <summary>
+    /// Invalidates the metadata cache.
+    /// </summary>
+    public void InvalidateMetadataCache()
+    {
+        ThrowIfDisposed();
+
+        cacheLock.Wait();
+        try
+        {
+            // Remove all metadata entries
+            var metadataKeys = blocksByKey.Keys
+                .Where(k => k.StartsWith("metadata:"))
+                .ToList();
+
+            foreach (var key in metadataKeys)
+            {
+                if (blocksByKey.TryRemove(key, out var entry))
+                {
+                    blocksByOffset.TryRemove(entry.Offset, out _);
+                    blocksById.TryRemove(entry.BlockId, out _);
+
+                    if (blocksByType.TryGetValue(BlockType.Metadata, out var typeList))
+                    {
+                        // Create a new list without the removed entry
+                        var newList = new ConcurrentBag<BlockIndexEntry>(
+                            typeList.Where(e => e.Key != key));
+
+                        blocksByType[BlockType.Metadata] = newList;
+                    }
+                }
+            }
+        }
+        finally
+        {
+            cacheLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Cleans up expired cache entries.
+    /// </summary>
     private void CleanupCache(object state)
     {
         if (isDisposed) return;
 
         var expirationTime = DateTime.UtcNow - cacheTimeout;
 
-        // Clean up folder cache
-        var expiredFolders = folderCache
-            .Where(x => x.Value.LastAccess < expirationTime)
-            .Select(x => x.Key)
-            .ToList();
-
-        foreach (var folder in expiredFolders)
+        // Check if cache size exceeds the limit
+        if (blocksByOffset.Count > maxCacheSize)
         {
-            folderCache.TryRemove(folder, out _);
-        }
+            var candidatesForEviction = blocksByOffset.Values
+                .Where(e => e.LastAccess < expirationTime)
+                .OrderBy(e => e.LastAccess)
+                .Take(blocksByOffset.Count - maxCacheSize)
+                .ToList();
 
-        // Clean up metadata cache
-        var expiredMetadata = metadataCache
-            .Where(x => x.Value.LastAccess < expirationTime)
-            .Select(x => x.Key)
-            .ToList();
-
-        foreach (var key in expiredMetadata)
-        {
-            metadataCache.TryRemove(key, out _);
+            foreach (var entry in candidatesForEviction)
+            {
+                RemoveFromCache(entry.Key);
+            }
         }
     }
+
+    /// <summary>
+    /// Helper method to remove an entry from all cache indices.
+    /// </summary>
+    private void RemoveFromCache(string key)
+    {
+        if (blocksByKey.TryRemove(key, out var entry))
+        {
+            blocksByOffset.TryRemove(entry.Offset, out _);
+            blocksById.TryRemove(entry.BlockId, out _);
+
+            if (blocksByType.TryGetValue(entry.Type, out var typeList))
+            {
+                // Create a new list without the removed entry
+                var newList = new ConcurrentBag<BlockIndexEntry>(
+                    typeList.Where(e => e.Key != key));
+
+                blocksByType[entry.Type] = newList;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Helper method to add an entry to the type index.
+    /// </summary>
+    private void AddToTypeIndex(BlockIndexEntry entry)
+    {
+        if (!blocksByType.TryGetValue(entry.Type, out var typeList))
+        {
+            typeList = new ConcurrentBag<BlockIndexEntry>();
+            blocksByType[entry.Type] = typeList;
+        }
+
+        // Remove old entries with the same key
+        var newList = new ConcurrentBag<BlockIndexEntry>(
+            typeList.Where(e => e.Key != entry.Key));
+
+        newList.Add(entry);
+        blocksByType[entry.Type] = newList;
+    }
+
+
 
     private void ThrowIfDisposed()
     {
@@ -225,6 +718,21 @@ public class CacheManager : IDisposable
         }
     }
 
+    public iBlockContentSerializer Serializer { get; }
+
+    /// <summary>
+    /// The encryption provider used for block-level encryption/decryption, or null if encryption is disabled.
+    /// </summary>
+    public IBlockEncryptionProvider? EncryptionProvider => encryptionProvider;
+
+    /// <summary>
+    /// Optional error handler invoked when catch blocks handle exceptions.
+    /// Receives a context string describing where the error occurred and the exception.
+    /// </summary>
+    public Action<string, Exception>? OnError { get; set; }
+    /// <summary>
+    /// Disposes resources used by the CacheManager.
+    /// </summary>
     public void Dispose()
     {
         if (!isDisposed)
@@ -232,10 +740,473 @@ public class CacheManager : IDisposable
             isDisposed = true;
             cacheCleanupTimer?.Dispose();
             cacheLock?.Dispose();
-            folderCache.Clear();
-            metadataCache.Clear();
-            cachedFolderTree = null;
+
+            blocksByOffset.Clear();
+            blocksById.Clear();
+            blocksByKey.Clear();
+            blocksByType.Clear();
             cachedHeader = null;
+        }
+    }
+
+
+    // Write Folder to Cache and storage (Will Write at end of File) returns the offset
+    internal async Task<long> UpdateFolder(string folderPath, FolderContent content)
+    {
+        try
+        {
+            // Create a block for the folder content
+            // Get Existing Block by FolderPath
+            if (blocksByKey.TryGetValue(folderPath, out var existingBlockIndex))
+            {
+                // Remove old entry from cache
+                RemoveFromCache(folderPath);
+            }
+            Block block = null;
+
+            if (existingBlockIndex == null)
+            {
+                block = new Block
+                {
+                    Type = BlockType.Folder,
+                    BlockId = BlockIdGenerator.Instance.GetNextBlockId(BlockType.Folder),
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    Payload = Serializer.Serialize(content)
+                };
+            }
+            else
+            {
+                var existingBlock = await ReadBlockAsync(existingBlockIndex.Offset);
+                if (!existingBlock.IsSuccess)
+                    throw new IOException($"Failed to read existing folder block: {existingBlock.Error}");
+                block = existingBlock.Value;
+            }
+            // Update the existing block
+
+            block.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+
+            // Write the block to storage
+            var result = await rawBlockManager.WriteBlockAsync(block);
+            if (!result.IsSuccess)
+                throw new IOException($"Failed to write folder block: {result.Error}");
+
+            long offset = result.Value.Position;
+
+            // Update all indices atomically
+            var entry = new BlockIndexEntry
+            {
+                BlockId = block.BlockId,
+                Offset = offset,
+                Type = BlockType.Folder,
+                Content = content,
+                LastAccess = DateTime.UtcNow,
+                Key = folderPath
+            };
+
+            // Remove old folder entry if exists
+            RemoveFromCache(folderPath);
+
+            // Update caches
+            blocksByOffset[offset] = entry;
+            blocksById[block.BlockId] = entry;
+            blocksByKey[folderPath] = entry;
+
+            AddToTypeIndex(entry);
+
+            return offset;
+        }
+        catch (Exception ex)
+        {
+            throw new IOException($"Error updating folder: {ex.Message}", ex);
+        }
+    }
+
+    // Write FolderTree to storage and update cache, returns the offset
+    internal async Task<long> UpdateFolderTree(FolderTreeContent folderTree)
+    {
+        try
+        {
+            // Create a block for the folder tree content
+            var block = new Block
+            {
+                Type = BlockType.FolderTree,
+                BlockId = 2, // Special ID for folder tree
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Payload = Serializer.Serialize(folderTree)
+            };
+
+            // Write the block to storage
+            var result = await rawBlockManager.WriteBlockAsync(block);
+            if (!result.IsSuccess)
+                throw new IOException($"Failed to write folder tree block: {result.Error}");
+
+            long offset = result.Value.Position;
+
+            // Update header with new folder tree offset
+            var header = await LoadHeaderContent();
+            header.FirstFolderTreeOffset = offset;
+
+            // Write updated header
+            var headerBlock = new Block
+            {
+                Type = BlockType.Metadata,
+                BlockId = 0, // Special ID for header
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Payload = Serializer.Serialize(header)
+            };
+
+            await rawBlockManager.WriteBlockAsync(headerBlock, OverrideLocation: 0);
+
+            // Update all indices atomically
+            var entry = new BlockIndexEntry
+            {
+                BlockId = block.BlockId,
+                Offset = offset,
+                Type = BlockType.FolderTree,
+                Content = folderTree,
+                LastAccess = DateTime.UtcNow,
+                Key = "folderTree" // Special key for folder tree
+            };
+
+            // Remove old folder tree from cache
+            RemoveFromCache("folderTree");
+
+            // Update caches
+            blocksByOffset[offset] = entry;
+            blocksById[block.BlockId] = entry;
+            blocksByKey["folderTree"] = entry;
+
+            AddToTypeIndex(entry);
+
+            // Cache the folder tree instance
+            cachedFolderTree = folderTree;
+
+            return offset;
+        }
+        catch (Exception ex)
+        {
+            throw new IOException($"Error updating folder tree: {ex.Message}", ex);
+        }
+    }
+
+    // Write Metadata to storage and update cache
+    internal async Task<long> UpdateMetadata(MetadataContent metadata)
+    {
+        try
+        {
+            // Create a block for the metadata content
+            var block = new Block
+            {
+                Type = BlockType.Metadata,
+                BlockId = 1, // Special ID for metadata (different from header)
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Payload = Serializer.Serialize(metadata)
+            };
+
+            // Write the block to storage
+            var result = await rawBlockManager.WriteBlockAsync(block);
+            if (!result.IsSuccess)
+                throw new IOException($"Failed to write metadata block: {result.Error}");
+
+            long offset = result.Value.Position;
+
+            // Update header with new metadata offset
+            var header = await LoadHeaderContent();
+            header.FirstMetadataOffset = offset;
+
+            // Write updated header
+            var headerBlock = new Block
+            {
+                Type = BlockType.Metadata,
+                BlockId = 0, // Special ID for header
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Payload = Serializer.Serialize(header)
+            };
+
+            await rawBlockManager.WriteBlockAsync(headerBlock, OverrideLocation: 0);
+
+            // Update all indices atomically
+            var metadataKey = $"metadata:{offset}";
+            var entry = new BlockIndexEntry
+            {
+                BlockId = block.BlockId,
+                Offset = offset,
+                Type = BlockType.Metadata,
+                Content = metadata,
+                LastAccess = DateTime.UtcNow,
+                Key = metadataKey
+            };
+
+            // Clear old metadata from cache
+            InvalidateMetadataCache();
+
+            // Update caches
+            blocksByOffset[offset] = entry;
+            blocksById[block.BlockId] = entry;
+            blocksByKey[metadataKey] = entry;
+
+            AddToTypeIndex(entry);
+
+            return offset;
+        }
+        catch (Exception ex)
+        {
+            throw new IOException($"Error updating metadata: {ex.Message}", ex);
+        }
+    }
+
+
+    // Write Segment to storage and update cache
+    internal async Task<long> UpdateSegment(string segmentID, SegmentContent segment)
+    {
+        blocksByKey.TryGetValue(segmentID, out var existingBlockIndex);
+        Block block = null;
+        if (existingBlockIndex == null)
+        {
+            // Create a block for the segment content
+            block = new Block
+            {
+                Type = BlockType.Segment,
+                BlockId = BlockIdGenerator.Instance.GetNextBlockId(BlockType.Segment),
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                Payload = Serializer.Serialize(segment)
+            };
+        }
+        else
+        {
+            // Read the existing block
+            var existingBlock = await ReadBlockAsync(existingBlockIndex.Offset);
+            if (!existingBlock.IsSuccess)
+                throw new IOException($"Failed to read existing segment block: {existingBlock.Error}");
+            block = existingBlock.Value;
+            // Remove old entry from cache
+            RemoveFromCache(segmentID);
+        }
+
+        // Update the existing block
+        block.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        // Write the block to storage
+        var result = await rawBlockManager.WriteBlockAsync(block);
+        if (!result.IsSuccess)
+            throw new IOException($"Failed to write segment block: {result.Error}");
+
+        long offset = result.Value.Position;
+
+        // Update metadata with new segment offset
+        var metadata = await GetCachedMetadata();
+        if (metadata != null)
+        {
+            metadata.SegmentOffsets[segment.SegmentId.ToString()] = offset;
+            await UpdateMetadata(metadata);
+        }
+
+        // Update all indices atomically
+        string segmentKey = $"segment:{segment.SegmentId}";
+        var entry = new BlockIndexEntry
+        {
+            BlockId = block.BlockId,
+            Offset = offset,
+            Type = BlockType.Segment,
+            Content = segment,
+            LastAccess = DateTime.UtcNow,
+            Key = segmentKey
+        };
+
+        // Remove old segment from cache
+        RemoveFromCache(segmentKey);
+
+        // Update caches
+        blocksByOffset[offset] = entry;
+        blocksById[block.BlockId] = entry;
+        blocksByKey[segmentKey] = entry;
+
+        AddToTypeIndex(entry);
+
+        return offset;
+    }
+
+    /// <summary>
+    /// Initializes a new file with the core system blocks.
+    /// </summary>
+    public async Task<Result> InitializeNewFile()
+    {
+        try
+        {
+            // Create initial header content (will update after writing other blocks)
+            var header = new HeaderContent
+            {
+                FileVersion = 1,
+                FirstMetadataOffset = -1,
+                FirstFolderTreeOffset = -1,
+                FirstCleanupOffset = -1
+            };
+
+            // Create initial metadata content (will update after writing WAL and folder tree)
+            var metadata = new MetadataContent
+            {
+                WALOffset = -1,
+                FolderTreeOffset = -1,
+                SegmentOffsets = new Dictionary<string, long>(),
+                OutdatedOffsets = new List<long>()
+            };
+
+            // Create initial folder tree content
+            var folderTree = new FolderTreeContent
+            {
+                RootFolderId = -1, // Set to -1 initially (no root folder yet)
+                FolderHierarchy = new Dictionary<string, string>(),
+                FolderIDs = new Dictionary<string, long>(),
+                FolderOffsets = new Dictionary<long, long>()
+            };
+
+            // Create initial WAL content
+            var walContent = new WALContent
+            {
+                NextWALOffset = -1,
+                CategoryOffsets = new Dictionary<string, long>(),
+                Entries = new Dictionary<string, List<WALEntry>>()
+            };
+
+            // Write header first (will update later)
+            var headerBlock = new Block
+            {
+                Version = 1,
+                Type = BlockType.Metadata,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                BlockId = 0, // Special ID for header
+                Payload = Serializer.Serialize(header)
+            };
+
+            var headerResult = await rawBlockManager.WriteBlockAsync(headerBlock, OverrideLocation: 0);
+            if (!headerResult.IsSuccess)
+                return Result.Failure($"Failed to write header block: {headerResult.Error}");
+
+            // Write WAL block
+            var walBlock = new Block
+            {
+                Version = 1,
+                Type = BlockType.WAL,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                BlockId = 3, // Special ID for WAL
+                Payload = Serializer.Serialize(walContent)
+            };
+
+            var walResult = await rawBlockManager.WriteBlockAsync(walBlock);
+            if (!walResult.IsSuccess)
+                return Result.Failure($"Failed to write WAL block: {walResult.Error}");
+
+            long walOffset = walResult.Value.Position;
+
+            // Write folder tree block
+            var folderTreeBlock = new Block
+            {
+                Version = 1,
+                Type = BlockType.FolderTree,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                BlockId = 2, // Special ID for folder tree
+                Payload = Serializer.Serialize(folderTree)
+            };
+
+            var folderTreeResult = await rawBlockManager.WriteBlockAsync(folderTreeBlock);
+            if (!folderTreeResult.IsSuccess)
+                return Result.Failure($"Failed to write folder tree block: {folderTreeResult.Error}");
+
+            long folderTreeOffset = folderTreeResult.Value.Position;
+
+            // Update metadata with correct offsets
+            metadata.WALOffset = walOffset;
+            metadata.FolderTreeOffset = folderTreeOffset;
+
+            // Write metadata block
+            var metadataBlock = new Block
+            {
+                Version = 1,
+                Type = BlockType.Metadata,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                BlockId = 1, // Special ID for metadata
+                Payload = Serializer.Serialize(metadata)
+            };
+
+            var metadataResult = await rawBlockManager.WriteBlockAsync(metadataBlock);
+            if (!metadataResult.IsSuccess)
+                return Result.Failure($"Failed to write metadata block: {metadataResult.Error}");
+
+            long metadataOffset = metadataResult.Value.Position;
+
+            // Update header with correct offsets
+            header.FirstMetadataOffset = metadataOffset;
+            header.FirstFolderTreeOffset = folderTreeOffset;
+            header.FirstCleanupOffset = -1; // No cleanup block yet
+
+            // Rewrite header with updated offsets
+            var updatedHeaderBlock = new Block
+            {
+                Version = 1,
+                Type = BlockType.Metadata,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                BlockId = 0, // Special ID for header
+                Payload = Serializer.Serialize(header)
+            };
+
+            var finalHeaderResult = await rawBlockManager.WriteBlockAsync(updatedHeaderBlock, OverrideLocation: 0);
+            if (!finalHeaderResult.IsSuccess)
+                return Result.Failure($"Failed to update header block: {finalHeaderResult.Error}");
+
+            // Cache the header, metadata, and folder tree for immediate use
+            var headerEntry = new BlockIndexEntry
+            {
+                BlockId = 0,
+                Offset = 0,
+                Type = BlockType.Metadata,
+                Content = header,
+                LastAccess = DateTime.UtcNow,
+                Key = "header"
+            };
+
+            var metadataEntry = new BlockIndexEntry
+            {
+                BlockId = 1,
+                Offset = metadataOffset,
+                Type = BlockType.Metadata,
+                Content = metadata,
+                LastAccess = DateTime.UtcNow,
+                Key = $"metadata:{metadataOffset}"
+            };
+
+            var folderTreeEntry = new BlockIndexEntry
+            {
+                BlockId = 2,
+                Offset = folderTreeOffset,
+                Type = BlockType.FolderTree,
+                Content = folderTree,
+                LastAccess = DateTime.UtcNow,
+                Key = "folderTree"
+            };
+
+            // Update cache
+            blocksByOffset[0] = headerEntry;
+            blocksByOffset[metadataOffset] = metadataEntry;
+            blocksByOffset[folderTreeOffset] = folderTreeEntry;
+
+            blocksById[0] = headerEntry;
+            blocksById[1] = metadataEntry;
+            blocksById[2] = folderTreeEntry;
+
+            blocksByKey["header"] = headerEntry;
+            blocksByKey[$"metadata:{metadataOffset}"] = metadataEntry;
+            blocksByKey["folderTree"] = folderTreeEntry;
+
+            AddToTypeIndex(headerEntry);
+            AddToTypeIndex(metadataEntry);
+            AddToTypeIndex(folderTreeEntry);
+
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure($"File initialization failed: {ex.Message}");
         }
     }
 }

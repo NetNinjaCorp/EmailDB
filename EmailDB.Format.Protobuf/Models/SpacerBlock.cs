@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace EmailDB.Format.Protobuf.Models;
 
 [ProtoContract]
-class SpacerBlock
+public class SpacerBlock : BlockContent
 {
     [ProtoMember(50)]
     public byte[] SpacerData { get; set; }

@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Blake3" Version="2.2.0" />
     <PackageReference Include="Bogus" Version="35.5.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
@@ -22,12 +23,13 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <!-- Commented out references to main projects to avoid build errors -->
-  <!--
   <ItemGroup>
     <ProjectReference Include="..\EmailDB.Format\EmailDB.Format.csproj" />
-    <ProjectReference Include="..\EmailDB.Format.CapnProto\EmailDB.Format.CapnProto.csproj" />
+    <ProjectReference Include="..\EmailDB.Format.Protobuf\EmailDB.Format.Protobuf.csproj" />
   </ItemGroup>
-  -->
+
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>

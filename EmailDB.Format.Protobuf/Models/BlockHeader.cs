@@ -1,6 +1,7 @@
 ﻿using ProtoBuf;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,12 +11,12 @@ namespace EmailDB.Format.Protobuf.Models;
 public class BlockHeader
 {
     [ProtoMember(20)]
-    public BlockType Type { get; set; }    
+    public BlockType Type { get; set; }
 
     [ProtoMember(21)]
     public long Timestamp { get; set; }
 
-    [ProtoMember(22)]
+    [ProtoMember(22), DefaultValue((uint)1)]
     public uint Version { get; set; } = 1;
 
     [ProtoMember(23)]

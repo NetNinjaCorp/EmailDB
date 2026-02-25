@@ -44,7 +44,6 @@ Concrete implementations of `IPayloadEncoding` will be created for different ser
 -   **`ProtobufPayloadEncoding`:** Uses Google Protocol Buffers for efficient binary serialization. Requires `.proto` definitions for the data structures. (e.g., in `EmailDB.Format.Protobuf` project)
 -   **`JsonPayloadEncoding`:** Uses JSON serialization (e.g., `System.Text.Json` or Newtonsoft.Json). Human-readable but potentially less efficient in size and speed.
 -   **`BsonPayloadEncoding`:** Uses BSON (Binary JSON) for a balance between efficiency and JSON-like structure.
--   **`CapnProtoPayloadEncoding`:** Uses Cap'n Proto for high-performance serialization. (e.g., in `EmailDB.Format.CapnProto` project)
 -   *(Others as needed)*
 
 ## Benefits
@@ -58,13 +57,11 @@ graph TD
     B(BlockManager) --> C{IPayloadEncoding};
     C --> D(ProtobufEncoding);
     C --> E(JsonEncoding);
-    C --> F(CapnProtoEncoding);
-    C --> G(... other encodings);
+    C --> F(... other encodings);
 
     style D fill:#f9f,stroke:#333,stroke-width:2px
     style E fill:#f9f,stroke:#333,stroke-width:2px
     style F fill:#f9f,stroke:#333,stroke-width:2px
-    style G fill:#f9f,stroke:#333,stroke-width:2px
 ```
 
 The `BlockManager` depends on the `IPayloadEncoding` interface, and a concrete implementation (like `ProtobufEncoding`) is provided at runtime.

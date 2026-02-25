@@ -1,4 +1,4 @@
-﻿using EmailDB.Format.Models.Blocks;
+﻿using EmailDB.Format.Models.BlockTypes;
 
 namespace EmailDB.Format;
 

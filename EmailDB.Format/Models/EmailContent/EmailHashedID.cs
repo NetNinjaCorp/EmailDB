@@ -3,10 +3,8 @@ using System.Text;
 using DZen.Security.Cryptography;
 using MimeKit;
 using SimpleBase;
-using Tenray.ZoneTree.Comparers;
-using Tenray.ZoneTree.Serializers;
 
-public struct EmailHashedID : IComparable<EmailHashedID>, IEquatable<EmailHashedID>, ISerializer<EmailHashedID>, IRefComparer<EmailHashedID>
+public struct EmailHashedID : IComparable<EmailHashedID>, IEquatable<EmailHashedID>
 {
     // Store the full 256 bits (32 bytes) of the SHA3-256 hash
     private readonly ulong _part1; // First 8 bytes
@@ -175,18 +173,4 @@ public struct EmailHashedID : IComparable<EmailHashedID>, IEquatable<EmailHashed
         return true;
     }
 
-    public EmailHashedID Deserialize(Memory<byte> bytes)
-    {
-        return new EmailHashedID(bytes.ToArray());
-    }
-
-    public Memory<byte> Serialize(in EmailHashedID entry)
-    {
-        return GetBytes();
-    }
-
-    public int Compare(in EmailHashedID x, in EmailHashedID y)
-    {
-        return x.CompareTo(y);
-    }
 }

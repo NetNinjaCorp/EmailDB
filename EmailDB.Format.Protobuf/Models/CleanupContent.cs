@@ -9,13 +9,13 @@ namespace EmailDB.Format.Protobuf.Models;
 [ProtoContract]
 public class CleanupContent : BlockContent
 {
-    [ProtoMember(1000)]
+    [ProtoMember(1000, IsRequired = true)]
     public List<long> FolderTreeOffsets { get; set; } = new();
 
-    [ProtoMember(1001)]
+    [ProtoMember(1001, IsRequired = true)]
     public Dictionary<string, List<long>> FolderOffsets { get; set; } = new();
 
-    [ProtoMember(1002)]
+    [ProtoMember(1002, IsRequired = true)]
     public List<long> MetadataOffsets { get; set; } = new();
 
     [ProtoMember(1003)]

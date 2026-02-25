@@ -12,13 +12,13 @@ public class FolderTreeContent : BlockContent
     [ProtoMember(2500)]
     public long RootFolderId { get; set; }
 
-    [ProtoMember(2501)]
+    [ProtoMember(2501, IsRequired = true)]
     public Dictionary<string, string> FolderHierarchy { get; set; } = new();
 
-    [ProtoMember(2502)]
+    [ProtoMember(2502, IsRequired = true)]
     public Dictionary<string, long> FolderIDs { get; set; } = new();
 
-    [ProtoMember(2503)]
+    [ProtoMember(2503, IsRequired = true)]
     public Dictionary<long, long> FolderOffsets { get; set; } = new();
 
 }

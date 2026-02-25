@@ -1,6 +1,7 @@
 ﻿using ProtoBuf;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,15 +12,15 @@ public class MetadataContent : BlockContent
 {
     private const int metadataSpace = 10;
 
-    [ProtoMember(3500)]
+    [ProtoMember(3500), DefaultValue(-1L)]
     public long WALOffset { get; set; } = -1;
-    [ProtoMember(3501)]
+    [ProtoMember(3501), DefaultValue(-1L)]
     public long FolderTreeOffset { get; set; } = -1;
 
-    [ProtoMember(3502)]
+    [ProtoMember(3502, IsRequired = true)]
     public Dictionary<string, long> SegmentOffsets { get; set; } = new();
 
-    [ProtoMember(3503)]
+    [ProtoMember(3503, IsRequired = true)]
     public List<long> OutdatedOffsets { get; set; } = new();
 
 

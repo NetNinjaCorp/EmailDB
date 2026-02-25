@@ -18,6 +18,6 @@ public class FolderContent : BlockContent
     [ProtoMember(2002)]
     public string Name { get; set; }
 
-    [ProtoMember(2003)]
+    [ProtoMember(2003, IsRequired = true)]
     public List<long> EmailIds { get; set; } = new();
 }

@@ -12,7 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EmailDB.Format.CapnProto\EmailDB.Format.CapnProto.csproj" />
     <ProjectReference Include="..\EmailDB.Format.Protobuf\EmailDB.Format.Protobuf.csproj" />
   </ItemGroup>
 

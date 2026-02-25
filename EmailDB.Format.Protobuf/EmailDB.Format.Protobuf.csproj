@@ -17,8 +17,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
 
-    <!-- Google.Protobuf runtime needed for generated code from .proto -->
-    <PackageReference Include="Google.Protobuf" Version="3.27.2" />  <!-- Use an appropriate version -->
   </ItemGroup>
 
 </Project>

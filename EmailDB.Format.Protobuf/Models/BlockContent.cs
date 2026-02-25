@@ -14,6 +14,7 @@ namespace EmailDB.Format.Protobuf.Models;
 [ProtoInclude(104, typeof(MetadataContent))]
 [ProtoInclude(105, typeof(CleanupContent))]
 [ProtoInclude(106, typeof(WALContent))]
+[ProtoInclude(107, typeof(SpacerBlock))]
 public class BlockContent
 {
     // Header content

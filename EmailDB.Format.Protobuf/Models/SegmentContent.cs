@@ -34,7 +34,7 @@ public class SegmentContent : BlockContent
     [ProtoMember(4007)]
     public uint Version { get; set; }  // Version number for this segment
 
-    [ProtoMember(4008)]
+    [ProtoMember(4008, IsRequired = true)]
     public Dictionary<string, string> Metadata { get; set; } = new();  // Optional metadata for the segment
 
     // Computed property to help with segment file organization
