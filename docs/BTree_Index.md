@@ -42,16 +42,17 @@ The BTree is consulted only when a user opens a specific email that has already 
 
 ### IndexRoot (BlockType = 8)
 
-Fixed 90-byte payload linking to the current BTree root:
+Fixed 58-byte payload linking to the current BTree root:
 
-| Field | Description |
-|-------|-------------|
-| RootNodeBlockOffset | File offset of the root node |
-| EntryCount | Total entries in the tree |
-| TreeHeight | Current tree height |
-| RootNodeHash | BLAKE3 hash of the root node |
-| PreviousRootHash | Hash of prior IndexRoot (integrity chain) |
-| PreviousRootOffset | Offset of prior IndexRoot |
+| Field | Size | Description |
+|-------|------|-------------|
+| RootNodeBlockOffset | 8 bytes | File offset of the root node |
+| EntryCount | 8 bytes | Total entries in the tree |
+| TreeHeight | 2 bytes | Current tree height |
+| RootNodeHash | 32 bytes | BLAKE3 hash of the root node (validates root on read) |
+| Sequence | 8 bytes | Monotonic counter (highest = latest during recovery) |
+
+No backward chain. Compaction starts the sequence fresh, so a hash chain linking to previous roots would be discarded anyway. The Checkpoint block points directly to the authoritative IndexRoot; the sequence number is only needed as a fallback during recovery when no valid Checkpoint is found.
 
 ## Copy-on-Write Model
 
@@ -64,13 +65,12 @@ The BTree uses the CouchDB copy-on-write pattern:
 
 This means every BTree mutation produces `tree_height` new blocks. At height 4, that is 4 new blocks per insert.
 
-## Hash Chain Integrity
+## Integrity Verification
 
 Every node stores:
 - **NodeContentHash** -- BLAKE3 of the node's entries/keys (tamper detection)
-- **PrevChainHash** -- BLAKE3 linking to the previous version of this node
 
-Internal nodes additionally store child hashes, forming a Merkle tree. The IndexRoot chain links consecutive root versions. This allows verification of the entire tree from the root down.
+Internal nodes additionally store child hashes, forming a Merkle tree from the root down. The IndexRoot stores the `RootNodeHash`, allowing top-down verification of the entire tree structure from root to leaves.
 
 ## WAL Buffering
 
