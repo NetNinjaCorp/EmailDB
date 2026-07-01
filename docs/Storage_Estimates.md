@@ -1,90 +1,72 @@
-# Storage Estimates
+# Storage Estimates (v3)
 
-Reference tables for capacity planning. All numbers assume v2 format (91 bytes fixed overhead per block).
+Back-of-envelope sizing for the v3 format. Assumptions: 4096-byte index nodes, 96 B block overhead, +28 B per encrypted block, average raw email 75 KB (MIME incl. attachments amortized), Tier 2 metadata ~4 KB, Tier 1 record ~400 B.
 
-## Constants
+## 1. Fixed overhead per email
 
-| Component | Size |
-|-----------|------|
-| Block fixed overhead | 91 bytes |
-| BTree leaf entry | 48 bytes (32B key + 16B BlockId) |
-| BTree leaf max entries | 82 |
-| BTree internal max keys / children | 54 / 55 |
-| BTree node payload budget | 4,036 bytes |
-| EmailHashedID | 32 bytes (SHA3-256) |
-| Encryption overhead per block | 28 bytes (12B nonce + 16B auth tag) |
+| Component | Amortized cost |
+|-----------|---------------|
+| Block overhead (EmailContent + EmailMetadata) | 192 B |
+| Encryption overhead (2 blocks + page share) | ~57 B |
+| Tier 1 listing record (in shared FolderPage) | ~400 B |
+| Primary index entry (48 B → leaf share) | ~49 B |
+| Date index entry (24 B → leaf share) | ~25 B |
+| BlockLocationIndex (~2.1 entries × 33 B leaf share) | ~70 B |
+| **Total bookkeeping** | **~0.8 KB/email (~1% of a 75 KB email)** |
 
-## Email Content Storage
+## 2. Node capacities (from spec Section 6.1)
 
-Each email = 1 block: `email_size + 91 bytes`
+3988 usable bytes per node (4096 − 96 block overhead − 12 node header):
 
-| Emails | 1 KB avg | 5 KB avg | 75 KB avg | 500 KB avg | 2 MB avg |
-|--------|----------|----------|-----------|------------|----------|
-| 10K | 10.6 MB | 49.7 MB | 733 MB | 4.77 GB | 19.5 GB |
-| 100K | 106 MB | 497 MB | 7.33 GB | 47.7 GB | 195 GB |
-| 1M | 1.06 GB | 4.97 GB | 73.3 GB | 477 GB | 1.95 TB |
-| 10M | 10.6 GB | 49.7 GB | 733 GB | 4.77 TB | 19.5 TB |
+| Index | Leaf entries | Internal fan-out |
+|-------|-------------|------------------|
+| PrimaryEmail (48 B entries) | 83 | 50 children |
+| BlockLocation (32 B entries) | 124 | 71 children |
+| Date (24 B entries) | 166 | 55 children |
 
-## BTree Primary Index
+Primary index capacity by height: 83 / 4,150 / 207K / **10.4M** / 519M.
 
-| Emails | Leaf Nodes | Height | Total Index Size |
-|--------|-----------|--------|------------------|
-| 10K | 176 | 3 | ~511 KB |
-| 100K | 1,755 | 4 | ~4.9 MB |
-| 1M | 17,544 | 4 | ~49 MB |
-| 10M | 175,439 | 5 | ~494 MB |
-| 100M | 1,754,386 | 5 | ~4.82 GB |
+## 3. Index sizes at scale
 
-## Folder Storage
+Live blocks ≈ 2.1 × emails (content + metadata + amortized pages/nodes).
 
-Assuming realistic folder distribution:
+| Emails | Primary index | BlockLocationIndex | Date index | Total index |
+|--------|--------------|--------------------|------------|-------------|
+| 10K | 0.5 MB | 0.7 MB | 0.25 MB | ~1.5 MB |
+| 100K | 5 MB | 7 MB | 2.5 MB | ~15 MB |
+| 1M | 50 MB | 70 MB | 25 MB | ~145 MB |
+| 10M | 503 MB | 703 MB | 247 MB | ~1.5 GB |
 
-| Emails | Folders | Avg Emails/Folder | Total Folder Data |
-|--------|---------|-------------------|-------------------|
-| 10K | 10 | 1,000 | ~313 KB |
-| 100K | 50 | 2,000 | ~3.1 MB |
-| 1M | 200 | 5,000 | ~30.5 MB |
-| 10M | 500 | 20,000 | ~305 MB |
+Upper (non-leaf) levels are ~2% of each tree — a few MB even at 10M — and stay fully cached, so lookups cost ~1 uncached read.
 
-## System Blocks (always negligible)
+## 4. Per-shard picture (50 GB cap)
 
-| Block | Typical Size |
-|-------|-------------|
-| Header | ~140 bytes |
-| Metadata | ~200 bytes |
-| FolderTree | 200 bytes - 5 KB |
-| WAL (flushed) | ~100 bytes |
-| KeyStore | ~200 bytes |
-| Checkpoint | ~220 bytes |
+A 50 GB shard ≈ **650K emails** at 75 KB average (more for light mailboxes: 50 GB ≈ 5M emails at 10 KB).
 
-## Total Overhead (non-content)
+| Component | Size @ 650K emails | % of shard |
+|-----------|--------------------|-----------|
+| Tier 3 EmailContent | ~46.5 GB | 93% |
+| Tier 2 EmailMetadata (~4 KB, Zstd ≈ 2×) | ~1.3 GB | 2.6% |
+| Tier 1 pages + directories + deltas | ~0.3 GB | 0.6% |
+| All indexes (Section 3, interpolated) | ~95 MB | 0.2% |
+| Superblocks, Checkpoints, WAL, KeyStore, Metadata | < 10 MB | ~0 |
+| Dead-block headroom before 2× compaction trigger | up to 1× live | (transient) |
 
-| Emails | BTree | Folders | System | Total Overhead |
-|--------|-------|---------|--------|----------------|
-| 10K | 511 KB | 313 KB | ~1 KB | ~825 KB |
-| 100K | 4.9 MB | 3.1 MB | ~2 KB | ~8 MB |
-| 1M | 49 MB | 30.5 MB | ~5 KB | ~80 MB |
-| 10M | 494 MB | 305 MB | ~10 KB | ~800 MB |
+## 5. `.emdb.vec` sidecar (per ADR-010, 384-dim MiniLM)
 
-## Three-Tier Additions (when implemented)
+| Emails | Float32 vectors | SQ8 vectors | HNSW graph | Sidecar total (SQ8) |
+|--------|----------------|-------------|------------|---------------------|
+| 100K | 154 MB | 38 MB | 15 MB | ~55 MB |
+| 1M | 1.5 GB | 384 MB | 150 MB | ~0.55 GB |
+| 10M | 14.7 GB | 3.7 GB | 1.5 GB | ~5.2 GB |
 
-| Component | Per Email | 10K | 1M | 10M |
-|-----------|----------|-----|-----|-----|
-| Tier 1: Listing pages | ~265 bytes | 2.6 MB | 265 MB | 2.65 GB |
-| Tier 2: Email metadata | ~5 KB | 50 MB | 5 GB | 50 GB |
-| Secondary BTrees (x3) | varies | 1.5 MB | 150 MB | 1.5 GB |
+## 6. Write amplification (steady state)
 
-## Storage Distribution
+| Operation | Blocks written |
+|-----------|---------------|
+| Add email | 2 content blocks + 1 delta block share + WAL share ≈ 3 |
+| Index flush (batch of ~83) | ~10–15 nodes + IndexRoots + Checkpoint |
+| Delta compile (500 ops) | ~7 pages + 1 directory |
+| Checkpoint | Location-index delta paths (log n) + 1 Checkpoint block |
 
-At typical email sizes (75 KB avg), email content is 99.9%+ of total file size. The BTree index is ~48 bytes per email in live leaves. The 91-byte block overhead is 0.1% for typical emails.
-
-## Per-Email Write Cost
-
-| Step | Bytes | Pattern |
-|------|-------|---------|
-| EmailContent block | email_size + 91 | Sequential append |
-| WAL entry | 48 | Sequential write |
-| Folder delta log | ~232 | Sequential append |
-| **Total** | **email_size + ~371** | **All sequential** |
-
-No BTree traversal on the write path. BTree updated in background batches (~82 emails per flush).
+Rule of thumb: bytes written ≈ 1.1–1.3 × bytes ingested between compactions; a compaction cycle at the 2× trigger adds one more full pass of live data.

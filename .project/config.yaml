@@ -1,0 +1,9 @@
+description: A custom binary file format for efficient email storage with append-only
+  block-based architecture
+hub: false
+name: EmailDB
+next_epic_id: 12
+next_story_id: 63
+prefix: EMDB
+projects: []
+repo: ''

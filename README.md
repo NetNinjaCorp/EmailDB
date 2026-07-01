@@ -4,27 +4,27 @@ A single-file, append-only email storage format with per-block encryption, BLAKE
 
 ## Key Properties
 
-- **Single file** -- all data, indexes, folders, and encryption keys in one `.emdb` file
-- **Append-only** -- blocks are never overwritten; old versions remain until compaction
-- **Per-block encryption** -- AES-256-GCM with multi-epoch key rotation
-- **Per-block integrity** -- BLAKE3-128 checksums on both header and payload
-- **Copy-on-write B+-tree** -- primary index for email lookups, hash-chain verified
-- **Checkpoint-based recovery** -- fast open via backward scan, no full file scan needed
-- **ULID block IDs** -- 128-bit, temporally ordered, globally unique, sync-friendly
+- **Single file per shard** -- data, indexes, folders, and encryption keys in one `.emdb` file (~50 GB shards; rebuildable `.emdb.vec` search sidecar)
+- **Append-only** -- blocks are never overwritten; the dual-slot superblock is the only (torn-write-safe) in-place structure
+- **Per-block encryption** -- AES-256-GCM with KEK/DEK key wrapping, multi-epoch rotation, and AAD binding to block + file identity
+- **Per-block integrity** -- BLAKE3-128 checksums on header and payload; Merkle-verified B+-tree indexes
+- **Copy-on-write B+-trees** -- one generic node format serving the primary email index, BlockLocationIndex, and date index
+- **Checkpoint-based recovery** -- O(log n) open via superblock pointer; full scans are disaster recovery only
+- **ULID block IDs** -- 128-bit, temporally ordered, globally unique, sync-friendly; offsets are derived data
 - **Active-to-Backup sync** -- one-way replication via ULID high-water marks and FolderVersion
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [File Format Spec](EmailDB_FileFormat_Spec.md) | Canonical on-disk format: block layout, types, operations |
-| [BTree Index](docs/BTree_Index.md) | Primary index: leaf/internal nodes, hash chains, WAL buffering |
-| [Encryption](docs/Encryption.md) | AES-256-GCM, key epochs, KeyStore, key rotation |
+| [File Format Spec](EmailDB_FileFormat_Spec.md) | **Normative** v3 on-disk format: superblock, block layout, types, encryption, recovery contract |
+| [BTree Index](docs/BTree_Index.md) | Generic node format, primary/location/date indexes, WAL flush, verification |
+| [Folder Listing](docs/Folder_Listing.md) | Three-tier email model, folder pages, delta log |
+| [Search](docs/Search.md) | Five-phase strategy: trigram FTS, page scan, date BTree, vectors, bloom filters |
+| [Encryption](docs/Encryption.md) | KEK/DEK hierarchy, policies, password change/rotation, threat model |
+| [Compaction](docs/Compaction.md) | Dead-block accounting, side-file swap, re-encryption |
+| [Storage Estimates](docs/Storage_Estimates.md) | Overhead, index sizes, per-shard sizing |
 | [Sync](docs/Sync.md) | Active-to-Backup replication, FolderVersion, actions channel |
-| [Folder Listing](docs/Folder_Listing.md) | Three-tier email model, paginated folder pages, delta WAL |
-| [Search](docs/Search.md) | Secondary BTree indexes, full-text search, vector embeddings |
-| [Compaction](docs/Compaction.md) | Tiered compaction, dead block reclamation |
-| [Storage Estimates](docs/Storage_Estimates.md) | Capacity planning tables at various scales |
 
 ## Project Structure
 

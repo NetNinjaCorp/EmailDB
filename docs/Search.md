@@ -1,89 +1,61 @@
-# Search
+# Search (v3)
 
-Search capabilities are implemented in phases, from structured queries using existing BTree infrastructure to full-text and semantic search in later phases. Full-text and semantic search indexes are stored in a **separate file** alongside the main `.emdb` file.
+Five complementary strategies, ordered by implementation priority. Block types use v3 numbering; layouts are normative in the [File Format Spec](../EmailDB_FileFormat_Spec.md).
 
-## Phase 1: Secondary BTree Indexes
+## Phase 1 — Address trigram index (FTS blocks 14–17)
 
-Reuse the existing `BTreeIndex` infrastructure to create additional trees keyed on searchable fields:
+Instant substring matching on From/To/Cc addresses ("rya" → ryan@biztactix.com.au).
 
-| Index | Key | Value | Use Case |
-|-------|-----|-------|----------|
-| DateIndex | date ticks (8B) | EmailHashedID | "Emails from last week" |
-| SenderIndex | BLAKE3(normalized_sender) | EmailHashedID | "Emails from alice@" |
-| FolderDateIndex | BLAKE3(folder + date) | EmailHashedID | Folder sorted by date |
+- Combined index over all address fields; postings distinguish the field
+- Structure: FTSSegmentMeta (14) describes a segment; FTSTermDictionary (15) maps trigram → posting-list block; FTSPostingList (16) holds sorted EmailHashedID lists; FTSSearchRoot (17) is the root, registered in the Checkpoint's SecondaryIndexes table (IndexKind 3)
+- **Always encrypted under every policy** — trigrams are trivially reversible to the indexed text, so plaintext trigrams would leak addresses even in an "encrypted" file
+- Query: split query into trigrams → intersect posting lists → verify candidates against Tier 1 records (trigram match is necessary, not sufficient)
 
-Each secondary index gets its own `IndexRoot` block, tracked in `MetadataContent`.
+## Phase 2 — Listing page scan
 
-**Performance at 10M emails:**
-- Exact sender lookup: O(log N) = 3-4 node reads
-- Date range query: O(log N + K) where K = result count
-- Combined queries: intersect results from two trees
+Sequential scan of Tier 1 Subject/From/Preview fields — no extra index, works day one.
 
-**Index size:** ~460 MB per secondary BTree at 10M emails.
+- Folder-scoped: a 50K-email folder is ~625 FolderPage blocks (~25 MB) → ~15 ms warm
+- Whole-mailbox scan is the fallback when no better phase applies
+- This is the accuracy backstop: other phases narrow candidates; page records confirm
 
-**Write cost:** One COW path rewrite per secondary BTree per email insert (12-16 blocks total across all trees).
+## Phase 3 — Date BTree (IndexKind 2)
 
-## Phase 2: Listing Page Scan
+Secondary B+-tree keyed `DateTicks ‖ BlockId` for time-range queries ("last week", date-bounded searches). Combines with any other phase as a pre- or post-filter. See [BTree Index](BTree_Index.md) Section 7.
 
-Folder listing pages contain subject and sender strings. For queries like "emails about invoice":
+## Phase 4 — Vector embeddings (.emdb.vec sidecar, types 19–21)
 
-- Scan listing pages' subject fields sequentially
-- Folder-scoped scan (50K emails): ~10 MB, ~10ms on NVMe
-- Full scan (10M emails): ~2 GB, 1-2 seconds on NVMe
+Semantic search for conceptual/fuzzy queries ("meeting notes" finds "standup summary").
 
-This is the "80% solution" for subject/sender text search with no additional index.
+- EmbeddingContent (19) stores per-email vectors; VectorIndexNode (20) and VectorIndexRoot (21) hold the HNSW graph — all in the `.emdb.vec` sidecar, never the main file
+- Sidecar is derived data: rebuildable from Tier 1/2/3; staleness detected by comparing the sidecar header's echoed `CheckpointSequence` against the main file (spec Section 15)
+- Embedding pipeline and phased HNSW scaling (float32 → SQ8 → mmap → PQ) per ADR-010/011: MiniLM-L6-v2 384-dim, `"Subject | From | body"` truncated to 256 tokens, cosine via dot product
+- Latency target: < 20 ms end-to-end at 100K emails including query embedding
 
-## Phase 3: Full-Text Search (Separate File)
+## Phase 5 — Bloom filters (type 18)
 
-For email body text search, a segment-based inverted index stored in a **separate search file**:
+Per-folder probabilistic filters for cheap elimination before page scans.
 
-| Block Type | Purpose |
-|------------|---------|
-| FTSSegmentMeta (15) | Segment metadata (field list, doc count) |
-| FTSTermDictionary (16) | FST-encoded term-to-posting-list map |
-| FTSPostingList (17) | Compressed posting lists |
-| FTSSearchRoot (18) | Root pointer for all active segments |
+- One BloomFilter block per folder over its Tier 1 tokens; sized ~1% false-positive
+- Multi-folder search consults filters first and scans only folders that might match
+- Encrypted always (filter bits leak token presence)
+- Root/catalog registered in SecondaryIndexes (IndexKind 4)
 
-Each segment is immutable -- a natural fit for append-only storage. New emails batch into new segments. Searching merges across segments. Compaction merges segments.
+## Query planning
 
-**Performance at 10M emails:** ~15-30 block reads per single-term query. With caching: 2-5 reads.
+```
+date-bounded?            → Phase 3 narrows first
+looks like an address?   → Phase 1
+folder-scoped keyword?   → Phase 5 eliminate → Phase 2 scan survivors
+conceptual / free text?  → Phase 4, merge with Phase 2 for exact hits
+```
 
-**Index size:** 15-25% of raw text size. At 10M emails (~50 GB text): ~7.5-12.5 GB.
+All phases return `EmailHashedID`s; the primary index resolves them to content BlockIds, the BlockLocationIndex to physical locations. Search structures are all rebuildable — none participate in crash recovery guarantees.
 
-## Phase 4: Bloom Filters (Separate File)
+## Encryption summary
 
-Per-folder or per-segment bloom filters for quick elimination:
-
-| Block Type | Purpose |
-|------------|---------|
-| BloomFilter (19) | Probabilistic existence filter |
-
-- 1% false positive rate: ~10 bits per element
-- 10M emails: ~12 MB total
-
-## Phase 5: Vector Embeddings (Separate File)
-
-Semantic search via embeddings (768-1536 floats per email):
-
-| Block Type | Purpose |
-|------------|---------|
-| EmbeddingContent (20) | Vector embedding data per email |
-| VectorIndexNode (21) | HNSW/IVF index tree nodes |
-| VectorIndexRoot (22) | Vector index root pointer |
-
-Complements structured search:
-
-| Structured search wins | Semantic search wins |
-|------------------------|---------------------|
-| "from:alice@example.com" | "emails about the project delay" |
-| "invoice #12345" | "that thing Bob sent about the conference" |
-| Date range queries | Cross-language matching |
-
-## Encryption Policy for Search Blocks
-
-| Block Type | Encrypted? | Rationale |
-|------------|------------|-----------|
-| Secondary BTree nodes | No | Keys are BLAKE3 hashes (opaque) |
-| FTS blocks | Yes | Term dictionaries expose search terms |
-| Bloom filters | No | Opaque bit arrays |
-| Embedding/vector blocks | Yes | Embeddings can leak content |
+| Structure | Policy |
+|-----------|--------|
+| FTS 14–17, BloomFilter 18 | Always encrypted (reversible to content) |
+| Date BTree | Plaintext under Default (keys are timestamps + ULIDs), encrypted under Full |
+| .vec sidecar | Own encryption story; embeddings are content-derived — encrypt at rest when the main file is encrypted (format TBD with the sidecar spec) |

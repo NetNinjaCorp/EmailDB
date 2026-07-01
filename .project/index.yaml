@@ -1,0 +1,3633 @@
+entries:
+- id: EPIC-EMDB-1
+  title: Core Storage Layer Stabilization
+  type: epic
+  status: archived
+  points: null
+  story_id: null
+  epic_id: null
+  tags: []
+- id: EPIC-EMDB-10
+  title: BLAKE3-128 Block Checksums
+  type: epic
+  status: archived
+  points: null
+  story_id: null
+  epic_id: null
+  tags: []
+- id: EPIC-EMDB-11
+  title: Two-Tier Email Storage (Metadata + Content Blocks)
+  type: epic
+  status: archived
+  points: null
+  story_id: null
+  epic_id: null
+  tags: []
+- id: EPIC-EMDB-2
+  title: Serialization Layer Consolidation
+  type: epic
+  status: archived
+  points: null
+  story_id: null
+  epic_id: null
+  tags: []
+- id: EPIC-EMDB-3
+  title: ZoneTree Integration
+  type: epic
+  status: archived
+  points: null
+  story_id: null
+  epic_id: null
+  tags: []
+- id: EPIC-EMDB-4
+  title: Email Management API
+  type: epic
+  status: archived
+  points: null
+  story_id: null
+  epic_id: null
+  tags: []
+- id: EPIC-EMDB-5
+  title: Maintenance & Operations
+  type: epic
+  status: archived
+  points: null
+  story_id: null
+  epic_id: null
+  tags: []
+- id: EPIC-EMDB-6
+  title: Testing & Quality
+  type: epic
+  status: archived
+  points: null
+  story_id: null
+  epic_id: null
+  tags: []
+- id: EPIC-EMDB-7
+  title: Embedding Search
+  type: epic
+  status: archived
+  points: null
+  story_id: null
+  epic_id: null
+  tags: []
+- id: EPIC-EMDB-8
+  title: Append-Only B+-Tree KV Index with Hash Chaining
+  type: epic
+  status: archived
+  points: null
+  story_id: null
+  epic_id: null
+  tags: []
+- id: EPIC-EMDB-9
+  title: Block-Level Encryption
+  type: epic
+  status: archived
+  points: null
+  story_id: null
+  epic_id: null
+  tags: []
+- id: US-EMDB-1
+  title: Fix async/lock concurrency issues in managers
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-1
+  tags: []
+- id: US-EMDB-10
+  title: Implement IStorageManager with two-tier storage and soft-delete
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-4
+  tags: []
+- id: US-EMDB-11
+  title: Implement MaintenanceManager compaction and cleanup
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-5
+  tags: []
+- id: US-EMDB-12
+  title: Implement WAL-based crash recovery
+  type: story
+  status: backlog
+  points: 8
+  story_id: null
+  epic_id: EPIC-EMDB-5
+  tags: []
+- id: US-EMDB-13
+  title: Fix broken test references and build test infrastructure
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-6
+  tags: []
+- id: US-EMDB-14
+  title: Add integration tests for end-to-end email workflows
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-6
+  tags: []
+- id: US-EMDB-15
+  title: Expand benchmark suite for serialization, block I/O, and SQLite comparison
+  type: story
+  status: backlog
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-6
+  tags: []
+- id: US-EMDB-16
+  title: Choose and integrate embedding model
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-7
+  tags: []
+- id: US-EMDB-17
+  title: Implement .vec sidecar file format for vector storage
+  type: story
+  status: backlog
+  points: 8
+  story_id: null
+  epic_id: EPIC-EMDB-7
+  tags: []
+- id: US-EMDB-18
+  title: Implement HNSW search with phased scaling path
+  type: story
+  status: backlog
+  points: 8
+  story_id: null
+  epic_id: EPIC-EMDB-7
+  tags: []
+- id: US-EMDB-19
+  title: Auto-index emails on insert and maintain index consistency
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-7
+  tags: []
+- id: US-EMDB-2
+  title: Fix silent error handling in CacheManager
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-1
+  tags: []
+- id: US-EMDB-20
+  title: Benchmark embedding search vs SQLite FTS5
+  type: story
+  status: backlog
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-7
+  tags: []
+- id: US-EMDB-21
+  title: Fix RawBlockManager footer int32/int64 read/write mismatch
+  type: story
+  status: done
+  points: 2
+  story_id: null
+  epic_id: EPIC-EMDB-1
+  tags: []
+- id: US-EMDB-22
+  title: Fix CacheManager.InitializeNewFile corrupting RawBlockManager position
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-1
+  tags: []
+- id: US-EMDB-23
+  title: Implement SQ8 scalar quantization for HNSW (Phase 2)
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-7
+  tags: []
+- id: US-EMDB-24
+  title: Design email text preparation pipeline for embedding
+  type: story
+  status: backlog
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-7
+  tags: []
+- id: US-EMDB-25
+  title: Define B+-tree block types, node structures, and binary serialization
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-26
+  title: Implement B+-tree insert with copy-on-write node splitting
+  type: story
+  status: done
+  points: 8
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-27
+  title: Implement B+-tree lookup and range query
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-28
+  title: Implement B+-tree delete with tombstone and merge
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-29
+  title: Implement BLAKE3 hash chaining and Merkle integrity verification
+  type: story
+  status: done
+  points: 8
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-3
+  title: Fix RawBlockManager async void and resource safety
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-1
+  tags: []
+- id: US-EMDB-30
+  title: Implement WAL-buffered writes with batch flush to B+-tree
+  type: story
+  status: done
+  points: 8
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-31
+  title: Implement IndexRoot management and crash recovery
+  type: story
+  status: done
+  points: 8
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-32
+  title: Implement B+-tree compaction (live tree rewrite)
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-33
+  title: Integrate B+-tree index with EmailManager and CacheManager
+  type: story
+  status: done
+  points: 8
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-34
+  title: B+-tree performance benchmarks and stress testing
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-35
+  title: WAL region model changes and RawBlockManager raw byte I/O
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-36
+  title: Reserve 16MB WAL region during file initialization
+  type: story
+  status: backlog
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-37
+  title: Implement BTreeIndex.BulkInsertAsync for optimal leaf packing
+  type: story
+  status: backlog
+  points: 8
+  story_id: null
+  epic_id: EPIC-EMDB-8
+  tags: []
+- id: US-EMDB-38
+  title: Define IBlockEncryptionProvider interface and NullBlockEncryptionProvider
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-39
+  title: Implement AesGcmBlockEncryptionProvider
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-4
+  title: Consolidate Protobuf library choice and remove duplicates
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-2
+  tags: []
+- id: US-EMDB-40
+  title: Implement EncryptionPolicy for block type filtering
+  type: story
+  status: done
+  points: 2
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-41
+  title: Implement KeyDerivation with Argon2id and key file support
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-42
+  title: Implement EncryptionHeader for file-level crypto metadata
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-43
+  title: Integrate encryption into CacheManager read/write paths
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-44
+  title: Integrate encryption into BTreeIndex read/write paths
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-45
+  title: Integrate encryption into BTreeWALManager
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-46
+  title: Optional re-encryption during compaction with DEK pruning
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-47
+  title: Encryption documentation and ADR
+  type: story
+  status: backlog
+  points: 2
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-48
+  title: Encryption performance benchmarks
+  type: story
+  status: backlog
+  points: 2
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-49
+  title: Update Block model and RawBlockManager for BLAKE3-128 checksums
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-10
+  tags: []
+- id: US-EMDB-5
+  title: Implement IBlockContentSerializer with Protobuf adapter
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-2
+  tags: []
+- id: US-EMDB-50
+  title: Update RawBlockManager unit tests for BLAKE3-128 checksums
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-10
+  tags: []
+- id: US-EMDB-51
+  title: Update benchmark project for BLAKE3-128 checksums
+  type: story
+  status: done
+  points: 2
+  story_id: null
+  epic_id: EPIC-EMDB-10
+  tags: []
+- id: US-EMDB-52
+  title: Remove Crc32.NET dependency and add ADR for BLAKE3-128 migration
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-10
+  tags: []
+- id: US-EMDB-53
+  title: Implement Key Store Block and KeyStoreManager
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-54
+  title: Update Block Flags for Key Epoch encoding
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-55
+  title: Implement KeyWrappingEncryptionProvider
+  type: story
+  status: done
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-56
+  title: Implement password change via KEK re-wrap
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-57
+  title: Implement key rotation without re-encryption
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-9
+  tags: []
+- id: US-EMDB-58
+  title: Define EmailMetadata block type and model
+  type: story
+  status: backlog
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-11
+  tags: []
+- id: US-EMDB-59
+  title: Implement two-tier email write flow (content block + metadata block + BTree
+    insert)
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-11
+  tags: []
+- id: US-EMDB-6
+  title: Decide Cap'n Proto layer future and clean up
+  type: story
+  status: done
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-2
+  tags: []
+- id: US-EMDB-60
+  title: Implement two-tier email read flow (metadata-only listing + lazy content
+    load)
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-11
+  tags: []
+- id: US-EMDB-61
+  title: Implement soft-delete via Dead folder and optional hard delete
+  type: story
+  status: backlog
+  points: 3
+  story_id: null
+  epic_id: EPIC-EMDB-11
+  tags: []
+- id: US-EMDB-62
+  title: Fix FolderManager serialization for Protobuf compatibility
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-11
+  tags: []
+- id: US-EMDB-7
+  title: Implement ZoneTree storage provider adapters
+  type: story
+  status: archived
+  points: 8
+  story_id: null
+  epic_id: EPIC-EMDB-3
+  tags: []
+- id: US-EMDB-8
+  title: Implement ZoneTree embedding-based vector search integration
+  type: story
+  status: archived
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-3
+  tags: []
+- id: US-EMDB-9
+  title: Implement EmailManager with two-tier storage (metadata + content blocks)
+  type: story
+  status: backlog
+  points: 8
+  story_id: null
+  epic_id: EPIC-EMDB-4
+  tags: []
+- id: US-EMDB-1-1
+  title: 'Test: MetadataManager uses SemaphoreSlim or AsyncReaderWriterLock instead
+    of object lock'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-1
+  epic_id: null
+  tags: []
+- id: US-EMDB-1-2
+  title: 'Test: SegmentManager uses async-safe locking'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-1
+  epic_id: null
+  tags: []
+- id: US-EMDB-1-3
+  title: 'Test: CacheManager LockAsync replaced with proper async lock pattern'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-1
+  epic_id: null
+  tags: []
+- id: US-EMDB-1-4
+  title: 'Test: No Monitor.Enter usage in async code paths'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-1
+  epic_id: null
+  tags: []
+- id: US-EMDB-1-5
+  title: 'Test: All existing unit tests still pass'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-1
+  epic_id: null
+  tags: []
+- id: US-EMDB-10-1
+  title: 'Test: StorageManager implements IStorageManager'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-10
+  epic_id: null
+  tags: []
+- id: US-EMDB-10-2
+  title: 'Test: Proper initialization order per architecture docs'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-10
+  epic_id: null
+  tags: []
+- id: US-EMDB-10-3
+  title: 'Test: All IStorageManager methods delegate to correct managers'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-10
+  epic_id: null
+  tags: []
+- id: US-EMDB-10-4
+  title: 'Test: Proper disposal of all managed resources'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-10
+  epic_id: null
+  tags: []
+- id: US-EMDB-10-5
+  title: 'Test: File can be opened from existing or created new'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-10
+  epic_id: null
+  tags: []
+- id: US-EMDB-11-1
+  title: 'Test: MaintenanceManager uncommented and compiles'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-11
+  epic_id: null
+  tags: []
+- id: US-EMDB-11-2
+  title: 'Test: CompactAsync creates a new file with only latest block versions'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-11
+  epic_id: null
+  tags: []
+- id: US-EMDB-11-3
+  title: 'Test: Cleanup removes blocks listed in OutdatedOffsets'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-11
+  epic_id: null
+  tags: []
+- id: US-EMDB-11-4
+  title: 'Test: Metadata updated after compaction'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-11
+  epic_id: null
+  tags: []
+- id: US-EMDB-11-5
+  title: 'Test: File replacement is atomic (no data loss on failure)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-11
+  epic_id: null
+  tags: []
+- id: US-EMDB-12-1
+  title: 'Test: WAL entries written before destructive operations'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-12
+  epic_id: null
+  tags: []
+- id: US-EMDB-12-2
+  title: 'Test: Recovery process detects incomplete operations on startup'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-12
+  epic_id: null
+  tags: []
+- id: US-EMDB-12-3
+  title: 'Test: Incomplete operations are rolled back or completed'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-12
+  epic_id: null
+  tags: []
+- id: US-EMDB-12-4
+  title: 'Test: WAL entries cleaned up after successful operations'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-12
+  epic_id: null
+  tags: []
+- id: US-EMDB-12-5
+  title: 'Test: System recovers correctly after simulated crash'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-12
+  epic_id: null
+  tags: []
+- id: US-EMDB-13-1
+  title: 'Test: All test projects compile without errors'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-13
+  epic_id: null
+  tags: []
+- id: US-EMDB-13-2
+  title: 'Test: Existing passing tests continue to pass'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-13
+  epic_id: null
+  tags: []
+- id: US-EMDB-13-3
+  title: 'Test: Test helper infrastructure (TestHelpers.cs) works with current APIs'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-13
+  epic_id: null
+  tags: []
+- id: US-EMDB-13-4
+  title: 'Test: Mock setups reference correct current types'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-13
+  epic_id: null
+  tags: []
+- id: US-EMDB-13-5
+  title: 'Test: dotnet test runs without compilation failures'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-13
+  epic_id: null
+  tags: []
+- id: US-EMDB-14-1
+  title: "Test: Integration test for add email \u2192 retrieve email round trip"
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-14
+  epic_id: null
+  tags: []
+- id: US-EMDB-14-2
+  title: "Test: Integration test for folder create \u2192 add email \u2192 list emails"
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-14
+  epic_id: null
+  tags: []
+- id: US-EMDB-14-3
+  title: 'Test: Integration test for move email between folders'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-14
+  epic_id: null
+  tags: []
+- id: US-EMDB-14-4
+  title: 'Test: Integration test for soft-delete email (move to Dead folder, BTree
+    entry persists)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-14
+  epic_id: null
+  tags: []
+- id: US-EMDB-14-5
+  title: 'Test: All tests use real file I/O (no mocks) with temp files'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-14
+  epic_id: null
+  tags: []
+- id: US-EMDB-15-1
+  title: 'Test: Benchmark for Protobuf vs JSON serialization of each content type'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-15
+  epic_id: null
+  tags: []
+- id: US-EMDB-15-2
+  title: 'Test: Benchmark for block write throughput at various sizes'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-15
+  epic_id: null
+  tags: []
+- id: US-EMDB-15-3
+  title: 'Test: Benchmark for block read with and without cache'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-15
+  epic_id: null
+  tags: []
+- id: US-EMDB-15-4
+  title: 'Test: Benchmark results logged in a reproducible format'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-15
+  epic_id: null
+  tags: []
+- id: US-EMDB-16-1
+  title: 'Test: Embedding model selected and documented in ADR'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-16
+  epic_id: null
+  tags: []
+- id: US-EMDB-16-2
+  title: 'Test: Model can generate embeddings for email subject+body+from fields'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-16
+  epic_id: null
+  tags: []
+- id: US-EMDB-16-3
+  title: 'Test: Embedding generation benchmarked (throughput at 1K and 10K emails)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-16
+  epic_id: null
+  tags: []
+- id: US-EMDB-16-4
+  title: 'Test: NuGet dependencies added to EmailDB.Format.csproj'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-16
+  epic_id: null
+  tags: []
+- id: US-EMDB-16-5
+  title: 'Test: Model distribution strategy decided and documented (sidecar ONNX vs
+    embedded resource)'
+  type: task
+  status: todo
+  points: 1
+  story_id: US-EMDB-16
+  epic_id: null
+  tags: []
+- id: US-EMDB-16-6
+  title: 'Test: Async/batched embedding generation API handles 1K+ emails without
+    blocking caller'
+  type: task
+  status: todo
+  points: 2
+  story_id: US-EMDB-16
+  epic_id: null
+  tags: []
+- id: US-EMDB-17-1
+  title: 'Test: Sidecar .emdb.vec file created alongside .emdb on first email insert'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-17
+  epic_id: null
+  tags: []
+- id: US-EMDB-17-2
+  title: 'Test: Embeddings persisted to .vec and restored correctly across close/reopen'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-17
+  epic_id: null
+  tags: []
+- id: US-EMDB-17-3
+  title: 'Test: Email ID to vector index mapping maintained through add/delete operations'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-17
+  epic_id: null
+  tags: []
+- id: US-EMDB-17-4
+  title: "Test: .vec file format versioned \u2014 header contains format version,\
+    \ model ID, quantization type"
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-17
+  epic_id: null
+  tags: []
+- id: US-EMDB-17-5
+  title: 'Test: Sidecar can be deleted and rebuilt from .emdb source data'
+  type: task
+  status: todo
+  points: 2
+  story_id: US-EMDB-17
+  epic_id: null
+  tags: []
+- id: US-EMDB-17-6
+  title: "Test: Storage overhead benchmarked at 1K/10K/100K emails \u2014 .vec size\
+    \ vs .emdb size"
+  type: task
+  status: todo
+  points: 1
+  story_id: US-EMDB-17
+  epic_id: null
+  tags: []
+- id: US-EMDB-17-7
+  title: "Test: HNSW graph fully flushed to .vec on close \u2014 survives unclean\
+    \ shutdown via rebuild"
+  type: task
+  status: todo
+  points: 2
+  story_id: US-EMDB-17
+  epic_id: null
+  tags: []
+- id: US-EMDB-17-8
+  title: 'Test: Thread-safe reader/writer lock protects concurrent search + insert
+    on .vec'
+  type: task
+  status: todo
+  points: 1
+  story_id: US-EMDB-17
+  epic_id: null
+  tags: []
+- id: US-EMDB-18-1
+  title: 'Test: SearchAsync returns top-K results ranked by cosine similarity score'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-18
+  epic_id: null
+  tags: []
+- id: US-EMDB-18-2
+  title: 'Test: HNSW search at 100K emails completes in <5ms (excluding query embedding
+    time)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-18
+  epic_id: null
+  tags: []
+- id: US-EMDB-18-3
+  title: 'Test: Top-K parameter configurable (default 10, supports 1-100)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-18
+  epic_id: null
+  tags: []
+- id: US-EMDB-18-4
+  title: "Test: IVectorIndex interface abstracts HNSW \u2014 supports Add, Remove,\
+    \ Search, Serialize, Deserialize"
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-18
+  epic_id: null
+  tags: []
+- id: US-EMDB-18-5
+  title: 'Test: Cross-shard search fans out to multiple .vec sidecars and merges results
+    by score'
+  type: task
+  status: todo
+  points: 2
+  story_id: US-EMDB-18
+  epic_id: null
+  tags: []
+- id: US-EMDB-18-6
+  title: 'Test: HNSW graph serialized to .vec sidecar and restored identically on
+    open'
+  type: task
+  status: todo
+  points: 2
+  story_id: US-EMDB-18
+  epic_id: null
+  tags: []
+- id: US-EMDB-19-1
+  title: "Test: Inserting an email queues async embedding generation \u2014 does not\
+    \ block insert path"
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-19
+  epic_id: null
+  tags: []
+- id: US-EMDB-19-2
+  title: 'Test: Deleting an email removes its vector from HNSW index and .vec sidecar'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-19
+  epic_id: null
+  tags: []
+- id: US-EMDB-19-3
+  title: "Test: Bulk insert batches embedding generation \u2014 processes 1K emails\
+    \ without OOM"
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-19
+  epic_id: null
+  tags: []
+- id: US-EMDB-19-4
+  title: 'Test: Index consistency verified after interleaved insert/delete/move sequences'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-19
+  epic_id: null
+  tags: []
+- id: US-EMDB-19-5
+  title: "Test: Cold start \u2014 missing .vec triggers background rebuild from .emdb,\
+    \ search returns 'indexing' status"
+  type: task
+  status: todo
+  points: 2
+  story_id: US-EMDB-19
+  epic_id: null
+  tags: []
+- id: US-EMDB-19-6
+  title: "Test: Model version tracked in .vec header \u2014 version mismatch triggers\
+    \ re-embedding"
+  type: task
+  status: todo
+  points: 1
+  story_id: US-EMDB-19
+  epic_id: null
+  tags: []
+- id: US-EMDB-2-1
+  title: 'Test: Silent catch blocks either propagate errors via Result or log them'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-2
+  epic_id: null
+  tags: []
+- id: US-EMDB-2-2
+  title: 'Test: Console.WriteLine calls replaced with ILogger or similar abstraction'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-2
+  epic_id: null
+  tags: []
+- id: US-EMDB-2-3
+  title: 'Test: Error context preserved in all failure paths'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-2
+  epic_id: null
+  tags: []
+- id: US-EMDB-20-1
+  title: 'Test: Benchmark added to EmailDB.Benchmark.SQLite for embedding search'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-20
+  epic_id: null
+  tags: []
+- id: US-EMDB-20-2
+  title: 'Test: Results show embedding search < 50ms at 100K emails'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-20
+  epic_id: null
+  tags: []
+- id: US-EMDB-20-3
+  title: 'Test: Comparison table updated with embedding search vs FTS5'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-20
+  epic_id: null
+  tags: []
+- id: US-EMDB-20-4
+  title: 'Test: Results documented in benchmark_results.txt'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-20
+  epic_id: null
+  tags: []
+- id: US-EMDB-21-1
+  title: 'Test: Footer length written and read as same type (both Int64 or both Int32)'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-21
+  epic_id: null
+  tags: []
+- id: US-EMDB-21-2
+  title: 'Test: Blocks written by WriteBlockToStream can be read by ReadBlockFromStreamInternal'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-21
+  epic_id: null
+  tags: []
+- id: US-EMDB-21-3
+  title: 'Test: Round-trip test passes: write block then read back with identical
+    payload'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-21
+  epic_id: null
+  tags: []
+- id: US-EMDB-21-4
+  title: 'Test: Existing unit tests still pass'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-21
+  epic_id: null
+  tags: []
+- id: US-EMDB-22-1
+  title: 'Test: InitializeNewFile does not corrupt currentPosition in RawBlockManager'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-22
+  epic_id: null
+  tags: []
+- id: US-EMDB-22-2
+  title: 'Test: OverrideLocation writes restore original position after seeking'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-22
+  epic_id: null
+  tags: []
+- id: US-EMDB-22-3
+  title: 'Test: System blocks (WAL/FolderTree/Metadata) not overwritten after InitializeNewFile'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-22
+  epic_id: null
+  tags: []
+- id: US-EMDB-22-4
+  title: 'Test: Integration test: InitializeNewFile followed by email insert reads
+    back correctly'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-22
+  epic_id: null
+  tags: []
+- id: US-EMDB-23-1
+  title: 'Test: SQ8 quantization reduces vector memory by ~4x'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-23
+  epic_id: null
+  tags: []
+- id: US-EMDB-23-2
+  title: 'Test: Recall at 100K emails >= 98% vs float32 baseline'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-23
+  epic_id: null
+  tags: []
+- id: US-EMDB-23-3
+  title: 'Test: SIMD int8 distance function implemented via System.Runtime.Intrinsics'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-23
+  epic_id: null
+  tags: []
+- id: US-EMDB-23-4
+  title: 'Test: Calibration parameters persisted in .vec sidecar'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-23
+  epic_id: null
+  tags: []
+- id: US-EMDB-23-5
+  title: 'Test: IVectorIndex interface allows transparent swap between float32 and
+    SQ8'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-23
+  epic_id: null
+  tags: []
+- id: US-EMDB-23-6
+  title: 'Test: Benchmark: SQ8 search latency at 1M emails < 3ms'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-23
+  epic_id: null
+  tags: []
+- id: US-EMDB-24-1
+  title: "Test: Text preparation function: email \u2192 embedding-ready string documented\
+    \ and implemented"
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-24
+  epic_id: null
+  tags: []
+- id: US-EMDB-24-2
+  title: 'Test: Truncation strategy decided and tested (256 token limit handling)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-24
+  epic_id: null
+  tags: []
+- id: US-EMDB-24-3
+  title: 'Test: HTML stripping for HTML-body emails'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-24
+  epic_id: null
+  tags: []
+- id: US-EMDB-24-4
+  title: 'Test: Query embedding latency measured and added to end-to-end search budget'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-24
+  epic_id: null
+  tags: []
+- id: US-EMDB-24-5
+  title: 'Test: Distance metric documented as cosine similarity in ADR'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-24
+  epic_id: null
+  tags: []
+- id: US-EMDB-25-1
+  title: 'Test: BlockType enum extended with BTreeLeaf/BTreeInternal/IndexRoot/EmailContent'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-25
+  epic_id: null
+  tags: []
+- id: US-EMDB-25-2
+  title: 'Test: Leaf node binary layout serializes and deserializes correctly with
+    82 entries at 4036B'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-25
+  epic_id: null
+  tags: []
+- id: US-EMDB-25-3
+  title: 'Test: Internal node binary layout serializes and deserializes correctly
+    with 55 children + Merkle hashes at 4036B'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-25
+  epic_id: null
+  tags: []
+- id: US-EMDB-25-4
+  title: 'Test: IndexRoot payload round-trips correctly'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-25
+  epic_id: null
+  tags: []
+- id: US-EMDB-25-5
+  title: 'Test: BLAKE3 hashing produces correct 32-byte digests for node content'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-25
+  epic_id: null
+  tags: []
+- id: US-EMDB-25-6
+  title: 'Test: BlockIdGenerator allocates IDs in a dedicated B+-tree range without
+    collisions'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-25
+  epic_id: null
+  tags: []
+- id: US-EMDB-25-7
+  title: 'Test: Custom binary serializer is at least 3x faster than protobuf for fixed-size
+    node data'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-25
+  epic_id: null
+  tags: []
+- id: US-EMDB-26-1
+  title: 'Test: Single insert into empty tree creates root leaf node'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-26
+  epic_id: null
+  tags: []
+- id: US-EMDB-26-2
+  title: 'Test: Insert into full leaf triggers split producing two leaves and a new
+    internal root'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-26
+  epic_id: null
+  tags: []
+- id: US-EMDB-26-3
+  title: 'Test: Cascade split through 3 levels produces correct tree structure'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-26
+  epic_id: null
+  tags: []
+- id: US-EMDB-26-4
+  title: 'Test: Inserting duplicate key updates value without creating duplicate entry'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-26
+  epic_id: null
+  tags: []
+- id: US-EMDB-26-5
+  title: 'Test: Old node blocks remain in file untouched after insert (append-only
+    verified)'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-26
+  epic_id: null
+  tags: []
+- id: US-EMDB-26-6
+  title: 'Test: Tree maintains sorted key order after 10K random inserts'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-26
+  epic_id: null
+  tags: []
+- id: US-EMDB-26-7
+  title: 'Test: All new blocks written via RawBlockManager.WriteBlockAsync'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-26
+  epic_id: null
+  tags: []
+- id: US-EMDB-27-1
+  title: 'Test: Point lookup returns correct BlockLocation for existing key'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-27
+  epic_id: null
+  tags: []
+- id: US-EMDB-27-2
+  title: 'Test: Point lookup returns not-found for missing key'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-27
+  epic_id: null
+  tags: []
+- id: US-EMDB-27-3
+  title: 'Test: Range query returns all entries in sorted order between start and
+    end keys'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-27
+  epic_id: null
+  tags: []
+- id: US-EMDB-27-4
+  title: 'Test: Range query works across multiple leaf nodes (backtrack navigation)'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-27
+  epic_id: null
+  tags: []
+- id: US-EMDB-27-5
+  title: "Test: Lookup reads \u2264 4 blocks for a tree with 10M entries"
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-27
+  epic_id: null
+  tags: []
+- id: US-EMDB-27-6
+  title: 'Test: Concurrent readers do not block each other'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-27
+  epic_id: null
+  tags: []
+- id: US-EMDB-27-7
+  title: 'Test: Node reads are served from CacheManager when available'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-27
+  epic_id: null
+  tags: []
+- id: US-EMDB-28-1
+  title: 'Test: Delete removes key from lookup results'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-28
+  epic_id: null
+  tags: []
+- id: US-EMDB-28-2
+  title: 'Test: Delete of non-existent key returns not-found without modifying tree'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-28
+  epic_id: null
+  tags: []
+- id: US-EMDB-28-3
+  title: 'Test: Underflow triggers merge with sibling via parent'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-28
+  epic_id: null
+  tags: []
+- id: US-EMDB-28-4
+  title: 'Test: Root collapse produces correct single-level tree'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-28
+  epic_id: null
+  tags: []
+- id: US-EMDB-28-5
+  title: 'Test: EntryCount decremented correctly after delete'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-28
+  epic_id: null
+  tags: []
+- id: US-EMDB-28-6
+  title: 'Test: Old leaf blocks remain in file (append-only)'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-28
+  epic_id: null
+  tags: []
+- id: US-EMDB-28-7
+  title: 'Test: Concurrent delete and read operations are safe'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-28
+  epic_id: null
+  tags: []
+- id: US-EMDB-29-1
+  title: 'Test: Every B+-tree block contains PrevChainHash linking to previous block'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-29
+  epic_id: null
+  tags: []
+- id: US-EMDB-29-2
+  title: 'Test: Modifying any block''s payload causes chain verification failure'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-29
+  epic_id: null
+  tags: []
+- id: US-EMDB-29-3
+  title: 'Test: Internal node child hashes match actual child node content hashes'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-29
+  epic_id: null
+  tags: []
+- id: US-EMDB-29-4
+  title: 'Test: Root hash in IndexRoot matches actual root node hash'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-29
+  epic_id: null
+  tags: []
+- id: US-EMDB-29-5
+  title: 'Test: Quick verification detects tampered IndexRoot chain'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-29
+  epic_id: null
+  tags: []
+- id: US-EMDB-29-6
+  title: 'Test: Standard verification detects tampered node on key lookup path'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-29
+  epic_id: null
+  tags: []
+- id: US-EMDB-29-7
+  title: 'Test: Full verification traverses all nodes and reports first integrity
+    violation'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-29
+  epic_id: null
+  tags: []
+- id: US-EMDB-29-8
+  title: 'Test: Chain handles genesis block (first block has zeroed PrevChainHash)'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-29
+  epic_id: null
+  tags: []
+- id: US-EMDB-29-9
+  title: 'Test: Compaction produces valid new chain with genesis'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-29
+  epic_id: null
+  tags: []
+- id: US-EMDB-3-1
+  title: 'Test: ScanExistingBlocks returns Task instead of async void'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-3
+  epic_id: null
+  tags: []
+- id: US-EMDB-3-2
+  title: 'Test: FileStream reference swap is safe with proper disposal'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-3
+  epic_id: null
+  tags: []
+- id: US-EMDB-3-3
+  title: 'Test: MemoryMappedFile disposed in all code paths'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-3
+  epic_id: null
+  tags: []
+- id: US-EMDB-3-4
+  title: 'Test: CapnProto duplicate EnterWriteLock fixed'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-3
+  epic_id: null
+  tags: []
+- id: US-EMDB-30-1
+  title: 'Test: Inserts are buffered and not visible in B+-tree until flush'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-30
+  epic_id: null
+  tags: []
+- id: US-EMDB-30-2
+  title: 'Test: Flush writes all buffered entries to B+-tree atomically'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-30
+  epic_id: null
+  tags: []
+- id: US-EMDB-30-3
+  title: 'Test: Count threshold triggers automatic flush'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-30
+  epic_id: null
+  tags: []
+- id: US-EMDB-30-4
+  title: 'Test: Time threshold triggers automatic flush'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-30
+  epic_id: null
+  tags: []
+- id: US-EMDB-30-5
+  title: 'Test: Explicit FlushAsync() call works correctly'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-30
+  epic_id: null
+  tags: []
+- id: US-EMDB-30-6
+  title: 'Test: WAL entries survive process crash (persisted to block before flush)'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-30
+  epic_id: null
+  tags: []
+- id: US-EMDB-30-7
+  title: 'Test: Concurrent inserts into WAL do not corrupt entries'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-30
+  epic_id: null
+  tags: []
+- id: US-EMDB-30-8
+  title: 'Test: Batch of 100 inserts produces fewer node writes than 100 individual
+    inserts'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-30
+  epic_id: null
+  tags: []
+- id: US-EMDB-30-9
+  title: 'Test: IndexRoot written after every successful flush'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-30
+  epic_id: null
+  tags: []
+- id: US-EMDB-31-1
+  title: 'Test: Clean shutdown followed by reopen loads correct IndexRoot and tree'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-31
+  epic_id: null
+  tags: []
+- id: US-EMDB-31-2
+  title: 'Test: Crash after node writes but before IndexRoot reverts to previous valid
+    tree'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-31
+  epic_id: null
+  tags: []
+- id: US-EMDB-31-3
+  title: 'Test: Crash after IndexRoot write recovers to latest tree'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-31
+  epic_id: null
+  tags: []
+- id: US-EMDB-31-4
+  title: 'Test: WAL entries written after last IndexRoot are replayed on recovery'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-31
+  epic_id: null
+  tags: []
+- id: US-EMDB-31-5
+  title: 'Test: Recovery with empty file initializes empty tree'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-31
+  epic_id: null
+  tags: []
+- id: US-EMDB-31-6
+  title: 'Test: Corrupted IndexRoot falls back to previous valid IndexRoot with warning'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-31
+  epic_id: null
+  tags: []
+- id: US-EMDB-31-7
+  title: 'Test: Recovery completes in O(WAL_size) time not O(file_size)'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-31
+  epic_id: null
+  tags: []
+- id: US-EMDB-31-8
+  title: 'Test: Double-fsync write ordering is enforced (nodes before IndexRoot)'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-31
+  epic_id: null
+  tags: []
+- id: US-EMDB-32-1
+  title: 'Test: Compaction produces file with only live B+-tree nodes'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-32
+  epic_id: null
+  tags: []
+- id: US-EMDB-32-2
+  title: 'Test: Tree is fully functional after compaction (all lookups still work)'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-32
+  epic_id: null
+  tags: []
+- id: US-EMDB-32-3
+  title: 'Test: Dead node space is reclaimed (file size reduced)'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-32
+  epic_id: null
+  tags: []
+- id: US-EMDB-32-4
+  title: 'Test: New hash chain starts with genesis in compacted file'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-32
+  epic_id: null
+  tags: []
+- id: US-EMDB-32-5
+  title: 'Test: New IndexRoot in compacted file has correct root hash'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-32
+  epic_id: null
+  tags: []
+- id: US-EMDB-32-6
+  title: 'Test: Compaction does not block concurrent reads during tree walk phase'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-32
+  epic_id: null
+  tags: []
+- id: US-EMDB-32-7
+  title: 'Test: Space amplification metrics are reported after compaction'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-32
+  epic_id: null
+  tags: []
+- id: US-EMDB-33-1
+  title: 'Test: EmailManager.AddEmailAsync stores email and indexes it in B+-tree'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-33
+  epic_id: null
+  tags: []
+- id: US-EMDB-33-2
+  title: 'Test: EmailManager.GetEmailAsync retrieves email via B+-tree lookup'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-33
+  epic_id: null
+  tags: []
+- id: US-EMDB-33-3
+  title: 'Test: EmailManager.DeleteEmailAsync removes from index and marks content
+    outdated'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-33
+  epic_id: null
+  tags: []
+- id: US-EMDB-33-4
+  title: 'Test: BTreeIndex reads upper nodes from CacheManager on subsequent lookups'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-33
+  epic_id: null
+  tags: []
+- id: US-EMDB-33-5
+  title: 'Test: ZoneTree NuGet dependency removed from .csproj'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-33
+  epic_id: null
+  tags: []
+- id: US-EMDB-33-6
+  title: 'Test: ZoneTree/*.cs files removed or archived'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-33
+  epic_id: null
+  tags: []
+- id: US-EMDB-33-7
+  title: 'Test: iStorageManager interface updated for B+-tree operations'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-33
+  epic_id: null
+  tags: []
+- id: US-EMDB-33-8
+  title: 'Test: End-to-end test: add 1000 emails then retrieve each by ID'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-33
+  epic_id: null
+  tags: []
+- id: US-EMDB-34-1
+  title: 'Test: Insert throughput benchmarked at 4 scale points with results documented'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-34
+  epic_id: null
+  tags: []
+- id: US-EMDB-34-2
+  title: 'Test: Point lookup latency benchmarked at 4 scale points'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-34
+  epic_id: null
+  tags: []
+- id: US-EMDB-34-3
+  title: 'Test: Range query throughput measured'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-34
+  epic_id: null
+  tags: []
+- id: US-EMDB-34-4
+  title: 'Test: WAL batch size vs flush latency curve produced'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-34
+  epic_id: null
+  tags: []
+- id: US-EMDB-34-5
+  title: 'Test: Concurrent read/write stress test passes without corruption'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-34
+  epic_id: null
+  tags: []
+- id: US-EMDB-34-6
+  title: 'Test: Crash recovery stress test passes 100/100 trials'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-34
+  epic_id: null
+  tags: []
+- id: US-EMDB-34-7
+  title: 'Test: Space amplification metrics documented with and without compaction'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-34
+  epic_id: null
+  tags: []
+- id: US-EMDB-34-8
+  title: 'Test: Results added to benchmark_results.txt'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-34
+  epic_id: null
+  tags: []
+- id: US-EMDB-35-1
+  title: 'Test: HeaderContent has WALRegionOffset and WALRegionSize fields'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-35
+  epic_id: null
+  tags: []
+- id: US-EMDB-35-2
+  title: 'Test: IndexRoot has LastFlushedWALSequence field with PayloadSize=98'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-35
+  epic_id: null
+  tags: []
+- id: US-EMDB-35-3
+  title: 'Test: MetadataContent has BTreeRootOffset field'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-35
+  epic_id: null
+  tags: []
+- id: US-EMDB-35-4
+  title: 'Test: WALContent.cs contains WALRegionHeader struct replacing old models'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-35
+  epic_id: null
+  tags: []
+- id: US-EMDB-35-5
+  title: 'Test: BTreeNodeSerializer round-trips 98-byte IndexRoot correctly'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-35
+  epic_id: null
+  tags: []
+- id: US-EMDB-35-6
+  title: 'Test: BTreeNodeSerializer handles old 90-byte IndexRoot payloads with LastFlushedWALSequence=0'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-35
+  epic_id: null
+  tags: []
+- id: US-EMDB-35-7
+  title: 'Test: RawBlockManager.WriteRawBytesAsync writes at specified offset using
+    fileLock'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-35
+  epic_id: null
+  tags: []
+- id: US-EMDB-35-8
+  title: 'Test: RawBlockManager.ReadRawBytesAsync reads from specified offset using
+    fileLock'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-35
+  epic_id: null
+  tags: []
+- id: US-EMDB-36-1
+  title: 'Test: InitializeNewFile creates a file at least 16MB in size'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-36
+  epic_id: null
+  tags: []
+- id: US-EMDB-36-2
+  title: 'Test: WAL block (BlockId=3) has exactly 16777216 bytes of payload'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-36
+  epic_id: null
+  tags: []
+- id: US-EMDB-36-3
+  title: 'Test: WALRegionHeader at start of WAL payload has Version=1 EntryCount=0
+    dirty=0'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-36
+  epic_id: null
+  tags: []
+- id: US-EMDB-36-4
+  title: 'Test: HeaderContent.WALRegionOffset points to correct payload start offset'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-36
+  epic_id: null
+  tags: []
+- id: US-EMDB-36-5
+  title: 'Test: HeaderContent.WALRegionSize equals 16777216'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-36
+  epic_id: null
+  tags: []
+- id: US-EMDB-36-6
+  title: 'Test: Block scanner sees exactly 4 blocks (Header WAL FolderTree Metadata)
+    after init'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-36
+  epic_id: null
+  tags: []
+- id: US-EMDB-36-7
+  title: 'Test: FolderTree and Metadata blocks are accessible at offsets after the
+    WAL region'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-36
+  epic_id: null
+  tags: []
+- id: US-EMDB-36-8
+  title: 'Test: Existing tests for InitializeNewFile still pass'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-36
+  epic_id: null
+  tags: []
+- id: US-EMDB-37-1
+  title: 'Test: Empty tree bulk insert builds tree with optimally packed leaves (near
+    MaxEntries per leaf)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-37
+  epic_id: null
+  tags: []
+- id: US-EMDB-37-2
+  title: 'Test: 10000 sorted entries produce correct tree height for the branching
+    factor'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-37
+  epic_id: null
+  tags: []
+- id: US-EMDB-37-3
+  title: 'Test: All leaves contain entries in globally sorted order'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-37
+  epic_id: null
+  tags: []
+- id: US-EMDB-37-4
+  title: 'Test: Merge with existing tree preserves all old entries plus new entries'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-37
+  epic_id: null
+  tags: []
+- id: US-EMDB-37-5
+  title: 'Test: Duplicate keys across old tree and new entries are handled as upserts'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-37
+  epic_id: null
+  tags: []
+- id: US-EMDB-37-6
+  title: 'Test: Bulk insert of 100K entries produces correct EntryCount in IndexRoot'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-37
+  epic_id: null
+  tags: []
+- id: US-EMDB-37-7
+  title: 'Test: Single IndexRoot written per bulk insert (not one per entry)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-37
+  epic_id: null
+  tags: []
+- id: US-EMDB-37-8
+  title: 'Test: Tree built by bulk insert passes Merkle hash verification'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-37
+  epic_id: null
+  tags: []
+- id: US-EMDB-38-1
+  title: 'Test: IBlockEncryptionProvider interface with Encrypt/Decrypt/ShouldEncrypt/OverheadBytes/IsEnabled'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-38
+  epic_id: null
+  tags: []
+- id: US-EMDB-38-2
+  title: 'Test: NullBlockEncryptionProvider passes through all payloads unchanged'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-38
+  epic_id: null
+  tags: []
+- id: US-EMDB-38-3
+  title: 'Test: Block.cs has FlagEncrypted constant and IsEncrypted property'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-38
+  epic_id: null
+  tags: []
+- id: US-EMDB-38-4
+  title: 'Test: All existing tests pass unchanged'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-38
+  epic_id: null
+  tags: []
+- id: US-EMDB-39-1
+  title: 'Test: Encrypts payload to format Nonce(12) + Ciphertext(N) + AuthTag(16)'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-39
+  epic_id: null
+  tags: []
+- id: US-EMDB-39-2
+  title: 'Test: Nonce = BlockId(8 bytes) + Random(4 bytes)'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-39
+  epic_id: null
+  tags: []
+- id: US-EMDB-39-3
+  title: 'Test: Decrypts and verifies auth tag'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-39
+  epic_id: null
+  tags: []
+- id: US-EMDB-39-4
+  title: 'Test: Uses System.Security.Cryptography.AesGcm'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-39
+  epic_id: null
+  tags: []
+- id: US-EMDB-39-5
+  title: 'Test: Round-trip encrypt/decrypt produces identical plaintext'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-39
+  epic_id: null
+  tags: []
+- id: US-EMDB-39-6
+  title: 'Test: Wrong key fails with clear error'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-39
+  epic_id: null
+  tags: []
+- id: US-EMDB-4-1
+  title: 'Test: Single Protobuf library chosen and documented in architecture decisions'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-4
+  epic_id: null
+  tags: []
+- id: US-EMDB-4-2
+  title: "Test: Duplicate model files removed \u2014 one canonical location"
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-4
+  epic_id: null
+  tags: []
+- id: US-EMDB-4-3
+  title: 'Test: All Protobuf models have correct serialization attributes'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-4
+  epic_id: null
+  tags: []
+- id: US-EMDB-4-4
+  title: 'Test: Project compiles cleanly with no ambiguous type references'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-4
+  epic_id: null
+  tags: []
+- id: US-EMDB-40-1
+  title: 'Test: Default policy encrypts EmailContent Folder FolderTree Segment WAL'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-40
+  epic_id: null
+  tags: []
+- id: US-EMDB-40-2
+  title: 'Test: Full policy encrypts all block types except header Metadata at offset
+    0'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-40
+  epic_id: null
+  tags: []
+- id: US-EMDB-40-3
+  title: 'Test: ShouldEncrypt returns correct result per policy'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-40
+  epic_id: null
+  tags: []
+- id: US-EMDB-40-4
+  title: 'Test: Custom policies can be constructed'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-40
+  epic_id: null
+  tags: []
+- id: US-EMDB-41-1
+  title: 'Test: DeriveFromPassword uses Argon2id with 64MB memory 3 iterations 4 parallelism'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-41
+  epic_id: null
+  tags: []
+- id: US-EMDB-41-2
+  title: 'Test: Same password + salt always produces same 32-byte key'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-41
+  epic_id: null
+  tags: []
+- id: US-EMDB-41-3
+  title: 'Test: Different salt produces different key'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-41
+  epic_id: null
+  tags: []
+- id: US-EMDB-41-4
+  title: 'Test: LoadFromKeyFile reads exactly 32 bytes'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-41
+  epic_id: null
+  tags: []
+- id: US-EMDB-41-5
+  title: 'Test: GenerateSalt produces 16 cryptographically random bytes'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-41
+  epic_id: null
+  tags: []
+- id: US-EMDB-42-1
+  title: 'Test: EncryptionHeader contains magic scheme version algorithm ID KDF type
+    salt key verification token'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-42
+  epic_id: null
+  tags: []
+- id: US-EMDB-42-2
+  title: 'Test: Key verification token = encrypt known plaintext EMDB with derived
+    key'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-42
+  epic_id: null
+  tags: []
+- id: US-EMDB-42-3
+  title: 'Test: Wrong key = immediate error'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-42
+  epic_id: null
+  tags: []
+- id: US-EMDB-42-4
+  title: 'Test: EncryptionHeaderManager reads/writes header'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-42
+  epic_id: null
+  tags: []
+- id: US-EMDB-42-5
+  title: 'Test: Unencrypted files have no EncryptionHeader'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-42
+  epic_id: null
+  tags: []
+- id: US-EMDB-43-1
+  title: 'Test: CacheManager accepts optional IBlockEncryptionProvider'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-43
+  epic_id: null
+  tags: []
+- id: US-EMDB-43-2
+  title: 'Test: WriteBlockAsync encrypts payload with active DEK and sets Flags bit
+    0 plus key epoch'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-43
+  epic_id: null
+  tags: []
+- id: US-EMDB-43-3
+  title: 'Test: ReadBlockAsync reads key epoch from Flags and decrypts with correct
+    DEK'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-43
+  epic_id: null
+  tags: []
+- id: US-EMDB-43-4
+  title: 'Test: All typed methods encrypt/decrypt correctly with multi-epoch DEKs'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-43
+  epic_id: null
+  tags: []
+- id: US-EMDB-43-5
+  title: 'Test: Cache stores decrypted content objects'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-43
+  epic_id: null
+  tags: []
+- id: US-EMDB-43-6
+  title: 'Test: Blocks written with different key epochs are all readable'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-43
+  epic_id: null
+  tags: []
+- id: US-EMDB-44-1
+  title: 'Test: BTreeIndex accepts optional IBlockEncryptionProvider'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-44
+  epic_id: null
+  tags: []
+- id: US-EMDB-44-2
+  title: 'Test: Write methods encrypt after serialization using active DEK and stamp
+    key epoch'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-44
+  epic_id: null
+  tags: []
+- id: US-EMDB-44-3
+  title: 'Test: Read methods read key epoch from Flags and decrypt before deserialization'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-44
+  epic_id: null
+  tags: []
+- id: US-EMDB-44-4
+  title: 'Test: BLAKE3 hash chain verification passes after decrypt'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-44
+  epic_id: null
+  tags: []
+- id: US-EMDB-44-5
+  title: 'Test: All BTree operations work correctly with encryption across key epochs'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-44
+  epic_id: null
+  tags: []
+- id: US-EMDB-45-1
+  title: 'Test: WAL blocks encrypted with active DEK and key epoch stamped in Flags'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-45
+  epic_id: null
+  tags: []
+- id: US-EMDB-45-2
+  title: 'Test: Write methods encrypt WAL content with active DEK'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-45
+  epic_id: null
+  tags: []
+- id: US-EMDB-45-3
+  title: 'Test: RecoverFromDisk reads key epoch from each WAL block and decrypts with
+    correct DEK'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-45
+  epic_id: null
+  tags: []
+- id: US-EMDB-45-4
+  title: 'Test: WAL recovery works correctly with encrypted WAL blocks across multiple
+    key epochs'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-45
+  epic_id: null
+  tags: []
+- id: US-EMDB-46-1
+  title: 'Test: CompactAsync accepts optional re-encrypt flag (default false)'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-46
+  epic_id: null
+  tags: []
+- id: US-EMDB-46-2
+  title: 'Test: When re-encrypt enabled blocks decrypted with original DEK and re-encrypted
+    with active DEK'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-46
+  epic_id: null
+  tags: []
+- id: US-EMDB-46-3
+  title: 'Test: After re-encryption all blocks have current active epoch in Flags'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-46
+  epic_id: null
+  tags: []
+- id: US-EMDB-46-4
+  title: 'Test: All data readable after compaction with or without re-encryption'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-46
+  epic_id: null
+  tags: []
+- id: US-EMDB-46-5
+  title: 'Test: Retired DEKs with no remaining block references pruned from key store'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-46
+  epic_id: null
+  tags: []
+- id: US-EMDB-46-6
+  title: 'Test: New file gets updated key store with only active DEKs'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-46
+  epic_id: null
+  tags: []
+- id: US-EMDB-46-7
+  title: 'Test: Compaction without re-encrypt flag works as normal space reclamation'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-46
+  epic_id: null
+  tags: []
+- id: US-EMDB-47-1
+  title: 'Test: ADR-015 in DECISIONS.md documents KEK/DEK key-wrapping architecture'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-47
+  epic_id: null
+  tags: []
+- id: US-EMDB-47-2
+  title: 'Test: EmailDB_FileFormat_Spec.md updated with key store block format and
+    key epoch Flags layout'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-47
+  epic_id: null
+  tags: []
+- id: US-EMDB-47-3
+  title: 'Test: ARCHITECTURE.md updated with key hierarchy diagram and encryption
+    flow'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-47
+  epic_id: null
+  tags: []
+- id: US-EMDB-47-4
+  title: 'Test: VISION.md updated with zero-cost password changes and forward secrecy'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-47
+  epic_id: null
+  tags: []
+- id: US-EMDB-48-1
+  title: 'Test: BenchmarkDotNet tests for encrypted vs unencrypted'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-48
+  epic_id: null
+  tags: []
+- id: US-EMDB-48-2
+  title: 'Test: BTree latency with and without encryption'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-48
+  epic_id: null
+  tags: []
+- id: US-EMDB-48-3
+  title: 'Test: Bulk throughput measured in MB/s'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-48
+  epic_id: null
+  tags: []
+- id: US-EMDB-48-4
+  title: 'Test: Results documented'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-48
+  epic_id: null
+  tags: []
+- id: US-EMDB-49-1
+  title: 'Test: HeaderChecksumSize and PayloadChecksumSize constants are 16'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-49
+  epic_id: null
+  tags: []
+- id: US-EMDB-49-2
+  title: 'Test: TotalFixedOverhead is 84'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-49
+  epic_id: null
+  tags: []
+- id: US-EMDB-49-3
+  title: 'Test: ComputeChecksum returns byte[16] using BLAKE3'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-49
+  epic_id: null
+  tags: []
+- id: US-EMDB-49-4
+  title: 'Test: Write path writes 16-byte checksums'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-49
+  epic_id: null
+  tags: []
+- id: US-EMDB-49-5
+  title: 'Test: Read path reads and verifies 16-byte checksums'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-49
+  epic_id: null
+  tags: []
+- id: US-EMDB-49-6
+  title: 'Test: Scan and TryReadBlockLocation use 16-byte checksums'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-49
+  epic_id: null
+  tags: []
+- id: US-EMDB-49-7
+  title: 'Test: Force.Crc32 import removed from RawBlockManager'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-49
+  epic_id: null
+  tags: []
+- id: US-EMDB-49-8
+  title: 'Test: Block.HeaderChecksum and PayloadChecksum are byte[] not uint'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-49
+  epic_id: null
+  tags: []
+- id: US-EMDB-49-9
+  title: 'Test: Empty payload uses 16 zero bytes as checksum'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-49
+  epic_id: null
+  tags: []
+- id: US-EMDB-5-1
+  title: 'Test: ProtobufBlockContentSerializer implements IBlockContentSerializer'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-5
+  epic_id: null
+  tags: []
+- id: US-EMDB-5-2
+  title: 'Test: All 6 content types serialize/deserialize correctly via Protobuf'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-5
+  epic_id: null
+  tags: []
+- id: US-EMDB-5-3
+  title: 'Test: PayloadEncoding enum is respected when reading blocks'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-5
+  epic_id: null
+  tags: []
+- id: US-EMDB-5-4
+  title: 'Test: JSON serializer retained as fallback for debugging'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-5
+  epic_id: null
+  tags: []
+- id: US-EMDB-5-5
+  title: 'Test: Round-trip tests pass for all content types'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-5
+  epic_id: null
+  tags: []
+- id: US-EMDB-50-1
+  title: 'Test: RawBlockManagerTests WriteTestBlock helper writes BLAKE3-128 checksums'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-50
+  epic_id: null
+  tags: []
+- id: US-EMDB-50-2
+  title: 'Test: RawBlockManagerTests ReadTestBlock helper reads BLAKE3-128 checksums'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-50
+  epic_id: null
+  tags: []
+- id: US-EMDB-50-3
+  title: 'Test: BTreeWALManagerTests corruption test updated for new checksum offsets'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-50
+  epic_id: null
+  tags: []
+- id: US-EMDB-50-4
+  title: 'Test: All existing unit tests pass with zero regressions'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-50
+  epic_id: null
+  tags: []
+- id: US-EMDB-50-5
+  title: 'Test: Crc32.NET package reference removed from EmailDB.UnitTests.csproj'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-50
+  epic_id: null
+  tags: []
+- id: US-EMDB-50-6
+  title: 'Test: No remaining references to Force.Crc32 in test projects'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-50
+  epic_id: null
+  tags: []
+- id: US-EMDB-51-1
+  title: 'Test: EmailDbStore uses BLAKE3-128 for checksum computation'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-51
+  epic_id: null
+  tags: []
+- id: US-EMDB-51-2
+  title: 'Test: Crc32.NET removed from benchmark csproj'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-51
+  epic_id: null
+  tags: []
+- id: US-EMDB-51-3
+  title: 'Test: Blake3 added to benchmark csproj'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-51
+  epic_id: null
+  tags: []
+- id: US-EMDB-51-4
+  title: 'Test: BlockOverhead constant updated'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-51
+  epic_id: null
+  tags: []
+- id: US-EMDB-51-5
+  title: 'Test: Benchmark compiles and runs correctly'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-51
+  epic_id: null
+  tags: []
+- id: US-EMDB-52-1
+  title: 'Test: ADR-014 exists in DECISIONS.md with full rationale'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-52
+  epic_id: null
+  tags: []
+- id: US-EMDB-52-2
+  title: 'Test: ADR-003 updated to note checksum portion superseded'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-52
+  epic_id: null
+  tags: []
+- id: US-EMDB-52-3
+  title: 'Test: EmailDB_FileFormat_Spec.md shows 16-byte checksums and 81-byte overhead'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-52
+  epic_id: null
+  tags: []
+- id: US-EMDB-52-4
+  title: 'Test: ARCHITECTURE.md references BLAKE3-128 not CRC32'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-52
+  epic_id: null
+  tags: []
+- id: US-EMDB-52-5
+  title: 'Test: PROJECT.md references BLAKE3-128 not CRC32'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-52
+  epic_id: null
+  tags: []
+- id: US-EMDB-52-6
+  title: 'Test: VISION.md references BLAKE3-128 not CRC32'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-52
+  epic_id: null
+  tags: []
+- id: US-EMDB-52-7
+  title: 'Test: EPIC-EMDB-9 description updated'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-52
+  epic_id: null
+  tags: []
+- id: US-EMDB-52-8
+  title: 'Test: Crc32.NET removed from all csproj files'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-52
+  epic_id: null
+  tags: []
+- id: US-EMDB-52-9
+  title: 'Test: No remaining Force.Crc32 references outside ZonetreeRef/'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-52
+  epic_id: null
+  tags: []
+- id: US-EMDB-53-1
+  title: 'Test: BlockType.KeyStore added to enum'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-53
+  epic_id: null
+  tags: []
+- id: US-EMDB-53-2
+  title: 'Test: KeyStoreContent model holds epoch/DEK/timestamp/retired entries plus
+    ActiveEpoch'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-53
+  epic_id: null
+  tags: []
+- id: US-EMDB-53-3
+  title: 'Test: KeyStoreManager encrypts key store payload with KEK using AES-256-GCM'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-53
+  epic_id: null
+  tags: []
+- id: US-EMDB-53-4
+  title: 'Test: KeyStoreManager decrypts key store with KEK and loads DEK table'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-53
+  epic_id: null
+  tags: []
+- id: US-EMDB-53-5
+  title: 'Test: On file creation initial DEK epoch 0 is generated and key store block
+    written'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-53
+  epic_id: null
+  tags: []
+- id: US-EMDB-53-6
+  title: 'Test: On file open KEK derived from password decrypts key store and loads
+    DEK table'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-53
+  epic_id: null
+  tags: []
+- id: US-EMDB-53-7
+  title: 'Test: Key store round-trips correctly through serialize/encrypt/decrypt/deserialize'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-53
+  epic_id: null
+  tags: []
+- id: US-EMDB-54-1
+  title: 'Test: FlagAlgorithm constant removed from Block.cs'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-54
+  epic_id: null
+  tags: []
+- id: US-EMDB-54-2
+  title: 'Test: Block.KeyEpoch property reads bits 1-7: (Flags >> 1) & 0x7F'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-54
+  epic_id: null
+  tags: []
+- id: US-EMDB-54-3
+  title: 'Test: Block.SetKeyEpoch method writes epoch into bits 1-7 preserving bit
+    0'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-54
+  epic_id: null
+  tags: []
+- id: US-EMDB-54-4
+  title: 'Test: Unencrypted blocks have Flags = 0 and KeyEpoch = 0'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-54
+  epic_id: null
+  tags: []
+- id: US-EMDB-54-5
+  title: 'Test: Encrypted blocks have bit 0 set and KeyEpoch matches the active epoch
+    at write time'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-54
+  epic_id: null
+  tags: []
+- id: US-EMDB-54-6
+  title: 'Test: All existing block tests updated and passing'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-54
+  epic_id: null
+  tags: []
+- id: US-EMDB-55-1
+  title: 'Test: Implements IBlockEncryptionProvider interface'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-55
+  epic_id: null
+  tags: []
+- id: US-EMDB-55-2
+  title: 'Test: Encrypt uses current active DEK from key store and returns the active
+    epoch'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-55
+  epic_id: null
+  tags: []
+- id: US-EMDB-55-3
+  title: 'Test: Decrypt accepts key epoch parameter and looks up correct DEK from
+    key store'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-55
+  epic_id: null
+  tags: []
+- id: US-EMDB-55-4
+  title: 'Test: Wrong epoch or missing DEK returns clear error'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-55
+  epic_id: null
+  tags: []
+- id: US-EMDB-55-5
+  title: 'Test: Round-trip encrypt/decrypt with multiple DEKs produces correct plaintext'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-55
+  epic_id: null
+  tags: []
+- id: US-EMDB-55-6
+  title: 'Test: Works with EncryptionPolicy to determine which block types to encrypt'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-55
+  epic_id: null
+  tags: []
+- id: US-EMDB-55-7
+  title: 'Test: Properly disposes all DEK key material on disposal'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-55
+  epic_id: null
+  tags: []
+- id: US-EMDB-56-1
+  title: 'Test: ChangePassword method derives old KEK from old password and existing
+    salt'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-56
+  epic_id: null
+  tags: []
+- id: US-EMDB-56-2
+  title: 'Test: Decrypts key store with old KEK'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-56
+  epic_id: null
+  tags: []
+- id: US-EMDB-56-3
+  title: 'Test: Generates new salt and derives new KEK from new password'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-56
+  epic_id: null
+  tags: []
+- id: US-EMDB-56-4
+  title: 'Test: Re-encrypts key store with new KEK'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-56
+  epic_id: null
+  tags: []
+- id: US-EMDB-56-5
+  title: 'Test: Updates EncryptionHeader with new salt and key verification token'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-56
+  epic_id: null
+  tags: []
+- id: US-EMDB-56-6
+  title: 'Test: Zero data blocks are read or written during password change'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-56
+  epic_id: null
+  tags: []
+- id: US-EMDB-56-7
+  title: 'Test: All data remains readable with new password after change'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-56
+  epic_id: null
+  tags: []
+- id: US-EMDB-56-8
+  title: 'Test: Old password no longer works after change'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-56
+  epic_id: null
+  tags: []
+- id: US-EMDB-57-1
+  title: 'Test: RotateKey method generates new 32-byte random DEK'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-57
+  epic_id: null
+  tags: []
+- id: US-EMDB-57-2
+  title: 'Test: New DEK assigned next epoch number'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-57
+  epic_id: null
+  tags: []
+- id: US-EMDB-57-3
+  title: 'Test: Previous active epoch marked as retained not retired'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-57
+  epic_id: null
+  tags: []
+- id: US-EMDB-57-4
+  title: 'Test: New epoch set as active in key store'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-57
+  epic_id: null
+  tags: []
+- id: US-EMDB-57-5
+  title: 'Test: Key store block re-encrypted and written'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-57
+  epic_id: null
+  tags: []
+- id: US-EMDB-57-6
+  title: 'Test: Future blocks use new DEK via active epoch'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-57
+  epic_id: null
+  tags: []
+- id: US-EMDB-57-7
+  title: 'Test: Existing blocks remain readable with their original DEK'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-57
+  epic_id: null
+  tags: []
+- id: US-EMDB-57-8
+  title: 'Test: Old and new epoch blocks coexist and are both decryptable'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-57
+  epic_id: null
+  tags: []
+- id: US-EMDB-58-1
+  title: 'Test: BlockType.EmailMetadata = 11 added to BlockType enum'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-58
+  epic_id: null
+  tags: []
+- id: US-EMDB-58-2
+  title: 'Test: EmailMetadataContent model defined with all fields (EmailHashedID
+    Subject From To Cc Date AttachmentCount Conte...'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-58
+  epic_id: null
+  tags: []
+- id: US-EMDB-58-3
+  title: 'Test: Protobuf-annotated model in EmailDB.Format.Protobuf.Models with ProtoContract/ProtoMember
+    attributes'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-58
+  epic_id: null
+  tags: []
+- id: US-EMDB-58-4
+  title: 'Test: EmailMetadataContent round-trips correctly through ProtobufBlockContentSerializer'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-58
+  epic_id: null
+  tags: []
+- id: US-EMDB-58-5
+  title: 'Test: BlockConverter handles BlockType.EmailMetadata deserialization'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-58
+  epic_id: null
+  tags: []
+- id: US-EMDB-58-6
+  title: 'Test: Existing tests pass unchanged'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-58
+  epic_id: null
+  tags: []
+- id: US-EMDB-59-1
+  title: 'Test: AddEmailAsync writes ContentBlock then MetadataBlock in correct order'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-59
+  epic_id: null
+  tags: []
+- id: US-EMDB-59-2
+  title: 'Test: BTree insert points to metadata block location not content block'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-59
+  epic_id: null
+  tags: []
+- id: US-EMDB-59-3
+  title: 'Test: MetadataBlock.ContentBlockId matches the written content block''s
+    BlockId'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-59
+  epic_id: null
+  tags: []
+- id: US-EMDB-59-4
+  title: 'Test: MetadataBlock contains correct extracted fields (subject from to cc
+    date attachment count)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-59
+  epic_id: null
+  tags: []
+- id: US-EMDB-59-5
+  title: 'Test: Email is added to target folder after all blocks written'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-59
+  epic_id: null
+  tags: []
+- id: US-EMDB-59-6
+  title: 'Test: Content block payload matches original raw email bytes'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-59
+  epic_id: null
+  tags: []
+- id: US-EMDB-59-7
+  title: 'Test: Duplicate EmailHashedID is rejected or handled as upsert'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-59
+  epic_id: null
+  tags: []
+- id: US-EMDB-6-1
+  title: 'Test: Decision documented in architecture decisions doc'
+  type: task
+  status: done
+  points: 1
+  story_id: US-EMDB-6
+  epic_id: null
+  tags: []
+- id: US-EMDB-6-2
+  title: 'Test: If keeping: fix compilation errors and add .capnp schemas'
+  type: task
+  status: done
+  points: 3
+  story_id: US-EMDB-6
+  epic_id: null
+  tags: []
+- id: US-EMDB-6-3
+  title: 'Test: If removing: delete project and clean solution references'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-6
+  epic_id: null
+  tags: []
+- id: US-EMDB-6-4
+  title: 'Test: No broken code left in the repository'
+  type: task
+  status: done
+  points: 2
+  story_id: US-EMDB-6
+  epic_id: null
+  tags: []
+- id: US-EMDB-60-1
+  title: 'Test: Folder listing reads only metadata blocks (zero content block reads
+    verified)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-60
+  epic_id: null
+  tags: []
+- id: US-EMDB-60-2
+  title: 'Test: GetEmailMetadataAsync returns EmailMetadataContent from BTree lookup'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-60
+  epic_id: null
+  tags: []
+- id: US-EMDB-60-3
+  title: 'Test: GetEmailContentAsync follows ContentBlockId pointer to read content
+    block'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-60
+  epic_id: null
+  tags: []
+- id: US-EMDB-60-4
+  title: 'Test: Content block is only read when explicitly requested'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-60
+  epic_id: null
+  tags: []
+- id: US-EMDB-60-5
+  title: 'Test: Metadata blocks are cached by CacheManager after first read'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-60
+  epic_id: null
+  tags: []
+- id: US-EMDB-60-6
+  title: 'Test: Listing 1000 emails reads at most 1000 metadata blocks plus BTree
+    traversal blocks'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-60
+  epic_id: null
+  tags: []
+- id: US-EMDB-61-1
+  title: 'Test: SoftDeleteEmailAsync removes email from source folder and adds to
+    Dead folder'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-61
+  epic_id: null
+  tags: []
+- id: US-EMDB-61-2
+  title: 'Test: BTree entry persists after soft-delete (lookup still succeeds)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-61
+  epic_id: null
+  tags: []
+- id: US-EMDB-61-3
+  title: 'Test: BTree.EntryCount unchanged after soft-delete'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-61
+  epic_id: null
+  tags: []
+- id: US-EMDB-61-4
+  title: 'Test: Content and metadata blocks remain readable after soft-delete'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-61
+  epic_id: null
+  tags: []
+- id: US-EMDB-61-5
+  title: 'Test: Dead folder created automatically during file initialization'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-61
+  epic_id: null
+  tags: []
+- id: US-EMDB-61-6
+  title: 'Test: HardDeleteEmailAsync removes from BTree and marks for compaction reclamation'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-61
+  epic_id: null
+  tags: []
+- id: US-EMDB-61-7
+  title: 'Test: Soft-deleted email can be recovered by moving out of Dead folder'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-61
+  epic_id: null
+  tags: []
+- id: US-EMDB-62-1
+  title: 'Test: FolderTreeContent serializable by ProtobufBlockContentSerializer'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-62
+  epic_id: null
+  tags: []
+- id: US-EMDB-62-2
+  title: 'Test: FolderContent serializable by ProtobufBlockContentSerializer with
+    EmailHashedID support'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-62
+  epic_id: null
+  tags: []
+- id: US-EMDB-62-3
+  title: 'Test: FolderManager.CreateFolderAsync works on a fresh file after InitializeFileAsync'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-62
+  epic_id: null
+  tags: []
+- id: US-EMDB-62-4
+  title: 'Test: FolderManager move/delete/add email operations persist correctly to
+    disk'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-62
+  epic_id: null
+  tags: []
+- id: US-EMDB-62-5
+  title: 'Test: File reopen loads folder tree and folder contents correctly'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-62
+  epic_id: null
+  tags: []
+- id: US-EMDB-62-6
+  title: 'Test: FolderContent.EmailIds stores EmailHashedID consistently across base
+    and Protobuf models'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-62
+  epic_id: null
+  tags: []
+- id: US-EMDB-7-1
+  title: 'Test: FileStreamProvider implements IFileStreamProvider and routes through
+    BlockManager'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-7
+  epic_id: null
+  tags: []
+- id: US-EMDB-7-2
+  title: 'Test: RandomAccessDevice/Manager implements IRandomAccessDevice and routes
+    through SegmentManager'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-7
+  epic_id: null
+  tags: []
+- id: US-EMDB-7-3
+  title: 'Test: WriteAheadLog/Provider implements IWriteAheadLog and routes through
+    block storage'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-7
+  epic_id: null
+  tags: []
+- id: US-EMDB-7-4
+  title: 'Test: ZoneTreeFactory creates properly configured ZoneTree instances'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-7
+  epic_id: null
+  tags: []
+- id: US-EMDB-7-5
+  title: 'Test: ZoneTree can perform basic upsert/get/delete through the EMDB file'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-7
+  epic_id: null
+  tags: []
+- id: US-EMDB-8-1
+  title: 'Test: HashedSearchEngine configured with EmailHashedID key type'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-8
+  epic_id: null
+  tags: []
+- id: US-EMDB-8-2
+  title: 'Test: Email subject/from/to/body indexed on add'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-8
+  epic_id: null
+  tags: []
+- id: US-EMDB-8-3
+  title: 'Test: SearchEmailsAsync returns matching EmailHashedIDs'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-8
+  epic_id: null
+  tags: []
+- id: US-EMDB-8-4
+  title: 'Test: Search index persisted through ZoneTree storage adapters'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-8
+  epic_id: null
+  tags: []
+- id: US-EMDB-8-5
+  title: 'Test: Delete/update operations maintain search index consistency'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-8
+  epic_id: null
+  tags: []
+- id: US-EMDB-9-1
+  title: 'Test: EmailManager compiles with two-tier storage API'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-9
+  epic_id: null
+  tags: []
+- id: US-EMDB-9-2
+  title: 'Test: AddEmailAsync writes content block + metadata block + BTree insert
+    + folder add'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-9
+  epic_id: null
+  tags: []
+- id: US-EMDB-9-3
+  title: 'Test: GetEmailMetadataAsync retrieves metadata via BTree lookup without
+    reading content'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-9
+  epic_id: null
+  tags: []
+- id: US-EMDB-9-4
+  title: 'Test: SoftDeleteEmailAsync moves to Dead folder without BTree mutation'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-9
+  epic_id: null
+  tags: []
+- id: US-EMDB-9-5
+  title: 'Test: MoveEmailAsync updates folder membership only (BTree and blocks untouched)'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-9
+  epic_id: null
+  tags: []
+- id: US-EMDB-9-6
+  title: 'Test: EmailHashedID deduplication prevents duplicate storage'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-9
+  epic_id: null
+  tags: []
+total_points: 670
+completed_points: 524
+story_count: 62
+task_count: 371
+epic_count: 11

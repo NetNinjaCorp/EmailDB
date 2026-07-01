@@ -1,113 +1,80 @@
-# Encryption
+# Encryption (v3)
 
-EmailDB provides optional per-block AES-256-GCM encryption with multi-epoch key rotation. Encryption is transparent to upper layers -- the cache and serialization systems handle encrypt/decrypt automatically.
+Operational design for at-rest encryption. Byte layouts and the corruption contract are normative in the [File Format Spec](../EmailDB_FileFormat_Spec.md) Sections 3, 9, 13.
 
-## Architecture
-
-```
-Password/KeyFile
-      |
-      v
-  KeyDerivation (Argon2id) --> KEK (Key Encryption Key)
-      |
-      v
-  KeyStoreManager (encrypt/decrypt DEK table with KEK)
-      |
-      v
-  KeyWrappingEncryptionProvider (multi-epoch DEK lookup)
-      |
-      v
-  AesGcmBlockEncryptionProvider (per-block encrypt/decrypt)
-      |
-      v
-  CacheManager / RawBlockManager (transparent integration)
-```
-
-## Key Hierarchy
-
-| Key | Purpose | Storage |
-|-----|---------|---------|
-| **Password / Key File** | User credential | External (never stored in file) |
-| **KEK** (Key Encryption Key) | Wraps/unwraps DEKs | Derived at runtime via Argon2id, never stored |
-| **DEK** (Data Encryption Key) | Encrypts block payloads | Stored in KeyStore block, wrapped with KEK |
-
-## Key Derivation
-
-- **Algorithm:** Argon2id
-- **Parameters:** 65,536 KB memory, 3 iterations, 4-way parallelism
-- **Salt:** 16 bytes, random, stored in the file's encryption header
-- **Output:** 32-byte KEK
-
-Alternative: 32-byte key loaded directly from a key file (no derivation).
-
-## Encryption Header
-
-Written at the start of encrypted files, before the first block:
+## 1. Key hierarchy
 
 ```
-Magic           4 bytes     Identifies file as encrypted
-SchemeVersion   1 byte      Encryption scheme version
-AlgorithmId     1 byte      Algorithm identifier
-KdfType         1 byte      Key derivation function type
-Salt            16 bytes    KDF salt
-TokenLength     4 bytes     Length of verification token
-Token           variable    Encrypted verification token (validates correct password)
+Password (NFC-normalized, UTF-8)
+    │
+    ▼  Argon2id (params from superblock KdfParams; default 64 MB / 3 iter / 4 lanes)
+KEK (32 B) ── verifies KeyVerificationToken ("EMDB" under GCM)
+    │
+    ▼  AES-256-GCM
+KeyStore block (type 8): { ActiveEpoch, Entries[]: epoch → DEK (32 B), Retired }
+    │
+    ▼  AES-256-GCM per block, epoch stamped in the 2-byte header KeyEpoch field
+Data block payloads
 ```
 
-## KeyStore Block (BlockType = 10)
+Two facts make the whole design work: **old blocks are never re-encrypted unless compaction chooses to**, and **the KEK never touches data blocks** — it only wraps the DEK table.
 
-Contains the encrypted DEK table:
+## 2. Bootstrap (open sequence)
 
-| Field | Description |
-|-------|-------------|
-| ActiveEpoch | Current epoch used for new encryptions |
-| Entries[] | Array of `{ Epoch, DEK[32B], Timestamp, Retired }` |
+1. Superblock → `EncryptionEnabled`, `KdfType`, `KdfParams`, `Salt`, `KeyVerificationToken`, KeyStore pointer
+2. Password → NFC normalize → Argon2id(stored params, stored salt) → KEK
+3. Decrypt `KeyVerificationToken`: failure = wrong password **or tampered KDF fields** (they're implicitly authenticated — altering Salt/KdfParams changes the derived KEK, which breaks the token). Fail fast, distinct error.
+4. Decrypt KeyStore with KEK → DEK table in memory
+5. Construct the block encryption provider: encrypt with `DEK[ActiveEpoch]`, decrypt by each block's header `KeyEpoch`
 
-The KeyStore is encrypted with the KEK. Each DEK is 32 bytes (AES-256).
+Files carry their own KDF configuration — implementations MUST never rely on compiled-in KDF constants, or parameter upgrades brick existing files.
 
-## Per-Block Encryption
+## 3. Per-block encryption
 
-- **Algorithm:** AES-256-GCM
-- **Nonce construction:** `[BlockId bytes (8B little-endian)] + [Random (4B)]` = 12 bytes
-- **Output format:** `[Nonce (12B)] [Ciphertext (N)] [AuthTag (16B)]`
-- **Overhead:** 28 bytes per encrypted block (12B nonce + 16B auth tag)
-- **Key selection:** The block header's `KeyEpoch` field identifies which DEK to use
+- AES-256-GCM; on-disk payload `Nonce (12) ‖ Ciphertext ‖ Tag (16)` = +28 B/block
+- **Nonce: 12 random CSPRNG bytes per operation** (never derived from BlockId — re-encryption of the same block under the same DEK would collapse uniqueness)
+- **AAD = `FileId ‖ BlockId ‖ BlockType ‖ KeyEpoch`** (35 B), mandatory both directions. A ciphertext moved to a different block, type, epoch, or file fails the tag even though every checksum passes — transplant attacks are dead
+- `PayloadChecksum` covers ciphertext, so scrubbing/scan integrity checks need no keys. Verify order: checksum (corruption) → tag (wrong key / tamper) — distinct error classes
 
-## Encryption Policy
+## 4. Policy — what gets encrypted
 
-Controls which block types are encrypted:
+| Blocks | Default | Full | Why |
+|--------|---------|------|-----|
+| EmailContent, EmailMetadata, FolderPage, FolderPageDirectory, FolderDeltaLog, FolderTree, WAL | ✔ | ✔ | Content and content-derived |
+| FTS (14–17), BloomFilter (18) | ✔ **always** | ✔ | Trigrams and filter bits reverse to the indexed text |
+| BTree nodes + IndexRoots (4–6) | ✘ | ✔ | Keys are opaque hashes; plaintext enables keyless integrity verification |
+| Metadata, Cleanup, Checkpoint | ✘ | ✘ | Needed for recovery before keys exist |
+| KeyStore | KEK-encrypted always | | |
 
-| Policy | Encrypted | Plaintext |
-|--------|-----------|-----------|
-| **Default** | EmailContent, Folder, FolderTree, Segment, WAL, FolderMeta, FolderDeltaLog | Metadata, BTreeLeaf, BTreeInternal, IndexRoot, Cleanup |
-| **Full** | All except Metadata | Metadata |
+The `Encrypted` flag is stamped per block, so files mixing policies (after a policy change) read correctly block-by-block.
 
-BTree nodes remain plaintext because their keys are SHA3-256 hashes (opaque). The `KeyEpoch` in the block header ensures correct DEK lookup at read time regardless of policy.
+## 5. Operations
 
-## Key Rotation
+**Password change — O(1), ~one block + superblock:** decrypt KeyStore with old KEK → new Salt (optionally upgraded KdfParams) → new KEK → append re-encrypted KeyStore block → superblock write (new Salt/KdfParams/token/pointer). Crash before the superblock write leaves the old password fully functional. Zero data blocks touched.
 
-1. Generate new 32-byte random DEK
-2. Assign it the next epoch number
-3. Mark it as the active epoch in the KeyStore
-4. Write updated KeyStore block (wrapped with current KEK)
-5. All future writes use the new DEK
-6. Existing blocks remain readable with their original DEK (old epochs are retained, not retired)
+**Key rotation — O(1):** append KeyStore block with fresh DEK at `ActiveEpoch + 1`; superblock update. Existing blocks keep their epoch and DEK. Rotation MUST fail rather than exceed epoch 65535; compaction re-encryption consolidates epochs long before that.
 
-**No re-encryption of existing blocks.** Old epochs stay valid indefinitely.
+**Compaction re-encryption (optional):** rewrite copied payloads under the active epoch, then prune unreferenced DEKs — the blast-radius cleanup mechanism. See [Compaction](Compaction.md) Section 4.
 
-## Password Change
+## 6. Threat model — what this does and doesn't protect
 
-1. Derive old KEK from old password + existing salt
-2. Decrypt KeyStore with old KEK
-3. Generate new salt, derive new KEK from new password + new salt
-4. Re-encrypt KeyStore with new KEK
-5. Update encryption header with new salt
-6. Write new KeyStore block
+Protected:
+- Content confidentiality at rest (stolen file/disk) — everything content-derived is ciphertext under Default
+- Tamper evidence: block corruption (checksums), payload swaps (AAD), index manipulation (Merkle + RootHash), KDF-parameter downgrade (token)
+- Old-epoch exposure containment: a leaked DEK exposes only its epoch's blocks
 
-Data blocks are unaffected -- they are encrypted with DEKs, not the KEK.
+Not protected (by design, documented honestly):
+- **Traffic-shape metadata**: block sizes, counts, ULID timestamps, and folder structure sizes are visible in a Default-policy file. Full policy hides index keys but sizes/timing remain.
+- **A live, unlocked process**: DEKs are in memory while open. Implementations MUST zeroize password bytes, KEK, and DEKs when scope ends, but memory-dump attacks on a running process are out of scope.
+- **Availability**: an attacker who can write to the file can destroy data (append-only + checksums detect, don't prevent).
+- **Superblock destruction**: if both slots are destroyed and no backup of Salt/KdfParams exists, encrypted data is unrecoverable — by design (that's what "encrypted" means). Users should be told plainly: password + intact superblock, or a backup.
 
-## Sync Considerations
+## 7. Implementation requirements checklist
 
-- **Same encryption domain (recommended):** Both replicas share the same password/key file. KeyStore block syncs directly. Both sides decrypt any block with the same key material.
-- **KeyStore sync ordering:** If the active rotates keys, the updated KeyStore must arrive at the backup before any blocks encrypted with the new epoch.
-- **Separate encryption domains:** Would require decrypt-on-source, re-encrypt-on-destination. Not recommended for v1.
+- NFC-normalize passwords before KDF (cross-platform lockout bug otherwise)
+- Random nonces from a CSPRNG only; never counters, never IDs
+- Always pass AAD; never expose a decrypt path that skips it
+- Zeroize key material buffers; prefer pinned/`fixed` buffers for DEKs
+- Read KDF params from the superblock, never constants
+- Fail rotation at epoch exhaustion; never wrap
+- Wrong-password, corruption, and tamper must surface as three distinguishable errors

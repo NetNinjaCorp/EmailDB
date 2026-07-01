@@ -1,73 +1,55 @@
-# Compaction
+# Compaction (v3)
 
-Compaction creates a new file containing only live blocks, reclaiming space from dead blocks left behind by the append-only, copy-on-write model.
+How dead space is reclaimed in an append-only file. Normative protocol in the [File Format Spec](../EmailDB_FileFormat_Spec.md) Sections 10–11; this doc covers policy and rationale.
 
-## Sources of Dead Blocks
+## 1. What creates dead blocks
 
-| Source | Frequency | Volume |
-|--------|-----------|--------|
-| BTree COW path rewrites | Every flush (~82 emails) | `tree_height` blocks per insert |
-| Folder page rebuilds | On delta compile | Old page blocks replaced |
-| Metadata/IndexRoot updates | Every mutation batch | 1-2 blocks per batch |
-| Deleted emails | On delete | Tombstoned content blocks |
+Copy-on-write makes garbage continuously:
 
-BTree nodes dominate dead block accumulation. During bulk import, dead BTree blocks can reach 150-300x the live index size before compaction.
+| Source | Rate |
+|--------|------|
+| BTree node rewrites (all indexes incl. BlockLocationIndex) | ~log(n) nodes per flush batch |
+| FolderPage/Directory rewrites on delta compile | ~7 pages + 1 directory per 500 folder ops |
+| Superseded Metadata / KeyStore / IndexRoot / Checkpoint / WAL versions | Per change |
+| Deleted emails' content + metadata blocks | Per delete |
+| FolderDeltaLog chains after compile | Per compile |
 
-## Tiered Compaction
+## 2. Two levels, honestly
 
-### Level 1 -- BTree Node Compaction (frequent, lightweight)
+An append-only single file cannot reclaim interior space in place. v3 therefore has exactly two mechanisms — not v2's three-tier scheme (its "L1 BTree-only compaction" reclaimed nothing without a file rewrite, and its in-place delta region is gone):
 
-- **Trigger:** Dead BTree blocks exceed 2x live node count
-- **Action:** Rewrite only BTree nodes + IndexRoot
-- **Cost at 10M emails:** Live BTree is ~494 MB, takes seconds
+**Level 0 — inline reorganization (continuous, not really compaction).** Delta-log compilation into folder pages, WAL clearance at checkpoint, epoch consolidation opportunities. These *convert* live-but-fragmented state into compact state; the byproduct is dead blocks, counted below.
 
-### Level 2 -- Listing Page Rebuild (periodic)
+**Level 1 — full-file compaction (the only space reclaimer).** Side-file rewrite + atomic swap, spec Section 11.2:
 
-- **Trigger:** Delta log exceeds threshold, or part of compaction
-- **Action:** Per-folder -- apply deltas to pages, re-sort, re-paginate
-- **Effect:** Clears delta logs, consolidates fragmented pages
+1. Create `<name>.emdb.compact`: fresh superblocks (same FileId; `SuperblockSequence` continues)
+2. Walk live roots from the latest Checkpoint; copy every reachable block
+3. Rebuild the BlockLocationIndex from scratch for the new physical layout
+4. Write fresh IndexRoots + Checkpoint; fsync file; atomic rename over the original; fsync directory
 
-### Level 3 -- Full Compaction (rare)
+Crash-safe at every point: the old complete file or the new complete file, never a hybrid. Readers holding the old file finish on their snapshot (old inode / pending delete). **No logical block content is rewritten** — every persisted pointer is a ULID, so blocks just move; only the (derived) location index is rebuilt.
 
-- **Trigger:** Manual or file size exceeds 2x live data
-- **Action:** Rewrite all live blocks into a new file
-- **Effect:** Optimal disk layout restored
+## 3. Triggers — no scanning to decide
 
-## Compaction and Encryption
+Every Checkpoint records `LiveByteCount` / `DeadByteCount`, maintained incrementally (a block's bytes move from live to dead the moment a new version or a delete supersedes it; Cleanup blocks (type 3) record the supersession for audit).
 
-With `reEncrypt = true`, only blocks being rewritten get re-encrypted with the active DEK. EmailContent blocks skipped by tiered compaction retain their original key epoch. The `KeyEpoch` field in the block header ensures correct DEK lookup at read time.
+| Trigger | Default |
+|---------|---------|
+| `DeadByteCount > 1.0 × LiveByteCount` (file ≈ 2× live data) | Compact on next idle window |
+| `DeadByteCount > 3 × LiveByteCount` | Compact urgently |
+| Retired DEK epochs pending pruning | Compact with `reEncrypt = true` when convenient |
+| Manual | Always available |
 
-## Compaction and Offsets
+Compaction is scheduled work, never on the write path.
 
-BTree leaves store `BlockId` (ULID), not file offsets. After compaction, the in-memory `Dictionary<Ulid, long>` is rebuilt from the new file layout. No BTree leaf rewriting is needed.
+## 4. Re-encryption option
 
-## Archival Workflow
+With `reEncrypt = true`, copied payloads are decrypted and re-encrypted with the active DEK epoch (fresh random nonces; AAD recomputed with the unchanged BlockId and the new epoch). Afterwards, DEKs with zero remaining references are pruned from the KeyStore. This is the epoch-consolidation mechanism — optional, since compaction works fine copying ciphertext verbatim.
 
-```
-Import emails  -->  Compact once  -->  Read-mostly steady state
-  (dead blocks       (reclaim all       (BTree is static,
-   accumulate)        dead space)         no further amplification)
-```
+## 5. Interaction with sync
 
-For archival use, dead block accumulation during bulk import is a one-time cost, fully reclaimed by a single compaction pass. In steady state, the BTree is essentially read-only with infrequent WAL flushes.
+Compaction changes offsets but no BlockIds, versions, or `FolderVersion`s — a backup comparing ULID high-water marks and folder versions sees no difference. The new file's Checkpoint continues `CheckpointSequence`, so restore points remain ordered. The `.emdb.vec` sidecar is untouched (it references emails by ID, not offset).
 
-## Write Amplification During Bulk Import
+## 6. Costs
 
-| Emails | Avg Height | Dead BTree Before Compact | Live BTree After | Amplification |
-|--------|-----------|---------------------------|------------------|---------------|
-| 10K    | 2.5       | ~74 MB                    | ~511 KB          | ~149x         |
-| 100K   | 3.0       | ~870 MB                   | ~4.9 MB          | ~177x         |
-| 1M     | 3.7       | ~11 GB                    | ~49 MB           | ~230x         |
-| 10M    | 4.0       | ~117 GB                   | ~494 MB          | ~242x         |
-
-These dead blocks do not affect write throughput (writes are sequential appends) and are fully reclaimed by one compaction pass.
-
-## Future: Batch-Aware Flush
-
-The current flush inserts entries individually (82 separate COW rewrites). A batch-aware strategy would:
-
-1. Sort entries by target leaf
-2. Apply all inserts to each leaf in one pass
-3. Propagate changes upward, creating each internal node once per batch
-
-This would reduce per-flush amplification by ~3-5x (tree height factor).
+Full compaction is O(live bytes) sequential read + write. A 50 GB shard at the 2× trigger carries ~25 GB live → roughly one sequential pass of each at disk speed. The rebuild of the BlockLocationIndex rides along in the same pass (entries emitted in write order, bulk-loaded bottom-up). Shards cap the worst case: compaction cost scales with shard size (~50 GB), not mailbox size.

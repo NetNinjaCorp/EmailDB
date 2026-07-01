@@ -1,0 +1,12 @@
+Search Strategy Benchmark — 10,000,000 emails
+Pages: 125,000 (×80 records each)
+======================================================================
+
+Generating listing records... 1M 2M 3M 4M 5M 6M 7M 8M 9M done in 30.5s
+  Needles: rare=994, mid=99863, prefix=20080
+  Natural gmail.com senders: 999,905
+
+Building encrypted pages... 20% 40% 60% 80% done in 11.1s
+  Total encrypted page data: 2499.2 MB
+
+Building trigram index... 2M

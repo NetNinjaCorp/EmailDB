@@ -1,185 +1,147 @@
 # EmailDB — Architecture
 
+**Format:** v3 (`EmailDB_FileFormat_Spec.md` is normative). Greenfield — no v1/v2 compatibility.
+
+## Implementation Status
+
+The v3 format is the build target. The existing code implements the retired v1 format (36 B headers, int64 BlockIds, offset-addressed BTree) and is being replaced subsystem-by-subsystem; see ADR-016 for the migration inventory. Nothing below should be read as "already built" unless the epic tracking says so.
+
 ## Layered Design
 
 ```
 ┌──────────────────────────────────────────────────────┐
 │   EmailManager                                        │  High-level email API
 ├──────────────────────┬───────────────────────────────┤
-│   BTreeIndex          │   VectorSearchManager         │  KV indexing + HNSW search
-├──────────────────────┤───────────────────────────────┤
-│   CacheManager        │   .emdb.vec Sidecar I/O      │  Block caching + vector persistence
-├──────────────────────┤───────────────────────────────┤
-│   RawBlockManager     │   IVectorIndex (HNSW)         │  Binary I/O + similarity search
+│   Indexes (BTree)     │   Search (FTS/Vector/Bloom)   │  Primary + Location + Date | 5-phase search
+├──────────────────────┼───────────────────────────────┤
+│   CheckpointManager   │   FolderManager               │  Commit protocol | pages + deltas
 ├──────────────────────┴───────────────────────────────┤
-│   .emdb File                    .emdb.vec Sidecar     │
+│   BlockStore (append, cache, encrypt, verify)         │  Superblock + block I/O
+├──────────────────────────────────────────────────────┤
+│   .emdb file                     .emdb.vec sidecar    │
 └──────────────────────────────────────────────────────┘
 ```
 
-## File Layout (per shard)
+Higher layers never bypass lower layers. Everything above BlockStore deals in ULIDs only; physical offsets are BlockStore's private concern (runtime map + BlockLocationIndex).
+
+## File Layout
 
 ```
 mailbox/
-├── emails_001.emdb          Email data, folders, metadata (up to ~50GB)
-├── emails_001.emdb.vec      Sidecar: embeddings + HNSW index
-├── emails_002.emdb          Next shard
-├── emails_002.emdb.vec      Sidecar for shard 2
+├── emails_001.emdb          Shard 1 (~50 GB cap): superblocks + append-only block stream
+├── emails_001.emdb.vec      Sidecar: embeddings + HNSW (derived, rebuildable)
+├── emails_002.emdb          Shard 2
 └── ...
 ```
 
-- `.emdb` — email content, folder structures, metadata, WAL, BTree index (append-only block format)
-- `.emdb.vec` — embedding vectors + HNSW graph + email ID mapping (independent lifecycle)
-- Sidecar can be deleted and rebuilt from .emdb data
-- Web frontend only needs .vec files to serve search
+Per file: two 4 KB superblock slots (A/B, alternating writes, highest valid sequence wins) then the append-only block stream. The superblock carries FileId (ULID), ShardIndex, feature flags (Compat/ReadOnlyCompat/Incompat), CleanShutdown flag, encryption bootstrap (KdfParams, Salt, verification token, KeyStore pointer), and a fast-open Checkpoint pointer. It is the only in-place structure and is torn-write safe by construction.
 
-## Block Format (91 bytes fixed overhead + variable payload)
-- **Header** (37 bytes): Magic, version, type, flags/key-epoch, encoding, timestamp, block ID (ULID), payload length
-- **Header Checksum** (16 bytes): BLAKE3-128
-- **Payload** (variable): Serialized content
-- **Payload Checksum** (16 bytes): BLAKE3-128
-- **Footer** (22 bytes): Footer magic, total block length
+## Block Format (96 bytes fixed overhead)
 
-With encryption enabled, each encrypted block adds 28 bytes overhead (12B nonce + 16B auth tag).
+- **Header** (48 B): magic, version, type, flags (bit 0 = encrypted), payload encoding, compression byte, **2-byte KeyEpoch**, **16-byte ULID BlockId**, payload length, 8 reserved
+- **Header checksum** (16 B, BLAKE3-128) + **payload** + **payload checksum** (16 B, over ciphertext) + **footer** (16 B: ~magic + total length)
+- No Timestamp field — the ULID's 48-bit ms timestamp is the timestamp
+- Encrypted payloads add 28 B (12 B random nonce + 16 B tag) and are AAD-bound to `FileId‖BlockId‖BlockType‖KeyEpoch`
+- Write path: Serialize → Compress → Encrypt → Checksum → Append; lengths validated against `MaxPayloadLength` before any allocation on read
 
-## Block Types
+## Block Types (v3, canonical)
 
-| Type ID | Name | Purpose |
-|---------|------|---------|
-| 0 | Metadata | Global file info, root references |
-| 1 | FolderTree | Folder hierarchy with block references |
-| 2 | FolderContent | Per-folder email ID list (source of truth for membership) |
-| 3 | WAL | Write-ahead log entries |
-| 4 | Cleanup | Superseded/deleted block markers |
-| 5 | Checkpoint | Points to authoritative IndexRoot |
-| 6 | BTreeLeaf | B+-tree leaf nodes (sorted key-value entries) |
-| 7 | BTreeInternal | B+-tree internal nodes (routing keys + child pointers + child hashes) |
-| 8 | IndexRoot | Root pointer + sequence counter + entry count + tree height |
-| 9 | EmailContent | Tier 3: Raw MIME body, inline images, attachments |
-| 10 | KeyStore | Encrypted DEK table (wrapped with KEK) |
-| 12 | EmailMetadata | Tier 2: Full headers, MIME structure, threading refs |
-| 13 | FolderPageDirectory | Per-folder page index with FolderVersion counter |
-| 14 | FolderDeltaLog | Append-only change log for folder pages |
-| 19 | BloomFilter | Per-folder probabilistic existence filter |
-| 20 | EmbeddingContent | Vector embedding data per email |
-| 21 | VectorIndexNode | HNSW/IVF index tree nodes |
-| 22 | VectorIndexRoot | Vector index root pointer |
+| ID | Name | Purpose |
+|----|------|---------|
+| 0 | Metadata | Global file info (non-bootstrap) |
+| 1 | WAL | Write-ahead log blocks (carry CheckpointBlockId replay fence) |
+| 2 | FolderTree | Folder hierarchy |
+| 3 | Cleanup | Dead-block accounting |
+| 4 | BTreeLeaf | Generic B+-tree leaf (all indexes) |
+| 5 | BTreeInternal | Generic B+-tree internal node |
+| 6 | IndexRoot | Root descriptor (carries IndexKind) |
+| 7 | EmailContent | Tier 3: raw MIME, attachments |
+| 8 | KeyStore | KEK-encrypted DEK table |
+| 9 | Checkpoint | Commit point + fast-open root table |
+| 10 | EmailMetadata | Tier 2: full headers, MIME structure, Preview |
+| 11 | FolderPageDirectory | Per-folder page index + FolderVersion |
+| 12 | FolderPage | Tier 1: packed listing records (~80/page) |
+| 13 | FolderDeltaLog | Chained folder change log |
+| 14–17 | FTS* | Trigram index (always encrypted) |
+| 18 | BloomFilter | Per-folder existence filter |
+| 19–21 | Embedding/VectorNode/VectorRoot | `.emdb.vec` sidecar |
 
-## Three-Tier Email Model
+## Indexes — one node format, four trees
 
-Email data is split by access temperature to minimize I/O for common operations:
+Generic node (declared IndexKind/KeySize/ValueSize) serves every tree; Merkle child-hashes are verified on every traversed path (write-only hashing is non-conforming).
 
-| Tier | What | Size | When Read |
+| IndexKind | Maps | Notes |
+|-----------|------|-------|
+| 0 PrimaryEmail | EmailHashedID (SHA3-256) → BlockId | 83/leaf, 50-way; height 4 ≈ 10.4M emails |
+| 1 **BlockLocation** | BlockId → (Offset, Length) | The indirection table: only offset-addressed structure, derived data, rebuilt by compaction; makes open O(log n) with ULID-only pointers |
+| 2 Date | DateTicks‖BlockId → ∅ | Time-range queries |
+| 3 FTS | trigram structures | See Search |
+
+Copy-on-write (CouchDB model): mutations rewrite root-to-leaf paths; WAL-buffered flushes (~83 entries/batch); Checkpoint is the commit point, `IndexRoot.Sequence` only a no-checkpoint fallback. See [BTree Index](../docs/BTree_Index.md).
+
+## Three-Tier Email Model + Folder Pages
+
+| Tier | Type | Size | Read when |
 |------|------|------|-----------|
-| **Tier 1** | Listing records packed into folder pages | ~400 bytes/email | Folder browsing (1 block per page of ~80 emails) |
-| **Tier 2** | Full RFC5322 headers + MIME structure | ~4 KB/email | Opening a specific email |
-| **Tier 3** | Raw MIME body + attachments | Variable | Viewing email body or downloading attachments |
+| 1 | FolderPage (12) | ~400 B/email | Folder browsing — 2-3 block reads per page view |
+| 2 | EmailMetadata (10) | ~4 KB | Opening an email; Preview field makes Tier 1 regenerable from Tier 2 alone |
+| 3 | EmailContent (7) | variable | Body/attachments |
 
-Listing one page of a 50K-email folder: 2-3 block reads (~35 KB, 1 decrypt per block). See [Folder Listing](../docs/Folder_Listing.md).
+Per folder: FolderPageDirectory (date-ranged page entries, FolderVersion counter, delta head) → FolderPages (date-desc) + chained FolderDeltaLog blocks (append-only; compiled into pages at ~500 pending ops). No in-place rewriting anywhere. See [Folder Listing](../docs/Folder_Listing.md).
 
-## Folder Page System
+## Commit, Recovery, Durability
 
-Each folder uses paginated listing pages with a delta log:
+- **Checkpoint (type 9) is the commit point**: root table (folder tree, primary index, location index, metadata, KeyStore, previous checkpoint, generic secondary-index table) + live/dead byte accounting
+- WAL blocks after Checkpoint N carry N's BlockId; recovery replays exactly those, then writes a fresh Checkpoint
+- Open: superblock → (CleanShutdown=1? done) → bounded forward scan for newer Checkpoints/WAL. Never O(file) on a normal path
+- fsync failure is fatal (poison handle, force recovery on reopen); directory fsync on create/rename/delete
+- Corruption handling is a spec-level contract (spec Section 13) — required behavior per failure class
 
-```
-FolderPageDirectory (1 block per folder, BlockType = 13)
-  |
-  +-- FolderPage 0 (newest ~80 emails, sorted by date desc)
-  +-- FolderPage 1
-  +-- FolderPage N
-  |
-  +-- FolderDeltaLog (append-only, BlockType = 14)
-```
+## Search
 
-- **FolderPageDirectory** tracks page index entries with date ranges (enables binary search by date)
-- **FolderDeltaLog** buffers Add/Delete/FlagChange operations (~432 bytes per email add)
-- Delta log compiles into pages when threshold (~500 entries) is exceeded
-- `FolderVersion` counter on the directory drives sync replication
-
-## BTree Primary Index
-
-Custom append-only B+-tree mapping `EmailHashedID` (32B SHA3-256) → `BlockId` (16B ULID). 48 bytes per entry.
-
-- **Copy-on-write** (CouchDB model): mutations rewrite only the root-to-leaf path
-- **WAL buffered**: inserts accumulate in WAL, flush at 82 entries (one full leaf)
-- **Merkle integrity**: internal nodes carry BLAKE3 child hashes; IndexRoot stores RootNodeHash
-- **Recovery**: IndexRoot has a monotonic Sequence counter (highest = latest). Checkpoint block points to the authoritative IndexRoot.
-- **No backward hash chain**: compaction discards chain anyway; Checkpoint is authoritative
-
-| Scale | Height | Leaf Nodes | Index Size |
-|-------|--------|------------|------------|
-| 10K | 3 | 176 | ~511 KB |
-| 100K | 4 | 1,755 | ~4.9 MB |
-| 1M | 4 | 17,544 | ~49 MB |
-| 10M | 5 | 175,439 | ~494 MB |
-
-See [BTree Index](../docs/BTree_Index.md).
-
-## Search Architecture
-
-Five-phase strategy ordered by implementation priority:
-
-1. **Address trigram index** — instant substring matching on From/To/Cc. Combined index, always encrypted (trigrams are reversible). See [Search](../docs/Search.md).
-2. **Listing page scan** — sequential scan of Tier 1 subject/preview fields. Folder-scoped: ~15ms for 50K emails.
-3. **Date BTree** — secondary BTree keyed on date ticks for time-range queries.
-4. **Vector embeddings** — semantic search via HNSW in sidecar `.emdb.vec` file. Handles conceptual/fuzzy queries.
-5. **Bloom filters** — per-folder quick elimination before full page scan.
+Five phases: address trigram FTS (14–17, always encrypted) → Tier 1 listing scan (~15 ms/50K folder) → date BTree → vector embeddings (`.emdb.vec`, HNSW, ADR-010/011) → per-folder bloom filters (18). All phases return EmailHashedIDs; the primary index resolves them. All search structures are rebuildable. See [Search](../docs/Search.md).
 
 ## Encryption
 
-AES-256-GCM per-block encryption with two-tier key hierarchy:
-
 ```
-Password → Argon2id → KEK → wraps/unwraps DEKs in KeyStore block
-                              DEKs encrypt block payloads (one DEK per epoch)
+Password → NFC → Argon2id(superblock KdfParams/Salt) → KEK → KeyStore (DEK table) → per-block AES-256-GCM
 ```
 
-- Password change re-encrypts only the KeyStore (~5 KB), not data blocks
-- Key rotation adds a new DEK epoch; old blocks keep their original DEK
-- Block header `KeyEpoch` field (bits 1-7 of Flags byte) identifies which DEK to use
-- Default policy: encrypt email content, folders, WAL; leave BTree nodes and metadata plaintext
+- Random 12 B nonces; AAD binding; checksums on ciphertext; 2-byte epochs (65,535)
+- Password change O(1) (KeyStore + superblock only, crash-safe via dual slots); rotation O(1) (new epoch)
+- Default policy: content, folders, WAL, FTS, bloom encrypted; BTree nodes/Metadata/Checkpoint plaintext (recovery before keys; keyless integrity checks)
+- Superblock KDF fields implicitly authenticated via the KeyVerificationToken
 
 See [Encryption](../docs/Encryption.md).
 
-## Sync (Active-to-Backup)
+## Compaction
 
-One-way replication, single authoritative writer:
+Two mechanisms (an append-only file cannot reclaim interior space in place):
+- **Inline reorganization**: delta compile, WAL clearance, epoch consolidation
+- **Full-file compaction**: side-file rewrite + atomic rename + directory fsync — crash yields old-complete or new-complete, never hybrid. BlockLocationIndex rebuilt; no logical content rewritten (ULID pointers). Triggered by Checkpoint byte accounting (`Dead > 1× Live`), never by scanning. Optional `reEncrypt` consolidates epochs and prunes DEKs.
+
+See [Compaction](../docs/Compaction.md).
+
+## Sync (Active-to-Backup)
 
 | Data | Mechanism |
 |------|-----------|
-| EmailContent blocks | ULID high-water mark (immutable, content-addressed) |
-| Folder pages | FolderVersion comparison, wholesale page transfer |
-| KeyStore | Sent before new-epoch content blocks |
-| BTree/Offsets/DeltaLog | Not synced — each replica maintains its own |
+| EmailContent/EmailMetadata | ULID high-water mark (immutable, ID-ordered) |
+| Folder pages | FolderVersion comparison, wholesale transfer |
+| KeyStore | Must precede new-epoch content (ordering protocol still open) |
+| Indexes / delta logs / location index | Not synced — derived per replica |
 
-Multi-machine writes use an actions channel RPC: secondary submits mutations to the primary writer.
-
-See [Sync](../docs/Sync.md).
-
-## Compaction
-
-Tiered compaction for the append-only, copy-on-write model:
-
-| Level | Trigger | Scope |
-|-------|---------|-------|
-| L1 | Dead BTree blocks > 2x live | BTree nodes + IndexRoot only |
-| L2 | Delta log threshold | Per-folder page rebuild |
-| L3 | File size > 2x live data | Full file rewrite |
-
-With `reEncrypt = true`, rewritten blocks get the active DEK epoch. See [Compaction](../docs/Compaction.md).
+Single authoritative writer; secondary machines submit mutations via actions-channel RPC. `CheckpointSequence` gives consistent restore points. See [Sync](../docs/Sync.md).
 
 ## Serialization
-Pluggable via `IBlockContentSerializer` / `IPayloadEncoding` interface:
-- **Protobuf** (primary) — protobuf-net with `[ProtoContract]` attributes (ADR-001)
-- **Custom binary** — BTree nodes use `BinaryPrimitives` for fixed-size fields (faster than protobuf for fixed layouts)
-- JSON (debug/interchange)
-- RawBytes (passthrough)
+
+Pluggable via `PayloadEncoding` byte: Custom binary (index nodes), Protobuf (protobuf-net — primary for structured payloads, ADR-001), Json (debug), RawBytes. Compression byte: None/LZ4/Zstd/Brotli/Deflate, applied before encryption.
 
 ## Key Patterns
-- **Append-only writes** — old versions preserved for journaling/versioning
-- **BLAKE3-128 integrity** — checksums on both header and payload
-- **Tiered compaction** — three levels from lightweight BTree-only to full file rewrite
-- **Thread safety** — `ReaderWriterLockSlim` for concurrent access
-- **Cache layer** — `CacheManager` for frequently accessed blocks
-- **Sharding** — .emdb files capped at ~50GB, auto-shard to new file
-- **Sidecar independence** — .vec files rebuildable from .emdb source data
-- **BlockId = ULID** — durable pointer (not file offsets); offsets resolved at runtime via `Dictionary<Ulid, long>`
+
+- **Append-only + dual-slot superblock** — one write model; the only in-place structure is torn-write safe
+- **ULIDs are the durable pointers; offsets are derived data** (BlockLocationIndex) — compaction moves anything freely
+- **O(log n) open, O(1) password change, scan only as disaster recovery**
+- **Verified Merkle + AAD + checksums-on-ciphertext** — corruption, tampering, and wrong-key are three distinguishable failures with contracted behavior
+- **Single writer (OS-enforced), snapshot readers** via Checkpoint + immutability
+- **Sharding at ~50 GB**; `.vec` sidecar rebuildable, staleness detected by echoed CheckpointSequence

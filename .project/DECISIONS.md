@@ -466,6 +466,36 @@ Entries[]:
 - Integration stories (US-EMDB-43, 44, 45) updated to use `KeyWrappingEncryptionProvider`
 - Tracked in EPIC-EMDB-9 (Block-Level Encryption)
 
+## ADR-016: v3 File Format — Canonical Build Target
+**Status**: Accepted
+**Date**: 2026-07-01
+**Supersedes**: v2 format spec (and reconciles ADR-003/013/014/15 details with the audit findings)
+**Context**: A full doc-vs-code audit (2026-07-01) found three mutually inconsistent format descriptions: the as-built v1 code (36B header/84B overhead, int64 BlockIds, offset-addressed BTree), the v2 design spec (48B/96B, ULID, Checkpoint — never implemented), and a stale intermediate draft in ARCHITECTURE.md. It also found design holes none of them addressed: no torn-write-safe file header (the in-place offset-0 header overwrite is a live corruption bug), no cryptographic binding between block headers and encrypted payloads, KDF parameters hardcoded rather than stored in-file, a nonce scheme unsafe under re-encrypting compaction, and integrity hashes that are written but never verified.
+
+**Decision**: Define **v3** as the single canonical format (rewritten `EmailDB_FileFormat_Spec.md`) and build to it. Key points, relative to v2:
+1. **Dual-slot superblock** (2 × 4 KB at offset 0; alternate writes, sequence + checksum, highest valid wins) — atomically solves password change, O(1) fast-open (Checkpoint pointer), and replaces the in-place Metadata-block-at-offset-0 hack.
+2. **Feature flags** (Compat / ReadOnlyCompat / Incompat masks, ext4-style) + **FileId ULID** + ShardIndex for identity, sync, and forward evolution.
+3. **ULID BlockIds everywhere; no persisted offsets as durable pointers.** BTree leaves store Key(32)+BlockId(16); internal nodes 48 keys/49 children with ChildBlockId+ChildHash. Compaction never rewrites index content.
+4. **AES-GCM AAD binding**: FileId‖BlockId‖BlockType‖KeyEpoch — prevents ciphertext transplant attacks. Nonce is 12 fully random bytes (ULID-derived nonce rejected: re-encryption collision risk). KdfParams (16B) stored in superblock — files are self-describing.
+5. **KeyEpoch is a dedicated 2-byte header field** (0–65535), not Flags bits (127 was too tight with re-encrypting compaction).
+6. **Header Timestamp field removed** — the ULID's 48-bit ms timestamp is the timestamp. Header: 48B; total fixed overhead 96B.
+7. **Pure append-only**: FolderDeltaLog becomes chained appended blocks (v2's fixed rewrite region dropped); the superblock is the only in-place structure. WAL is standard blocks carrying CheckpointBlockId (replay fence).
+8. **PrevChainHash removed** from BTree nodes; Merkle verification (ChildHash / RootHash) is REQUIRED at read time — write-only hashing is non-conforming.
+9. **Checkpoint gains a generic SecondaryIndexes table** ({IndexKind, BlockId, Offset}) for date BTree / FTS / bloom roots.
+10. **Corruption-handling contract**: defined required behavior for every verification failure (superblock, checksum, GCM tag, Merkle, torn checkpoint, torn tail).
+
+**Update (2026-07-01, greenfield hardening)**: With no real files in existence, backward compatibility was dropped entirely and the spec hardened with production-database techniques:
+11. **BlockLocationIndex** — a persistent BlockId→(Offset,Length) B+-tree (LMDB page-table pattern), COW-updated at each Checkpoint and rebuilt by compaction. Closes the hole where ULID-only addressing would have forced an O(file) scan on open; open is now O(log n) always.
+12. **Generic B+-tree node format** — one node layout with declared IndexKind/KeySize/ValueSize serves the primary index, location index, date index, and FTS; new indexes need no new block types.
+13. **Operational safety rails**: CleanShutdown flag (skip recovery scan on clean open), MaxPayloadLength sanity bound + decompression bomb guard (never allocate from an unverified length), fsync-failure-is-fatal rule (fsyncgate), directory fsync on create/rename, compaction via side-file + atomic rename, enforced single-writer OS lock, live/dead byte accounting in Checkpoint to trigger compaction without scans, NFC password normalization before KDF, monotonic ULID mode for clock regression, little-endian/ULID-byte-order conventions made normative.
+14. **Block type IDs renumbered gapless 0–21** — no legacy reservations since no v1/v2 files exist.
+
+**Consequence**:
+- `EmailDB_FileFormat_Spec.md` rewritten as v3 canonical; `docs/file_spec/*` must be updated to v3 (currently describe as-built v1)
+- Implementation targets: superblock manager, ULID block IDs in RawBlockManager, ULID-addressed BTree rewrite, Checkpoint writer/reader, WAL-as-blocks, encryption bootstrap wiring with AAD, read-time Merkle verification
+- Existing v1-era code paths to retire: OverrideLocation in-place writes, raw fixed-region BTree WAL, PrevChainHash serialization, int64 BlockIdGenerator range partitioning
+- Open items carried forward: KeyStore sync ordering protocol (ExpertReport #16), sync coverage for Tier 2/search indexes (#15), .vec sidecar file format (#23)
+
 ## Known Bugs Found During Benchmarking
 - **RawBlockManager footer int32/int64 mismatch**: `WriteBlockToStream` writes footer length as `int` (4 bytes) but `ReadBlockFromStreamInternal` reads it as `Int64` (8 bytes). Causes "Unable to read beyond the end of the stream" on every read.
 - **CacheManager.InitializeNewFile corrupts RawBlockManager state**: Calling `WriteBlockAsync` with `OverrideLocation: 0` resets `currentPosition` to just past the header, causing subsequent writes to overwrite WAL/FolderTree/Metadata blocks.

@@ -1,98 +1,84 @@
-# BTree Primary Index
+# B+-Tree Indexes (v3)
 
-The primary index is a copy-on-write B+-tree that maps `EmailHashedID` to `BlockId`. It is the only structure used for point lookups of individual emails.
+Behavioral design for all B+-tree indexes in an `.emdb` file. Byte layouts are normative in the [File Format Spec](../EmailDB_FileFormat_Spec.md) Sections 6–7; this doc covers algorithms, protocols, and costs.
 
-## What the BTree Stores
+## 1. One node format, many indexes
 
-| Field | Size | Description |
-|-------|------|-------------|
-| EmailHashedID (key) | 32 bytes | SHA3-256 hash of MessageID + Date + Subject + From + To |
-| BlockId (value) | 16 bytes | ULID pointing to the EmailContent block |
-| **Total per entry** | **48 bytes** | |
+Every tree uses the same generic node format (BlockTypes 4/5, IndexRoot 6). A node declares its `IndexKind`, `KeySize`, and `ValueSize` in its 12-byte node header, so adding an index never changes the file format.
 
-The BTree does **not** store file offsets. BlockIds are the durable pointer; offsets are resolved at runtime via `Dictionary<Ulid, long>`.
+| IndexKind | Index | Maps | Leaf entry | Capacity (leaf / internal children) |
+|-----------|-------|------|------------|--------------------------------------|
+| 0 | PrimaryEmail | EmailHashedID (SHA3-256) → BlockId | 32 + 16 = 48 B | 83 / 50 |
+| 1 | BlockLocation | BlockId → (Offset, Length) | 16 + 16 = 32 B | 124 / 71 |
+| 2 | Date | (DateTicks ‖ BlockId) → ∅ | 24 + 0 = 24 B | 166 / 55 |
+| 3 | FTS | See [Search](Search.md) | | |
 
-## What the BTree Does NOT Do
+All trees share these properties:
 
-- **Folder browsing** -- handled by folder listing pages (see [Folder Listing](Folder_Listing.md))
-- **Display metadata** -- subject, sender, date are in folder listing pages (Tier 1) or EmailMetadata blocks (Tier 2)
-- **Search** -- secondary BTree indexes and FTS handle search (see [Search](Search.md))
-- **Recent email lookups** -- served from the WAL buffer in memory before flush
+- **Copy-on-write (CouchDB model).** A mutation rewrites only the root-to-leaf path as new blocks; unchanged subtrees are shared between tree versions. Old nodes become dead and are reclaimed by compaction.
+- **No sibling pointers.** Range scans backtrack through the parent to reach the next leaf; this avoids cascade rewrites when a sibling splits.
+- **Merkle integrity.** Internal child records embed `ChildHash` (BLAKE3-256 of the child's payload); the IndexRoot carries `RootHash`. Verification is mandatory at read time (Section 5).
 
-The BTree is consulted only when a user opens a specific email that has already been flushed from the WAL buffer into the tree.
+## 2. Primary email index (IndexKind 0)
 
-## Node Structure
+Maps `EmailHashedID` → `BlockId` of the EmailContent block. Values are ULIDs, never offsets — physical location is resolved through the BlockLocationIndex, which is what makes the tree compaction-safe.
 
-### Leaf Nodes (BlockType = 6)
+### Capacity (50-way branching, 83-entry leaves)
 
-| Component | Size | Description |
-|-----------|------|-------------|
-| Node header | 69 bytes | NodeType, Version, EntryCount, NodeContentHash, PrevChainHash |
-| Entries | up to 4,036 bytes | Array of (EmailHashedID + BlockId) pairs |
-| **Max entries** | **82** | 4,036 / 48 = 82 (with ~70% fill: avg ~57) |
-| **Min entries** | **41** | Underflow threshold (non-root) |
+| Height | Max entries | Use case |
+|--------|-------------|----------|
+| 1 | 83 | Tiny mailbox |
+| 2 | 4,150 | Small |
+| 3 | 207,500 | Medium |
+| 4 | ~10.4M | Large (target) |
+| 5 | ~519M | Beyond shard size |
 
-### Internal Nodes (BlockType = 7)
+A point lookup reads at most `height` node blocks; the top 2–3 levels (a few MB) stay cached, so steady-state lookups cost 1–2 uncached block reads.
 
-| Component | Size | Description |
-|-----------|------|-------------|
-| Node header | 69 bytes | NodeType, Version, KeyCount, NodeContentHash, PrevChainHash |
-| Keys + child offsets + child hashes | up to 4,036 bytes | Routing keys with child pointers |
-| **Max keys / children** | **54 / 55** | |
+## 3. BlockLocationIndex (IndexKind 1)
 
-### IndexRoot (BlockType = 8)
+The indirection table: `BlockId → (Offset, Length)` for every live block. Full rationale in spec Section 7. Operational rules:
 
-Fixed 58-byte payload linking to the current BTree root:
+- **Offset-addressed internally** (child records carry `ChildOffset`, not `ChildBlockId`) — it cannot depend on itself. This is safe because it is derived data: compaction rebuilds it, and a full scan can always regenerate it.
+- **Updated at checkpoint time**: entries for blocks appended since the last Checkpoint are sorted and batch-inserted; changed paths are written, then its IndexRoot, then the Checkpoint.
+- **Resolution precedence**: runtime map (blocks since last checkpoint) → BlockLocationIndex → full scan (disaster only).
+- Deletion happens implicitly at compaction rebuild; the index never carries tombstones.
 
-| Field | Size | Description |
-|-------|------|-------------|
-| RootNodeBlockOffset | 8 bytes | File offset of the root node |
-| EntryCount | 8 bytes | Total entries in the tree |
-| TreeHeight | 2 bytes | Current tree height |
-| RootNodeHash | 32 bytes | BLAKE3 hash of the root node (validates root on read) |
-| Sequence | 8 bytes | Monotonic counter (highest = latest during recovery) |
+## 4. Write path (primary index)
 
-No backward chain. Compaction starts the sequence fresh, so a hash chain linking to previous roots would be discarded anyway. The Checkpoint block points directly to the authoritative IndexRoot; the sequence number is only needed as a fallback during recovery when no valid Checkpoint is found.
+1. Inserts/deletes accumulate in the in-memory WAL buffer; each is also appended to a WAL block (BlockType 1) carrying the current `CheckpointBlockId` — durability comes from the WAL block, not the buffer.
+2. Flush triggers: buffer reaches one leaf's worth (default 83), a time threshold, or an explicit call.
+3. Flush: sort buffered entries by key → apply to the tree in one pass (COW; splits propagate upward, root split adds a level) → write all new nodes → fsync → write IndexRoot (Sequence + 1) → the batch commits at the next Checkpoint → clear buffer.
+4. Write amplification: a batch of 100 inserts touching ~10 leaves writes ~15 nodes instead of 400.
 
-## Copy-on-Write Model
+Underflow on delete: leaves below minimum occupancy merge with or borrow from a neighbor; internal nodes rebalance the same way; a root with one child collapses (height − 1). Both leaf and internal rebalancing are required — leaf-only rebalancing degrades fill factor over time.
 
-The BTree uses the CouchDB copy-on-write pattern:
+## 5. Verification modes
 
-1. A mutation (insert/delete) rewrites only the root-to-leaf path
-2. Unchanged subtrees are shared -- their blocks remain untouched
-3. A new IndexRoot block is appended, pointing to the new root
-4. Old nodes become dead blocks, reclaimed at compaction
+| Mode | What | Cost | When |
+|------|------|------|------|
+| Path (default) | Each traversed node's hash checked against parent's ChildHash; root against `IndexRoot.RootHash` | O(height), amortized ~0 with caching (verify on cache load) | Every read |
+| Full | Walk entire tree verifying all hashes | O(nodes) | Integrity audit, post-recovery |
 
-This means every BTree mutation produces `tree_height` new blocks. At height 4, that is 4 new blocks per insert.
+A conforming implementation MUST verify on the path it traverses. Verify-on-cache-load is sufficient: a node validated once against its parent may be served from cache without re-hashing. Mismatch behavior is defined in the spec's corruption contract (Section 13): fail the lookup, fall back to the previous Checkpoint's root, escalate to rebuild if persistent.
 
-## Integrity Verification
+## 6. Recovery
 
-Every node stores:
-- **NodeContentHash** -- BLAKE3 of the node's entries/keys (tamper detection)
+The tree itself needs no scan-based recovery — the Checkpoint is authoritative:
 
-Internal nodes additionally store child hashes, forming a Merkle tree from the root down. The IndexRoot stores the `RootNodeHash`, allowing top-down verification of the entire tree structure from root to leaves.
+1. Open finds the last valid Checkpoint (spec Section 10.2)
+2. `PrimaryIndexRootBlockId` / `LocationIndexRootBlockId` load the roots
+3. WAL blocks carrying that Checkpoint's BlockId are replayed into the WAL buffer and flushed
+4. `IndexRoot.Sequence` (monotonic per index) exists only as a tiebreaker when no valid Checkpoint survives and roots must be recovered by scan
 
-## WAL Buffering
+A failed IndexRoot or node write mid-flush is safe by construction: the previous root remains authoritative; orphaned new nodes are dead blocks reclaimed by compaction.
 
-The BTree is **not** updated on every email write. The `BTreeWALManager` buffers inserts:
+## 7. Date index (IndexKind 2)
 
-1. Email write appends an EmailContent block + a 48-byte WAL entry
-2. WAL entries accumulate in memory (crash-safe via on-disk WAL region)
-3. When the buffer reaches **82 entries** (one full leaf), a flush triggers
-4. Flush sorts entries by key and inserts them into the BTree via COW path rewrites
+Secondary index for time-range queries. Key is the composite `DateTicks (8) ‖ BlockId (16)` — the BlockId suffix makes keys unique so duplicate timestamps need no overflow handling; the value is empty. Range scan = seek to `(fromTicks, 0)`, iterate until `(toTicks, max)`. Root is registered in the Checkpoint's `SecondaryIndexes` table (IndexKind 2).
 
-**Per-email write cost:** `email_size + 48 bytes WAL entry + ~232 bytes folder delta` -- all sequential appends. No BTree traversal on the write path.
+## 8. Caching
 
-## Tree Height at Scale
-
-| Email Count | Tree Height | Leaf Nodes | Total Index Size |
-|-------------|-------------|------------|------------------|
-| 10,000      | 3           | 176        | ~511 KB          |
-| 100,000     | 4           | 1,755      | ~4.9 MB          |
-| 1,000,000   | 4           | 17,544     | ~49 MB           |
-| 10,000,000  | 5           | 175,439    | ~494 MB          |
-| 100,000,000 | 5           | 1,754,386  | ~4.82 GB         |
-
-## Serialization
-
-BTree nodes use a custom binary serializer (`BTreeNodeSerializer`) with `BinaryPrimitives` for fixed-size fields. This is faster than Protobuf for the fixed-layout node structures. All other block types use Protobuf or JSON via the `iBlockContentSerializer` interface.
+- Internal nodes: LRU by BlockId, verified on load (Section 5). At 10M emails the primary index's non-leaf levels total ~10 MB — cache them all.
+- BlockLocationIndex upper levels: ~10 MB at 20M blocks — cache them all; leaf reads are the only per-lookup I/O.
+- Leaves: optional small LRU; folder-page workloads rarely revisit leaves.
