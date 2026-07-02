@@ -12,6 +12,25 @@
 | [US-EMDB-10-3](tasks/US-EMDB-10-3.md) | Test: All IStorageManager methods delegate to correct managers | ⚪ todo | — |  | — | — | [US-EMDB-10](stories/US-EMDB-10.md) |
 | [US-EMDB-10-4](tasks/US-EMDB-10-4.md) | Test: Proper disposal of all managed resources | ⚪ todo | — |  | — | — | [US-EMDB-10](stories/US-EMDB-10.md) |
 | [US-EMDB-10-5](tasks/US-EMDB-10-5.md) | Test: File can be opened from existing or created new | ⚪ todo | — |  | — | — | [US-EMDB-10](stories/US-EMDB-10.md) |
+| [US-EMDB-100-1](tasks/US-EMDB-100-1.md) | Test: Protocol documented in docs/Sync.md closing the open design item | ⚪ todo | — |  | — | — | [US-EMDB-100](stories/US-EMDB-100.md) |
+| [US-EMDB-100-2](tasks/US-EMDB-100-2.md) | Test: A backup never holds a content block whose epoch DEK it lacks | ⚪ todo | — |  | — | — | [US-EMDB-100](stories/US-EMDB-100.md) |
+| [US-EMDB-100-3](tasks/US-EMDB-100-3.md) | Test: Interrupted sync during epoch transition recovers correctly | ⚪ todo | — |  | — | — | [US-EMDB-100](stories/US-EMDB-100.md) |
+| [US-EMDB-100-4](tasks/US-EMDB-100-4.md) | Design and implement KeyStore ordering protocol | ⚪ todo | 2 |  | — | — | [US-EMDB-100](stories/US-EMDB-100.md) |
+| [US-EMDB-101-1](tasks/US-EMDB-101-1.md) | Test: All listed files and code paths removed | ⚪ todo | — |  | — | — | [US-EMDB-101](stories/US-EMDB-101.md) |
+| [US-EMDB-101-2](tasks/US-EMDB-101-2.md) | Test: Solution builds with zero warnings about missing references | ⚪ todo | — |  | — | — | [US-EMDB-101](stories/US-EMDB-101.md) |
+| [US-EMDB-101-3](tasks/US-EMDB-101-3.md) | Test: No remaining reference to ZoneTree or OverrideLocation or int64 BlockId generation in EmailDB.Format | ⚪ todo | — |  | — | — | [US-EMDB-101](stories/US-EMDB-101.md) |
+| [US-EMDB-101-4](tasks/US-EMDB-101-4.md) | Test: git grep confirms no dead namespaces remain | ⚪ todo | — |  | — | — | [US-EMDB-101](stories/US-EMDB-101.md) |
+| [US-EMDB-101-5](tasks/US-EMDB-101-5.md) | Delete v1 files and code paths | ⚪ todo | 3 |  | — | — | [US-EMDB-101](stories/US-EMDB-101.md) |
+| [US-EMDB-102-1](tasks/US-EMDB-102-1.md) | Test: v1-format tests removed or rewritten against v3 | ⚪ todo | — |  | — | — | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-102-2](tasks/US-EMDB-102-2.md) | Test: Crypto-primitive tests retained and passing | ⚪ todo | — |  | — | — | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-102-3](tasks/US-EMDB-102-3.md) | Test: Full suite green in CI on Linux | ⚪ todo | — |  | — | — | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-102-4](tasks/US-EMDB-102-4.md) | Test: Coverage exists for every v3 spec section with a MUST | ⚪ todo | — |  | — | — | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-102-5](tasks/US-EMDB-102-5.md) | Triage existing test suite | ⚪ todo | 2 |  | — | — | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-102-6](tasks/US-EMDB-102-6.md) | Port retained tests to v3 APIs | ⚪ todo | 5 |  | — | US-EMDB-102-5 | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-103-1](tasks/US-EMDB-103-1.md) | Test: Every project on disk is in the sln and vice versa | ⚪ todo | — |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
+| [US-EMDB-103-2](tasks/US-EMDB-103-2.md) | Test: No folder/project name mismatches remain | ⚪ todo | — |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
+| [US-EMDB-103-3](tasks/US-EMDB-103-3.md) | Test: PROJECT.md project table matches the sln | ⚪ todo | — |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
+| [US-EMDB-103-4](tasks/US-EMDB-103-4.md) | Fix solution and folder hygiene | ⚪ todo | 2 |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
 | [US-EMDB-11-1](tasks/US-EMDB-11-1.md) | Test: MaintenanceManager uncommented and compiles | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
 | [US-EMDB-11-2](tasks/US-EMDB-11-2.md) | Test: CompactAsync creates a new file with only latest block versions | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
 | [US-EMDB-11-3](tasks/US-EMDB-11-3.md) | Test: Cleanup removes blocks listed in OutdatedOffsets | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
@@ -357,19 +376,257 @@
 | [US-EMDB-62-4](tasks/US-EMDB-62-4.md) | Test: FolderManager move/delete/add email operations persist correctly to disk | ⚪ todo | — |  | — | — | [US-EMDB-62](stories/US-EMDB-62.md) |
 | [US-EMDB-62-5](tasks/US-EMDB-62-5.md) | Test: File reopen loads folder tree and folder contents correctly | ⚪ todo | — |  | — | — | [US-EMDB-62](stories/US-EMDB-62.md) |
 | [US-EMDB-62-6](tasks/US-EMDB-62-6.md) | Test: FolderContent.EmailIds stores EmailHashedID consistently across base and Protobuf models | ⚪ todo | — |  | — | — | [US-EMDB-62](stories/US-EMDB-62.md) |
+| [US-EMDB-63-1](tasks/US-EMDB-63-1.md) | Test: Writes alternate slots with incremented sequence and fsync | ⚪ todo | — |  | — | — | [US-EMDB-63](stories/US-EMDB-63.md) |
+| [US-EMDB-63-2](tasks/US-EMDB-63-2.md) | Test: Open validates both slots and picks the higher valid sequence | ⚪ todo | — |  | — | — | [US-EMDB-63](stories/US-EMDB-63.md) |
+| [US-EMDB-63-3](tasks/US-EMDB-63-3.md) | Test: A torn slot is detected via checksum and repaired on next update | ⚪ todo | — |  | — | — | [US-EMDB-63](stories/US-EMDB-63.md) |
+| [US-EMDB-63-4](tasks/US-EMDB-63-4.md) | Test: Unknown IncompatFlags refuse open and unknown ReadOnlyCompatFlags force read-only | ⚪ todo | — |  | — | — | [US-EMDB-63](stories/US-EMDB-63.md) |
+| [US-EMDB-63-5](tasks/US-EMDB-63-5.md) | Test: CleanShutdown set to 0 on first write after open and 1 on graceful close | ⚪ todo | — |  | — | — | [US-EMDB-63](stories/US-EMDB-63.md) |
+| [US-EMDB-63-6](tasks/US-EMDB-63-6.md) | Implement superblock slot serialization | ⚪ todo | 2 |  | — | — | [US-EMDB-63](stories/US-EMDB-63.md) |
+| [US-EMDB-63-7](tasks/US-EMDB-63-7.md) | Implement dual-slot write protocol | ⚪ todo | 2 |  | — | US-EMDB-63-6 | [US-EMDB-63](stories/US-EMDB-63.md) |
+| [US-EMDB-63-8](tasks/US-EMDB-63-8.md) | Implement open validation, feature flags, and CleanShutdown transitions | ⚪ todo | 3 |  | — | US-EMDB-63-7 | [US-EMDB-63](stories/US-EMDB-63.md) |
+| [US-EMDB-64-1](tasks/US-EMDB-64-1.md) | Test: Round-trip write/read for every block type and encoding | ⚪ todo | — |  | — | — | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-10](tasks/US-EMDB-64-10.md) | Implement compression pipeline | ⚪ todo | 2 |  | — | US-EMDB-64-9 | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-2](tasks/US-EMDB-64-2.md) | Test: Header checksum verified before trusting any header field and PayloadLength validated against MaxPayloadLength ... | ⚪ todo | — |  | — | — | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-3](tasks/US-EMDB-64-3.md) | Test: Payload checksum covers on-disk bytes and empty payload stores 16 zero bytes | ⚪ todo | — |  | — | — | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-4](tasks/US-EMDB-64-4.md) | Test: Footer TotalBlockLength supports backward walk from EOF | ⚪ todo | — |  | — | — | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-5](tasks/US-EMDB-64-5.md) | Test: ULID generator stays monotonic under simulated clock regression | ⚪ todo | — |  | — | — | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-6](tasks/US-EMDB-64-6.md) | Test: Compression byte round-trips None/LZ4/Zstd with decompression bomb guard | ⚪ todo | — |  | — | — | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-7](tasks/US-EMDB-64-7.md) | Implement monotonic ULID generator | ⚪ todo | 2 |  | — | — | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-8](tasks/US-EMDB-64-8.md) | Implement v3 header/footer serialization and checksums | ⚪ todo | 3 |  | — | US-EMDB-64-7 | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-9](tasks/US-EMDB-64-9.md) | Implement append writer and verifying reader | ⚪ todo | 3 |  | — | US-EMDB-64-8 | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-65-1](tasks/US-EMDB-65-1.md) | Test: Second writer fails fast with a clear error while readers open shared | ⚪ todo | — |  | — | — | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-2](tasks/US-EMDB-65-2.md) | Test: fsync means flush-to-disk not stream flush | ⚪ todo | — |  | — | — | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-3](tasks/US-EMDB-65-3.md) | Test: fsync failure poisons the handle and forces recovery on reopen | ⚪ todo | — |  | — | — | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-4](tasks/US-EMDB-65-4.md) | Test: Directory fsync on file create and rename | ⚪ todo | — |  | — | — | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-5](tasks/US-EMDB-65-5.md) | Implement single-writer OS lock | ⚪ todo | 2 |  | — | — | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-6](tasks/US-EMDB-65-6.md) | Implement fsync wrapper with fatal-poison semantics | ⚪ todo | 2 |  | — | — | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-7](tasks/US-EMDB-65-7.md) | Implement directory fsync helpers | ⚪ todo | 1 |  | — | — | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-66-1](tasks/US-EMDB-66-1.md) | Test: Runtime map tracks all blocks appended this session | ⚪ todo | — |  | — | — | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-2](tasks/US-EMDB-66-2.md) | Test: Forward scan resynchronizes past a corrupt block by hunting the next valid header magic and logs the damaged range | ⚪ todo | — |  | — | — | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-3](tasks/US-EMDB-66-3.md) | Test: Duplicate BlockIds resolve last-position-wins | ⚪ todo | — |  | — | — | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-4](tasks/US-EMDB-66-4.md) | Test: Backward walk from EOF via footers finds the last valid block after a torn tail | ⚪ todo | — |  | — | — | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-5](tasks/US-EMDB-66-5.md) | Implement runtime ULID-to-offset map | ⚪ todo | 1 |  | — | — | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-6](tasks/US-EMDB-66-6.md) | Implement forward scan with resynchronization | ⚪ todo | 3 |  | — | US-EMDB-66-5 | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-7](tasks/US-EMDB-66-7.md) | Implement backward EOF footer walk | ⚪ todo | 2 |  | — | — | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-67-1](tasks/US-EMDB-67-1.md) | Test: Leaf and internal nodes round-trip for IndexKinds 0/1/2 layouts | ⚪ todo | — |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-67-2](tasks/US-EMDB-67-2.md) | Test: Deserialization bounds-checks EntryCount against payload size and rejects overflow | ⚪ todo | — |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-67-3](tasks/US-EMDB-67-3.md) | Test: Capacities match spec: 83-entry primary leaves with 50-way internals and 124-entry location leaves with 71-way ... | ⚪ todo | — |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-67-4](tasks/US-EMDB-67-4.md) | Test: NodeContentHash computed over full serialized payload | ⚪ todo | — |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-67-5](tasks/US-EMDB-67-5.md) | Implement generic node models and serializers | ⚪ todo | 3 |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-67-6](tasks/US-EMDB-67-6.md) | Implement bounds-checked deserializers and capacity constants | ⚪ todo | 2 |  | — | US-EMDB-67-5 | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-68-1](tasks/US-EMDB-68-1.md) | Test: Insert splits propagate upward and grow height at root split | ⚪ todo | — |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-2](tasks/US-EMDB-68-2.md) | Test: Delete rebalances leaves and internal nodes and collapses single-child roots | ⚪ todo | — |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-3](tasks/US-EMDB-68-3.md) | Test: Range scans return sorted results across leaf boundaries via parent backtracking | ⚪ todo | — |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-4](tasks/US-EMDB-68-4.md) | Test: Old tree roots remain fully readable after mutations | ⚪ todo | — |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-5](tasks/US-EMDB-68-5.md) | Test: Randomized insert/delete stress against a reference model at 1M+ entries | ⚪ todo | — |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-6](tasks/US-EMDB-68-6.md) | Implement COW insert with splits | ⚪ todo | 5 |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-7](tasks/US-EMDB-68-7.md) | Implement delete with full rebalancing | ⚪ todo | 5 |  | — | US-EMDB-68-6 | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-8](tasks/US-EMDB-68-8.md) | Implement range scan with parent backtracking | ⚪ todo | 3 |  | — | US-EMDB-68-6 | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-69-1](tasks/US-EMDB-69-1.md) | Test: Every traversed node verified against its parent ChildHash and root against IndexRoot.RootHash | ⚪ todo | — |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-2](tasks/US-EMDB-69-2.md) | Test: Verify-on-cache-load allows cached nodes to skip re-hashing | ⚪ todo | — |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-3](tasks/US-EMDB-69-3.md) | Test: Full-tree verification mode walks all nodes | ⚪ todo | — |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-4](tasks/US-EMDB-69-4.md) | Test: Any single bit flip in any node fails the affected lookups with the contracted error | ⚪ todo | — |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-5](tasks/US-EMDB-69-5.md) | Test: Mismatch falls back per corruption contract | ⚪ todo | — |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-6](tasks/US-EMDB-69-6.md) | Implement write-path hash computation | ⚪ todo | 2 |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-7](tasks/US-EMDB-69-7.md) | Implement read-path verification with verify-on-cache-load | ⚪ todo | 3 |  | — | US-EMDB-69-6 | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-8](tasks/US-EMDB-69-8.md) | Implement full-tree verification mode | ⚪ todo | 2 |  | — | US-EMDB-69-7 | [US-EMDB-69](stories/US-EMDB-69.md) |
 | [US-EMDB-7-1](tasks/US-EMDB-7-1.md) | Test: FileStreamProvider implements IFileStreamProvider and routes through BlockManager | ⚪ todo | — |  | — | — | [US-EMDB-7](stories/US-EMDB-7.md) |
 | [US-EMDB-7-2](tasks/US-EMDB-7-2.md) | Test: RandomAccessDevice/Manager implements IRandomAccessDevice and routes through SegmentManager | ⚪ todo | — |  | — | — | [US-EMDB-7](stories/US-EMDB-7.md) |
 | [US-EMDB-7-3](tasks/US-EMDB-7-3.md) | Test: WriteAheadLog/Provider implements IWriteAheadLog and routes through block storage | ⚪ todo | — |  | — | — | [US-EMDB-7](stories/US-EMDB-7.md) |
 | [US-EMDB-7-4](tasks/US-EMDB-7-4.md) | Test: ZoneTreeFactory creates properly configured ZoneTree instances | ⚪ todo | — |  | — | — | [US-EMDB-7](stories/US-EMDB-7.md) |
 | [US-EMDB-7-5](tasks/US-EMDB-7-5.md) | Test: ZoneTree can perform basic upsert/get/delete through the EMDB file | ⚪ todo | — |  | — | — | [US-EMDB-7](stories/US-EMDB-7.md) |
+| [US-EMDB-70-1](tasks/US-EMDB-70-1.md) | Test: Flush triggers on count threshold and time threshold and explicit call | ⚪ todo | — |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-70-2](tasks/US-EMDB-70-2.md) | Test: Buffered entries sorted by key and applied in one COW pass | ⚪ todo | — |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-70-3](tasks/US-EMDB-70-3.md) | Test: IndexRoot Sequence increments monotonically per index | ⚪ todo | — |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-70-4](tasks/US-EMDB-70-4.md) | Test: Failed node or root write leaves previous root authoritative with orphans reclaimed later | ⚪ todo | — |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-70-5](tasks/US-EMDB-70-5.md) | Implement IndexRoot serialization | ⚪ todo | 2 |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-70-6](tasks/US-EMDB-70-6.md) | Implement WAL-buffered batch flush | ⚪ todo | 3 |  | — | US-EMDB-70-5 | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-71-1](tasks/US-EMDB-71-1.md) | Test: Entries for blocks since last checkpoint batch-insert at checkpoint time | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-2](tasks/US-EMDB-71-2.md) | Test: Internal nodes use ChildOffset not ChildBlockId | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-3](tasks/US-EMDB-71-3.md) | Test: Resolution precedence is runtime map then location index then full scan | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-4](tasks/US-EMDB-71-4.md) | Test: Index regenerates from a full scan and matches | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-5](tasks/US-EMDB-71-5.md) | Test: Lookup of any committed block is O(log n) with upper levels cached | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-6](tasks/US-EMDB-71-6.md) | Implement offset-addressed location tree variant | ⚪ todo | 3 |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-7](tasks/US-EMDB-71-7.md) | Implement checkpoint-time batch insert | ⚪ todo | 2 |  | — | US-EMDB-71-6 | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-8](tasks/US-EMDB-71-8.md) | Implement resolution precedence and scan regeneration | ⚪ todo | 3 |  | — | US-EMDB-71-7 | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-72-1](tasks/US-EMDB-72-1.md) | Test: Checkpoint written last in every mutation batch after fsync of its contents | ⚪ todo | — |  | — | — | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-72-2](tasks/US-EMDB-72-2.md) | Test: Offset hints verified by BlockId match on use and re-resolved on mismatch without error | ⚪ todo | — |  | — | — | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-72-3](tasks/US-EMDB-72-3.md) | Test: Secondary index table round-trips arbitrary IndexKind entries | ⚪ todo | — |  | — | — | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-72-4](tasks/US-EMDB-72-4.md) | Test: CheckpointSequence monotonic and previous-checkpoint chain walkable | ⚪ todo | — |  | — | — | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-72-5](tasks/US-EMDB-72-5.md) | Implement Checkpoint payload serialization | ⚪ todo | 2 |  | — | — | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-72-6](tasks/US-EMDB-72-6.md) | Implement checkpoint write protocol and reader | ⚪ todo | 3 |  | — | US-EMDB-72-5 | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-73-1](tasks/US-EMDB-73-1.md) | Test: WAL blocks after Checkpoint N carry N's BlockId | ⚪ todo | — |  | — | — | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-73-2](tasks/US-EMDB-73-2.md) | Test: Recovery replays only WAL matching the last valid Checkpoint then writes a fresh Checkpoint | ⚪ todo | — |  | — | — | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-73-3](tasks/US-EMDB-73-3.md) | Test: WAL referencing older checkpoints is treated as committed history | ⚪ todo | — |  | — | — | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-73-4](tasks/US-EMDB-73-4.md) | Test: WAL payload round-trips insert/delete/folder ops | ⚪ todo | — |  | — | — | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-73-5](tasks/US-EMDB-73-5.md) | Implement WAL block payload and writer | ⚪ todo | 2 |  | — | — | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-73-6](tasks/US-EMDB-73-6.md) | Implement WAL replay | ⚪ todo | 3 |  | — | US-EMDB-73-5 | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-74-1](tasks/US-EMDB-74-1.md) | Test: Clean open performs zero scanning beyond superblock and checkpoint reads | ⚪ todo | — |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-2](tasks/US-EMDB-74-2.md) | Test: Dirty open scans only bytes written after the last checkpoint | ⚪ todo | — |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-3](tasks/US-EMDB-74-3.md) | Test: Crash between checkpoint and superblock update is healed by the forward scan | ⚪ todo | — |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-4](tasks/US-EMDB-74-4.md) | Test: No valid superblock falls back to full scan from 8192 and no valid checkpoint to full rebuild | ⚪ todo | — |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-5](tasks/US-EMDB-74-5.md) | Test: Open is O(log n) on every normal path | ⚪ todo | — |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-6](tasks/US-EMDB-74-6.md) | Implement clean-open fast path | ⚪ todo | 2 |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-7](tasks/US-EMDB-74-7.md) | Implement dirty-open scan and heal | ⚪ todo | 3 |  | — | US-EMDB-74-6 | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-8](tasks/US-EMDB-74-8.md) | Implement disaster fallbacks | ⚪ todo | 3 |  | — | US-EMDB-74-7 | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-75-1](tasks/US-EMDB-75-1.md) | Test: Each contract row has a dedicated fault-injection test that asserts the required behavior | ⚪ todo | — |  | — | — | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-2](tasks/US-EMDB-75-2.md) | Test: Corruption and wrong-key and tamper surface as distinct error types | ⚪ todo | — |  | — | — | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-3](tasks/US-EMDB-75-3.md) | Test: Damaged byte ranges are logged with offsets | ⚪ todo | — |  | — | — | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-4](tasks/US-EMDB-75-4.md) | Test: Referenced live data loss surfaces the affected BlockId | ⚪ todo | — |  | — | — | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-5](tasks/US-EMDB-75-5.md) | Implement error taxonomy | ⚪ todo | 2 |  | — | — | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-6](tasks/US-EMDB-75-6.md) | Implement per-failure handlers | ⚪ todo | 3 |  | — | US-EMDB-75-5 | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-7](tasks/US-EMDB-75-7.md) | Build fault-injection test harness | ⚪ todo | 3 |  | — | US-EMDB-75-6 | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-76-1](tasks/US-EMDB-76-1.md) | Test: Password NFC-normalized then UTF-8 encoded before KDF | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-2](tasks/US-EMDB-76-2.md) | Test: KDF parameters read from superblock and honored even when they differ from defaults | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-3](tasks/US-EMDB-76-3.md) | Test: Wrong password fails fast via KeyVerificationToken with a distinct error | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-4](tasks/US-EMDB-76-4.md) | Test: Tampered Salt or KdfParams detected via token failure | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-5](tasks/US-EMDB-76-5.md) | Test: Provider decrypts blocks across multiple epochs from the loaded DEK table | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-6](tasks/US-EMDB-76-6.md) | Implement NFC normalization and parameterized Argon2id | ⚪ todo | 2 |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-7](tasks/US-EMDB-76-7.md) | Implement KeyVerificationToken create/verify | ⚪ todo | 2 |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-8](tasks/US-EMDB-76-8.md) | Implement bootstrap wiring | ⚪ todo | 3 |  | — | US-EMDB-76-6, US-EMDB-76-7 | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-77-1](tasks/US-EMDB-77-1.md) | Test: Nonces are 12 CSPRNG bytes and never derived from IDs or counters | ⚪ todo | — |  | — | — | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-77-2](tasks/US-EMDB-77-2.md) | Test: Encrypt and decrypt both require AAD and a ciphertext moved to another BlockId or BlockType or epoch or FileId ... | ⚪ todo | — |  | — | — | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-77-3](tasks/US-EMDB-77-3.md) | Test: On-disk layout is Nonce then Ciphertext then Tag adding exactly 28 bytes | ⚪ todo | — |  | — | — | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-77-4](tasks/US-EMDB-77-4.md) | Test: Password KEK and DEK buffers zeroized when scope ends | ⚪ todo | — |  | — | — | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-77-5](tasks/US-EMDB-77-5.md) | Implement AES-GCM encrypt/decrypt with random nonces and AAD | ⚪ todo | 3 |  | — | — | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-77-6](tasks/US-EMDB-77-6.md) | Implement epoch DEK lookup and zeroization | ⚪ todo | 2 |  | — | US-EMDB-77-5 | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-78-1](tasks/US-EMDB-78-1.md) | Test: Default policy encrypts content/folders/WAL/FTS/bloom and leaves BTree/Metadata/Checkpoint plaintext | ⚪ todo | — |  | — | — | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-78-2](tasks/US-EMDB-78-2.md) | Test: Full policy encrypts everything except Metadata/Cleanup/Checkpoint/KeyStore-rules per spec | ⚪ todo | — |  | — | — | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-78-3](tasks/US-EMDB-78-3.md) | Test: Read verifies checksum before GCM tag and corruption vs wrong-key vs tamper are three distinct errors | ⚪ todo | — |  | — | — | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-78-4](tasks/US-EMDB-78-4.md) | Test: Mixed-policy files read correctly block-by-block via the Encrypted flag | ⚪ todo | — |  | — | — | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-78-5](tasks/US-EMDB-78-5.md) | Implement policy sets and write-path stamping | ⚪ todo | 2 |  | — | — | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-78-6](tasks/US-EMDB-78-6.md) | Wire decrypt and error taxonomy into read path | ⚪ todo | 3 |  | — | US-EMDB-78-5 | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-79-1](tasks/US-EMDB-79-1.md) | Test: Password change writes one KeyStore block and one superblock update with zero data blocks touched | ⚪ todo | — |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-2](tasks/US-EMDB-79-2.md) | Test: Crash before the superblock write leaves the old password fully working | ⚪ todo | — |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-3](tasks/US-EMDB-79-3.md) | Test: Old password rejected and new password accepted after completion | ⚪ todo | — |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-4](tasks/US-EMDB-79-4.md) | Test: Rotation adds epoch N+1 and old-epoch blocks remain readable | ⚪ todo | — |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-5](tasks/US-EMDB-79-5.md) | Test: Rotation fails cleanly at epoch 65535 instead of wrapping | ⚪ todo | — |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-6](tasks/US-EMDB-79-6.md) | Implement ChangePassword | ⚪ todo | 3 |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-7](tasks/US-EMDB-79-7.md) | Implement RotateKey with epoch bound | ⚪ todo | 2 |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
 | [US-EMDB-8-1](tasks/US-EMDB-8-1.md) | Test: HashedSearchEngine configured with EmailHashedID key type | ⚪ todo | — |  | — | — | [US-EMDB-8](stories/US-EMDB-8.md) |
 | [US-EMDB-8-2](tasks/US-EMDB-8-2.md) | Test: Email subject/from/to/body indexed on add | ⚪ todo | — |  | — | — | [US-EMDB-8](stories/US-EMDB-8.md) |
 | [US-EMDB-8-3](tasks/US-EMDB-8-3.md) | Test: SearchEmailsAsync returns matching EmailHashedIDs | ⚪ todo | — |  | — | — | [US-EMDB-8](stories/US-EMDB-8.md) |
 | [US-EMDB-8-4](tasks/US-EMDB-8-4.md) | Test: Search index persisted through ZoneTree storage adapters | ⚪ todo | — |  | — | — | [US-EMDB-8](stories/US-EMDB-8.md) |
 | [US-EMDB-8-5](tasks/US-EMDB-8-5.md) | Test: Delete/update operations maintain search index consistency | ⚪ todo | — |  | — | — | [US-EMDB-8](stories/US-EMDB-8.md) |
+| [US-EMDB-80-1](tasks/US-EMDB-80-1.md) | Test: EmailHashedID is SHA3-256 over canonical content and is stable across sessions | ⚪ todo | — |  | — | — | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-80-2](tasks/US-EMDB-80-2.md) | Test: EmailMetadata round-trips headers MIME structure threading refs and Preview | ⚪ todo | — |  | — | — | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-80-3](tasks/US-EMDB-80-3.md) | Test: Preview extracted as plain text from HTML or text bodies | ⚪ todo | — |  | — | — | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-80-4](tasks/US-EMDB-80-4.md) | Test: Both block types compress with Zstd and encrypt under Default policy | ⚪ todo | — |  | — | — | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-80-5](tasks/US-EMDB-80-5.md) | Implement canonical EmailHashedID | ⚪ todo | 2 |  | — | — | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-80-6](tasks/US-EMDB-80-6.md) | Implement Tier 2/3 models and Preview extraction | ⚪ todo | 3 |  | — | US-EMDB-80-5 | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-81-1](tasks/US-EMDB-81-1.md) | Test: Listing one page of a 50K-email folder costs at most 3 block reads | ⚪ todo | — |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-2](tasks/US-EMDB-81-2.md) | Test: Date-jump uses binary search over directory date ranges | ⚪ todo | — |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-3](tasks/US-EMDB-81-3.md) | Test: FolderVersion increments on every directory rewrite | ⚪ todo | — |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-4](tasks/US-EMDB-81-4.md) | Test: Pages and directory encrypted under Default policy | ⚪ todo | — |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-5](tasks/US-EMDB-81-5.md) | Test: Listing record packs EmailHashedID BlockId date flags size from subject preview in ~400 bytes | ⚪ todo | — |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-6](tasks/US-EMDB-81-6.md) | Implement listing record packing and FolderPage | ⚪ todo | 3 |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-7](tasks/US-EMDB-81-7.md) | Implement FolderPageDirectory | ⚪ todo | 3 |  | — | US-EMDB-81-6 | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-82-1](tasks/US-EMDB-82-1.md) | Test: Add/Delete/FlagChange entries append to the chain via PreviousDeltaBlockId | ⚪ todo | — |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-2](tasks/US-EMDB-82-2.md) | Test: Listing merges pending deltas with pages in memory | ⚪ todo | — |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-3](tasks/US-EMDB-82-3.md) | Test: Compile at ~500 pending entries rewrites only affected pages COW and resets the delta head | ⚪ todo | — |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-4](tasks/US-EMDB-82-4.md) | Test: Old pages directory versions and consumed delta chain become dead after compile | ⚪ todo | — |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-5](tasks/US-EMDB-82-5.md) | Test: Move is two delta entries with content blocks untouched | ⚪ todo | — |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-6](tasks/US-EMDB-82-6.md) | Implement delta chain append and ops | ⚪ todo | 3 |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-7](tasks/US-EMDB-82-7.md) | Implement listing merge of pending deltas | ⚪ todo | 2 |  | — | US-EMDB-82-6 | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-8](tasks/US-EMDB-82-8.md) | Implement compile-to-pages | ⚪ todo | 3 |  | — | US-EMDB-82-7 | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-83-1](tasks/US-EMDB-83-1.md) | Test: Regeneration reads only Tier 2 blocks never Tier 3 | ⚪ todo | — |  | — | — | [US-EMDB-83](stories/US-EMDB-83.md) |
+| [US-EMDB-83-2](tasks/US-EMDB-83-2.md) | Test: Rebuilt pages match originals except flags reset to defaults | ⚪ todo | — |  | — | — | [US-EMDB-83](stories/US-EMDB-83.md) |
+| [US-EMDB-83-3](tasks/US-EMDB-83-3.md) | Test: Regenerated directory carries a bumped FolderVersion | ⚪ todo | — |  | — | — | [US-EMDB-83](stories/US-EMDB-83.md) |
+| [US-EMDB-83-4](tasks/US-EMDB-83-4.md) | Implement Tier-2 regeneration routine | ⚪ todo | 2 |  | — | — | [US-EMDB-83](stories/US-EMDB-83.md) |
+| [US-EMDB-84-1](tasks/US-EMDB-84-1.md) | Test: Create produces a file that reopens cleanly with and without encryption | ⚪ todo | — |  | — | — | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-2](tasks/US-EMDB-84-2.md) | Test: Open wires superblock checkpoint indexes folders and encryption into one ready instance | ⚪ todo | — |  | — | — | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-3](tasks/US-EMDB-84-3.md) | Test: Close writes final checkpoint sets CleanShutdown and releases the writer lock | ⚪ todo | — |  | — | — | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-4](tasks/US-EMDB-84-4.md) | Test: Kill -9 between operations always reopens via recovery to the last commit | ⚪ todo | — |  | — | — | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-5](tasks/US-EMDB-84-5.md) | Implement Create/Initialize | ⚪ todo | 3 |  | — | — | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-6](tasks/US-EMDB-84-6.md) | Implement Open composition | ⚪ todo | 3 |  | — | US-EMDB-84-5 | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-7](tasks/US-EMDB-84-7.md) | Implement Close | ⚪ todo | 2 |  | — | US-EMDB-84-6 | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-85-1](tasks/US-EMDB-85-1.md) | Test: Duplicate content is detected via EmailHashedID and not stored twice | ⚪ todo | — |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-85-2](tasks/US-EMDB-85-2.md) | Test: A committed AddEmail survives crash and recovery | ⚪ todo | — |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-85-3](tasks/US-EMDB-85-3.md) | Test: 1000-email bulk add commits in batches with bounded checkpoint count | ⚪ todo | — |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-85-4](tasks/US-EMDB-85-4.md) | Test: All indexes and the folder listing observe the email after commit | ⚪ todo | — |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-85-5](tasks/US-EMDB-85-5.md) | Implement AddEmail write pipeline | ⚪ todo | 3 |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-85-6](tasks/US-EMDB-85-6.md) | Implement group-commit batching | ⚪ todo | 3 |  | — | US-EMDB-85-5 | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-86-1](tasks/US-EMDB-86-1.md) | Test: GetEmail returns content for any committed email in O(log n) block reads | ⚪ todo | — |  | — | — | [US-EMDB-86](stories/US-EMDB-86.md) |
+| [US-EMDB-86-2](tasks/US-EMDB-86-2.md) | Test: Metadata-only fetch reads Tier 2 without touching Tier 3 | ⚪ todo | — |  | — | — | [US-EMDB-86](stories/US-EMDB-86.md) |
+| [US-EMDB-86-3](tasks/US-EMDB-86-3.md) | Test: Unknown ID returns a clean not-found not an exception | ⚪ todo | — |  | — | — | [US-EMDB-86](stories/US-EMDB-86.md) |
+| [US-EMDB-86-4](tasks/US-EMDB-86-4.md) | Test: Read path verifies checksums and Merkle path per spec | ⚪ todo | — |  | — | — | [US-EMDB-86](stories/US-EMDB-86.md) |
+| [US-EMDB-86-5](tasks/US-EMDB-86-5.md) | Implement GetEmail and metadata-only fetch | ⚪ todo | 3 |  | — | — | [US-EMDB-86](stories/US-EMDB-86.md) |
+| [US-EMDB-87-1](tasks/US-EMDB-87-1.md) | Test: Move appears in both folders' listings without rewriting content blocks | ⚪ todo | — |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-87-2](tasks/US-EMDB-87-2.md) | Test: Delete removes the email from listings and indexes and counts its bytes dead | ⚪ todo | — |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-87-3](tasks/US-EMDB-87-3.md) | Test: Flag change is visible in the next listing read | ⚪ todo | — |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-87-4](tasks/US-EMDB-87-4.md) | Test: List API returns a stable date-descending page for any offset within the folder | ⚪ todo | — |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-87-5](tasks/US-EMDB-87-5.md) | Implement move, delete, and flag operations | ⚪ todo | 3 |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-87-6](tasks/US-EMDB-87-6.md) | Implement folder listing API | ⚪ todo | 2 |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-88-1](tasks/US-EMDB-88-1.md) | Test: Every COW rewrite and delete moves the superseded block's bytes to the dead counter | ⚪ todo | — |  | — | — | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-88-2](tasks/US-EMDB-88-2.md) | Test: Counters persist in each Checkpoint and survive reopen | ⚪ todo | — |  | — | — | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-88-3](tasks/US-EMDB-88-3.md) | Test: Trigger fires at Dead greater than Live without scanning | ⚪ todo | — |  | — | — | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-88-4](tasks/US-EMDB-88-4.md) | Test: Cleanup blocks record superseded BlockIds for audit | ⚪ todo | — |  | — | — | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-88-5](tasks/US-EMDB-88-5.md) | Implement live/dead byte accounting and Cleanup blocks | ⚪ todo | 3 |  | — | — | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-88-6](tasks/US-EMDB-88-6.md) | Implement trigger evaluation | ⚪ todo | 1 |  | — | US-EMDB-88-5 | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-89-1](tasks/US-EMDB-89-1.md) | Test: Compacted file contains exactly the live blocks with identical BlockIds and content | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-2](tasks/US-EMDB-89-2.md) | Test: BlockLocationIndex rebuilt for the new layout and verifies | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-3](tasks/US-EMDB-89-3.md) | Test: Kill at every step of the swap yields either the complete old file or the complete new file | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-4](tasks/US-EMDB-89-4.md) | Test: Leftover .compact file is deleted on next open | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-5](tasks/US-EMDB-89-5.md) | Test: FolderVersions and CheckpointSequence continue across the swap so sync is unaffected | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-6](tasks/US-EMDB-89-6.md) | Implement live-block walk and side-file copy | ⚪ todo | 3 |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-7](tasks/US-EMDB-89-7.md) | Implement location index rebuild during copy | ⚪ todo | 2 |  | — | US-EMDB-89-6 | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-8](tasks/US-EMDB-89-8.md) | Implement atomic swap and leftover cleanup | ⚪ todo | 2 |  | — | US-EMDB-89-7 | [US-EMDB-89](stories/US-EMDB-89.md) |
 | [US-EMDB-9-1](tasks/US-EMDB-9-1.md) | Test: EmailManager compiles with two-tier storage API | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
 | [US-EMDB-9-2](tasks/US-EMDB-9-2.md) | Test: AddEmailAsync writes content block + metadata block + BTree insert + folder add | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
 | [US-EMDB-9-3](tasks/US-EMDB-9-3.md) | Test: GetEmailMetadataAsync retrieves metadata via BTree lookup without reading content | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
 | [US-EMDB-9-4](tasks/US-EMDB-9-4.md) | Test: SoftDeleteEmailAsync moves to Dead folder without BTree mutation | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
 | [US-EMDB-9-5](tasks/US-EMDB-9-5.md) | Test: MoveEmailAsync updates folder membership only (BTree and blocks untouched) | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
 | [US-EMDB-9-6](tasks/US-EMDB-9-6.md) | Test: EmailHashedID deduplication prevents duplicate storage | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
+| [US-EMDB-90-1](tasks/US-EMDB-90-1.md) | Test: reEncrypt=true leaves every block at the active epoch with fresh nonces | ⚪ todo | — |  | — | — | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-90-2](tasks/US-EMDB-90-2.md) | Test: BlockIds unchanged and AAD recomputed with the new epoch | ⚪ todo | — |  | — | — | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-90-3](tasks/US-EMDB-90-3.md) | Test: DEKs with zero remaining references pruned from the KeyStore | ⚪ todo | — |  | — | — | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-90-4](tasks/US-EMDB-90-4.md) | Test: reEncrypt=false copies ciphertext verbatim and prunes nothing | ⚪ todo | — |  | — | — | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-90-5](tasks/US-EMDB-90-5.md) | Implement reEncrypt path in compaction copy | ⚪ todo | 3 |  | — | — | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-90-6](tasks/US-EMDB-90-6.md) | Implement DEK pruning | ⚪ todo | 2 |  | — | US-EMDB-90-5 | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-91-1](tasks/US-EMDB-91-1.md) | Test: Substring query over addresses returns correct results at 100K emails in under 10ms warm | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-2](tasks/US-EMDB-91-2.md) | Test: FTS blocks are encrypted under every policy | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-3](tasks/US-EMDB-91-3.md) | Test: Index updates on add and delete | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-4](tasks/US-EMDB-91-4.md) | Test: Candidates verified against Tier 1 records to remove trigram false positives | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-5](tasks/US-EMDB-91-5.md) | Test: Root recoverable from the Checkpoint secondary index table | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-6](tasks/US-EMDB-91-6.md) | Implement trigram extraction and FTS block structures | ⚪ todo | 5 |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-7](tasks/US-EMDB-91-7.md) | Implement ingest and delete maintenance | ⚪ todo | 3 |  | — | US-EMDB-91-6 | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-8](tasks/US-EMDB-91-8.md) | Implement trigram query path | ⚪ todo | 3 |  | — | US-EMDB-91-7 | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-92-1](tasks/US-EMDB-92-1.md) | Test: Folder-scoped scan of a 50K-email folder completes in ~15ms warm | ⚪ todo | — |  | — | — | [US-EMDB-92](stories/US-EMDB-92.md) |
+| [US-EMDB-92-2](tasks/US-EMDB-92-2.md) | Test: Matches include pending delta entries | ⚪ todo | — |  | — | — | [US-EMDB-92](stories/US-EMDB-92.md) |
+| [US-EMDB-92-3](tasks/US-EMDB-92-3.md) | Test: Whole-mailbox fallback works when no better phase applies | ⚪ todo | — |  | — | — | [US-EMDB-92](stories/US-EMDB-92.md) |
+| [US-EMDB-92-4](tasks/US-EMDB-92-4.md) | Implement folder-scoped listing scan search | ⚪ todo | 2 |  | — | — | [US-EMDB-92](stories/US-EMDB-92.md) |
+| [US-EMDB-93-1](tasks/US-EMDB-93-1.md) | Test: Date-range query returns exactly the emails in range without scanning pages | ⚪ todo | — |  | — | — | [US-EMDB-93](stories/US-EMDB-93.md) |
+| [US-EMDB-93-2](tasks/US-EMDB-93-2.md) | Test: Duplicate timestamps handled via the BlockId suffix | ⚪ todo | — |  | — | — | [US-EMDB-93](stories/US-EMDB-93.md) |
+| [US-EMDB-93-3](tasks/US-EMDB-93-3.md) | Test: Index maintained on add and delete and recovered via Checkpoint | ⚪ todo | — |  | — | — | [US-EMDB-93](stories/US-EMDB-93.md) |
+| [US-EMDB-93-4](tasks/US-EMDB-93-4.md) | Test: Combines as a pre-filter with other search phases | ⚪ todo | — |  | — | — | [US-EMDB-93](stories/US-EMDB-93.md) |
+| [US-EMDB-93-5](tasks/US-EMDB-93-5.md) | Implement date index maintenance and range query | ⚪ todo | 3 |  | — | — | [US-EMDB-93](stories/US-EMDB-93.md) |
+| [US-EMDB-94-1](tasks/US-EMDB-94-1.md) | Test: Address-shaped queries route to the trigram index | ⚪ todo | — |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
+| [US-EMDB-94-2](tasks/US-EMDB-94-2.md) | Test: Date-bounded queries pre-filter via the date index | ⚪ todo | — |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
+| [US-EMDB-94-3](tasks/US-EMDB-94-3.md) | Test: Results merge and dedupe across phases with stable ordering | ⚪ todo | — |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
+| [US-EMDB-94-4](tasks/US-EMDB-94-4.md) | Test: Planner degrades gracefully when an index is absent | ⚪ todo | — |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
+| [US-EMDB-94-5](tasks/US-EMDB-94-5.md) | Implement query planner routing and merge | ⚪ todo | 3 |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
+| [US-EMDB-95-1](tasks/US-EMDB-95-1.md) | Test: Sidecar round-trips embeddings and index nodes | ⚪ todo | — |  | — | — | [US-EMDB-95](stories/US-EMDB-95.md) |
+| [US-EMDB-95-2](tasks/US-EMDB-95-2.md) | Test: Stale sidecar detected via CheckpointSequence mismatch and rebuilt from the main file | ⚪ todo | — |  | — | — | [US-EMDB-95](stories/US-EMDB-95.md) |
+| [US-EMDB-95-3](tasks/US-EMDB-95-3.md) | Test: Deleting the sidecar never loses email data | ⚪ todo | — |  | — | — | [US-EMDB-95](stories/US-EMDB-95.md) |
+| [US-EMDB-95-4](tasks/US-EMDB-95-4.md) | Test: Sidecar encrypted at rest when the main file is encrypted | ⚪ todo | — |  | — | — | [US-EMDB-95](stories/US-EMDB-95.md) |
+| [US-EMDB-95-5](tasks/US-EMDB-95-5.md) | Implement .vec sidecar reader/writer and staleness check | ⚪ todo | 3 |  | — | — | [US-EMDB-95](stories/US-EMDB-95.md) |
+| [US-EMDB-96-1](tasks/US-EMDB-96-1.md) | Test: Conceptual queries return semantically related emails | ⚪ todo | — |  | — | — | [US-EMDB-96](stories/US-EMDB-96.md) |
+| [US-EMDB-96-2](tasks/US-EMDB-96-2.md) | Test: End-to-end search under 20ms at 100K emails including query embedding | ⚪ todo | — |  | — | — | [US-EMDB-96](stories/US-EMDB-96.md) |
+| [US-EMDB-96-3](tasks/US-EMDB-96-3.md) | Test: Graph flushes to sidecar on close and periodic checkpoint | ⚪ todo | — |  | — | — | [US-EMDB-96](stories/US-EMDB-96.md) |
+| [US-EMDB-96-4](tasks/US-EMDB-96-4.md) | Test: Search never blocks on concurrent inserts | ⚪ todo | — |  | — | — | [US-EMDB-96](stories/US-EMDB-96.md) |
+| [US-EMDB-96-5](tasks/US-EMDB-96-5.md) | Integrate ONNX embedding and text prep | ⚪ todo | 5 |  | — | — | [US-EMDB-96](stories/US-EMDB-96.md) |
+| [US-EMDB-96-6](tasks/US-EMDB-96-6.md) | Implement HNSW build/search with sidecar flush | ⚪ todo | 5 |  | — | US-EMDB-96-5 | [US-EMDB-96](stories/US-EMDB-96.md) |
+| [US-EMDB-97-1](tasks/US-EMDB-97-1.md) | Test: Filter sized for ~1% false positives over Tier 1 tokens | ⚪ todo | — |  | — | — | [US-EMDB-97](stories/US-EMDB-97.md) |
+| [US-EMDB-97-2](tasks/US-EMDB-97-2.md) | Test: Multi-folder search consults filters before scanning | ⚪ todo | — |  | — | — | [US-EMDB-97](stories/US-EMDB-97.md) |
+| [US-EMDB-97-3](tasks/US-EMDB-97-3.md) | Test: Filters always encrypted | ⚪ todo | — |  | — | — | [US-EMDB-97](stories/US-EMDB-97.md) |
+| [US-EMDB-97-4](tasks/US-EMDB-97-4.md) | Test: Filters rebuilt with page compile and registered in the Checkpoint | ⚪ todo | — |  | — | — | [US-EMDB-97](stories/US-EMDB-97.md) |
+| [US-EMDB-97-5](tasks/US-EMDB-97-5.md) | Implement bloom filter build, query, and registration | ⚪ todo | 3 |  | — | — | [US-EMDB-97](stories/US-EMDB-97.md) |
+| [US-EMDB-98-1](tasks/US-EMDB-98-1.md) | Test: Backup converges to the active file's content set after arbitrary interruption | ⚪ todo | — |  | — | — | [US-EMDB-98](stories/US-EMDB-98.md) |
+| [US-EMDB-98-2](tasks/US-EMDB-98-2.md) | Test: Delta computation is a single high-water-mark comparison | ⚪ todo | — |  | — | — | [US-EMDB-98](stories/US-EMDB-98.md) |
+| [US-EMDB-98-3](tasks/US-EMDB-98-3.md) | Test: Backup rebuilds its own indexes from received blocks | ⚪ todo | — |  | — | — | [US-EMDB-98](stories/US-EMDB-98.md) |
+| [US-EMDB-98-4](tasks/US-EMDB-98-4.md) | Test: Replicated blocks verify checksums and AAD on the backup side | ⚪ todo | — |  | — | — | [US-EMDB-98](stories/US-EMDB-98.md) |
+| [US-EMDB-98-5](tasks/US-EMDB-98-5.md) | Implement high-water-mark content replication | ⚪ todo | 5 |  | — | — | [US-EMDB-98](stories/US-EMDB-98.md) |
+| [US-EMDB-99-1](tasks/US-EMDB-99-1.md) | Test: Only folders with changed FolderVersion transfer | ⚪ todo | — |  | — | — | [US-EMDB-99](stories/US-EMDB-99.md) |
+| [US-EMDB-99-2](tasks/US-EMDB-99-2.md) | Test: Backup folder listings match the active after sync | ⚪ todo | — |  | — | — | [US-EMDB-99](stories/US-EMDB-99.md) |
+| [US-EMDB-99-3](tasks/US-EMDB-99-3.md) | Test: Compaction on the active side causes zero folder retransfer | ⚪ todo | — |  | — | — | [US-EMDB-99](stories/US-EMDB-99.md) |
+| [US-EMDB-99-4](tasks/US-EMDB-99-4.md) | Implement FolderVersion folder replication | ⚪ todo | 3 |  | — | — | [US-EMDB-99](stories/US-EMDB-99.md) |

@@ -1,9 +1,13 @@
+auto_commit: false
+deploy_branch: null
 description: A custom binary file format for efficient email storage with append-only
   block-based architecture
 hub: false
 name: EmailDB
-next_epic_id: 12
-next_story_id: 63
+next_changeset_id: 1
+next_epic_id: 23
+next_sprint_id: 1
+next_story_id: 104
 prefix: EMDB
 projects: []
 repo: ''

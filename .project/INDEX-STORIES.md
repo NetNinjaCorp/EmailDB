@@ -4,6 +4,10 @@
 | -- | ----- | ------ | -------- | ------ | ---- | ---- | --- | ----- |
 | [US-EMDB-1](stories/US-EMDB-1.md) | Fix async/lock concurrency issues in managers | ✅ done | must | 5 |  | [EPIC-EMDB-1](epics/EPIC-EMDB-1.md) | 5 | 5 |
 | [US-EMDB-10](stories/US-EMDB-10.md) | Implement IStorageManager with two-tier storage and soft-delete | 📋 backlog | must | 5 |  | [EPIC-EMDB-4](epics/EPIC-EMDB-4.md) | 6 | 5 |
+| [US-EMDB-100](stories/US-EMDB-100.md) | KeyStore sync ordering protocol | 📋 backlog | could | 3 | v3, sync, keystore | [EPIC-EMDB-21](epics/EPIC-EMDB-21.md) | 3 | 4 |
+| [US-EMDB-101](stories/US-EMDB-101.md) | Delete v1 code paths | 📋 backlog | must | 5 | v3, cleanup | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 4 | 5 |
+| [US-EMDB-102](stories/US-EMDB-102.md) | Test suite migration to v3 | 📋 backlog | must | 8 | v3, testing, migration | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 4 | 6 |
+| [US-EMDB-103](stories/US-EMDB-103.md) | Solution hygiene | 📋 backlog | should | 3 | v3, cleanup, hygiene | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 3 | 4 |
 | [US-EMDB-11](stories/US-EMDB-11.md) | Implement MaintenanceManager compaction and cleanup | 📋 backlog | should | 5 |  | [EPIC-EMDB-5](epics/EPIC-EMDB-5.md) | 5 | 5 |
 | [US-EMDB-12](stories/US-EMDB-12.md) | Implement WAL-based crash recovery | 📋 backlog | should | 8 |  | [EPIC-EMDB-5](epics/EPIC-EMDB-5.md) | 5 | 5 |
 | [US-EMDB-13](stories/US-EMDB-13.md) | Fix broken test references and build test infrastructure | 📋 backlog | must | 5 |  | [EPIC-EMDB-6](epics/EPIC-EMDB-6.md) | 5 | 5 |
@@ -61,6 +65,43 @@
 | [US-EMDB-60](stories/US-EMDB-60.md) | Implement two-tier email read flow (metadata-only listing + lazy content load) | 📋 backlog | must | 5 |  | [EPIC-EMDB-11](epics/EPIC-EMDB-11.md) | 6 | 6 |
 | [US-EMDB-61](stories/US-EMDB-61.md) | Implement soft-delete via Dead folder and optional hard delete | 📋 backlog | must | 3 |  | [EPIC-EMDB-11](epics/EPIC-EMDB-11.md) | 7 | 7 |
 | [US-EMDB-62](stories/US-EMDB-62.md) | Fix FolderManager serialization for Protobuf compatibility | 📋 backlog | must | 5 |  | [EPIC-EMDB-11](epics/EPIC-EMDB-11.md) | 6 | 6 |
+| [US-EMDB-63](stories/US-EMDB-63.md) | Superblock manager (dual-slot, feature flags, CleanShutdown) | 📋 backlog | must | 8 | v3, superblock | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 5 | 8 |
+| [US-EMDB-64](stories/US-EMDB-64.md) | v3 block writer and reader (ULID, checksums, length sanity) | 📋 backlog | must | 8 | v3, blocks, format | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 6 | 10 |
+| [US-EMDB-65](stories/US-EMDB-65.md) | Single-writer lock and fsync discipline | 📋 backlog | must | 5 | v3, concurrency, durability | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 4 | 7 |
+| [US-EMDB-66](stories/US-EMDB-66.md) | Runtime block map and scan fallback | 📋 backlog | must | 5 | v3, recovery, scan | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 4 | 7 |
+| [US-EMDB-67](stories/US-EMDB-67.md) | Generic node serialization (declared key/value sizes) | 📋 backlog | must | 5 | v3, btree, serialization | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 6 |
+| [US-EMDB-68](stories/US-EMDB-68.md) | COW insert, delete, and range scan | 📋 backlog | must | 13 | v3, btree, cow | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 5 | 8 |
+| [US-EMDB-69](stories/US-EMDB-69.md) | Merkle integrity verification (path + full) | 📋 backlog | must | 8 | v3, btree, integrity, merkle | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 5 | 8 |
 | [US-EMDB-7](stories/US-EMDB-7.md) | Implement ZoneTree storage provider adapters | 📦 archived | must | 8 |  | [EPIC-EMDB-3](epics/EPIC-EMDB-3.md) | 5 | 5 |
+| [US-EMDB-70](stories/US-EMDB-70.md) | IndexRoot and WAL-buffered flush | 📋 backlog | must | 5 | v3, btree, wal | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 6 |
+| [US-EMDB-71](stories/US-EMDB-71.md) | BlockLocationIndex (indirection table) | 📋 backlog | must | 8 | v3, location-index, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 5 | 8 |
+| [US-EMDB-72](stories/US-EMDB-72.md) | Checkpoint writer and reader | 📋 backlog | must | 5 | v3, checkpoint, commit | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 6 |
+| [US-EMDB-73](stories/US-EMDB-73.md) | WAL blocks with checkpoint replay fence | 📋 backlog | must | 5 | v3, wal, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 6 |
+| [US-EMDB-74](stories/US-EMDB-74.md) | Open protocol and crash recovery | 📋 backlog | must | 8 | v3, recovery, open | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 5 | 8 |
+| [US-EMDB-75](stories/US-EMDB-75.md) | Corruption-handling contract implementation | 📋 backlog | must | 8 | v3, corruption, testing | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 7 |
+| [US-EMDB-76](stories/US-EMDB-76.md) | Encryption bootstrap (superblock to provider) | 📋 backlog | must | 8 | v3, encryption, bootstrap | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 5 | 8 |
+| [US-EMDB-77](stories/US-EMDB-77.md) | AES-GCM v3 provider (random nonces, AAD, zeroization) | 📋 backlog | must | 5 | v3, encryption, aes-gcm | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 4 | 6 |
+| [US-EMDB-78](stories/US-EMDB-78.md) | Policy-driven encryption on the write/read path | 📋 backlog | must | 5 | v3, encryption, policy | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 4 | 6 |
+| [US-EMDB-79](stories/US-EMDB-79.md) | Password change and key rotation | 📋 backlog | must | 5 | v3, encryption, rotation | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 5 | 7 |
 | [US-EMDB-8](stories/US-EMDB-8.md) | Implement ZoneTree embedding-based vector search integration | 📦 archived | should | 5 |  | [EPIC-EMDB-3](epics/EPIC-EMDB-3.md) | 5 | 5 |
+| [US-EMDB-80](stories/US-EMDB-80.md) | Tier 2/3 email blocks (EmailMetadata + EmailContent) | 📋 backlog | must | 5 | v3, email, tiers | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 4 | 6 |
+| [US-EMDB-81](stories/US-EMDB-81.md) | FolderPage and FolderPageDirectory | 📋 backlog | must | 8 | v3, folders, pages | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 5 | 7 |
+| [US-EMDB-82](stories/US-EMDB-82.md) | FolderDeltaLog chain and compile | 📋 backlog | must | 8 | v3, folders, delta | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 5 | 8 |
+| [US-EMDB-83](stories/US-EMDB-83.md) | Tier-2 page regeneration | 📋 backlog | should | 3 | v3, folders, recovery | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 3 | 4 |
+| [US-EMDB-84](stories/US-EMDB-84.md) | Lifecycle: create, open, close | 📋 backlog | must | 8 | v3, api, lifecycle | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 7 |
+| [US-EMDB-85](stories/US-EMDB-85.md) | AddEmail pipeline | 📋 backlog | must | 8 | v3, api, write-path | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 6 |
+| [US-EMDB-86](stories/US-EMDB-86.md) | GetEmail and open-email read path | 📋 backlog | must | 5 | v3, api, read-path | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 5 |
+| [US-EMDB-87](stories/US-EMDB-87.md) | Move, delete, flag, and list operations | 📋 backlog | must | 5 | v3, api, operations | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 6 |
+| [US-EMDB-88](stories/US-EMDB-88.md) | Dead-block accounting and compaction triggers | 📋 backlog | should | 5 | v3, compaction, accounting | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 4 | 6 |
+| [US-EMDB-89](stories/US-EMDB-89.md) | Side-file compaction and atomic swap | 📋 backlog | must | 8 | v3, compaction, swap | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 5 | 8 |
 | [US-EMDB-9](stories/US-EMDB-9.md) | Implement EmailManager with two-tier storage (metadata + content blocks) | 📋 backlog | must | 8 |  | [EPIC-EMDB-4](epics/EPIC-EMDB-4.md) | 7 | 6 |
+| [US-EMDB-90](stories/US-EMDB-90.md) | Compaction re-encryption and DEK pruning | 📋 backlog | should | 5 | v3, compaction, encryption | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 4 | 6 |
+| [US-EMDB-91](stories/US-EMDB-91.md) | Address trigram FTS index | 📋 backlog | should | 13 | v3, search, fts, trigram | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 5 | 8 |
+| [US-EMDB-92](stories/US-EMDB-92.md) | Listing page scan search | 📋 backlog | should | 3 | v3, search, scan | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 3 | 4 |
+| [US-EMDB-93](stories/US-EMDB-93.md) | Date BTree secondary index | 📋 backlog | should | 5 | v3, search, date-index | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 4 | 5 |
+| [US-EMDB-94](stories/US-EMDB-94.md) | Query planner | 📋 backlog | could | 5 | v3, search, planner | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 4 | 5 |
+| [US-EMDB-95](stories/US-EMDB-95.md) | .emdb.vec sidecar format | 📋 backlog | could | 8 | v3, vectors, sidecar | [EPIC-EMDB-20](epics/EPIC-EMDB-20.md) | 4 | 5 |
+| [US-EMDB-96](stories/US-EMDB-96.md) | Phase-1 HNSW and embedding pipeline | 📋 backlog | could | 13 | v3, vectors, hnsw, embeddings | [EPIC-EMDB-20](epics/EPIC-EMDB-20.md) | 4 | 6 |
+| [US-EMDB-97](stories/US-EMDB-97.md) | Per-folder bloom filters | 📋 backlog | could | 5 | v3, search, bloom | [EPIC-EMDB-20](epics/EPIC-EMDB-20.md) | 4 | 5 |
+| [US-EMDB-98](stories/US-EMDB-98.md) | Content replication via ULID high-water mark | 📋 backlog | could | 8 | v3, sync, content | [EPIC-EMDB-21](epics/EPIC-EMDB-21.md) | 4 | 5 |
+| [US-EMDB-99](stories/US-EMDB-99.md) | Folder replication via FolderVersion | 📋 backlog | could | 5 | v3, sync, folders | [EPIC-EMDB-21](epics/EPIC-EMDB-21.md) | 3 | 4 |
