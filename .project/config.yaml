@@ -6,7 +6,7 @@ hub: false
 name: EmailDB
 next_changeset_id: 1
 next_epic_id: 23
-next_sprint_id: 1
+next_sprint_id: 2
 next_story_id: 104
 prefix: EMDB
 projects: []

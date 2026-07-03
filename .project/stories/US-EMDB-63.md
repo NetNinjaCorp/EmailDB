@@ -11,12 +11,12 @@ epic_id: EPIC-EMDB-12
 id: US-EMDB-63
 points: 8
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - superblock
 title: Superblock manager (dual-slot, feature flags, CleanShutdown)
-updated: '2026-07-01'
+updated: '2026-07-03'
 ---
 
 As the storage engine, I want a dual-slot superblock so that file bootstrap state survives torn writes and the file is self-describing. Implements spec Section 3: 4096-byte slots at offsets 0/4096, alternating writes with monotonic sequence, BLAKE3-128 slot checksum, feature flag masks, CleanShutdown protocol, MaxPayloadLength, FileId/ShardIndex, encryption bootstrap fields, LastCheckpoint hint.

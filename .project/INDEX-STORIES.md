@@ -65,10 +65,10 @@
 | [US-EMDB-60](stories/US-EMDB-60.md) | Implement two-tier email read flow (metadata-only listing + lazy content load) | 📋 backlog | must | 5 |  | [EPIC-EMDB-11](epics/EPIC-EMDB-11.md) | 6 | 6 |
 | [US-EMDB-61](stories/US-EMDB-61.md) | Implement soft-delete via Dead folder and optional hard delete | 📋 backlog | must | 3 |  | [EPIC-EMDB-11](epics/EPIC-EMDB-11.md) | 7 | 7 |
 | [US-EMDB-62](stories/US-EMDB-62.md) | Fix FolderManager serialization for Protobuf compatibility | 📋 backlog | must | 5 |  | [EPIC-EMDB-11](epics/EPIC-EMDB-11.md) | 6 | 6 |
-| [US-EMDB-63](stories/US-EMDB-63.md) | Superblock manager (dual-slot, feature flags, CleanShutdown) | 📋 backlog | must | 8 | v3, superblock | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 5 | 8 |
-| [US-EMDB-64](stories/US-EMDB-64.md) | v3 block writer and reader (ULID, checksums, length sanity) | 📋 backlog | must | 8 | v3, blocks, format | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 6 | 10 |
-| [US-EMDB-65](stories/US-EMDB-65.md) | Single-writer lock and fsync discipline | 📋 backlog | must | 5 | v3, concurrency, durability | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 4 | 7 |
-| [US-EMDB-66](stories/US-EMDB-66.md) | Runtime block map and scan fallback | 📋 backlog | must | 5 | v3, recovery, scan | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 4 | 7 |
+| [US-EMDB-63](stories/US-EMDB-63.md) | Superblock manager (dual-slot, feature flags, CleanShutdown) | ✅ done | must | 8 | v3, superblock | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 5 | 8 |
+| [US-EMDB-64](stories/US-EMDB-64.md) | v3 block writer and reader (ULID, checksums, length sanity) | 🟢 ready | must | 8 | v3, blocks, format | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 6 | 10 |
+| [US-EMDB-65](stories/US-EMDB-65.md) | Single-writer lock and fsync discipline | 🟢 ready | must | 5 | v3, concurrency, durability | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 4 | 7 |
+| [US-EMDB-66](stories/US-EMDB-66.md) | Runtime block map and scan fallback | 🟢 ready | must | 5 | v3, recovery, scan | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 4 | 7 |
 | [US-EMDB-67](stories/US-EMDB-67.md) | Generic node serialization (declared key/value sizes) | 📋 backlog | must | 5 | v3, btree, serialization | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 6 |
 | [US-EMDB-68](stories/US-EMDB-68.md) | COW insert, delete, and range scan | 📋 backlog | must | 13 | v3, btree, cow | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 5 | 8 |
 | [US-EMDB-69](stories/US-EMDB-69.md) | Merkle integrity verification (path + full) | 📋 backlog | must | 8 | v3, btree, integrity, merkle | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 5 | 8 |

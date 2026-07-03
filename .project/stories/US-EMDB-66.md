@@ -11,13 +11,13 @@ epic_id: EPIC-EMDB-12
 id: US-EMDB-66
 points: 5
 priority: must
-status: backlog
+status: ready
 tags:
 - v3
 - recovery
 - scan
 title: Runtime block map and scan fallback
-updated: '2026-07-01'
+updated: '2026-07-03'
 ---
 
 As the storage engine, I want a runtime ULID-to-offset map plus resilient scan routines so that blocks written since the last checkpoint resolve instantly and disaster recovery can rebuild state from raw bytes (spec Sections 7, 11, 13).

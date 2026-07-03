@@ -684,7 +684,7 @@ entries:
 - id: US-EMDB-63
   title: Superblock manager (dual-slot, feature flags, CleanShutdown)
   type: story
-  status: backlog
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-12
@@ -692,7 +692,7 @@ entries:
 - id: US-EMDB-64
   title: v3 block writer and reader (ULID, checksums, length sanity)
   type: story
-  status: backlog
+  status: ready
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-12
@@ -700,7 +700,7 @@ entries:
 - id: US-EMDB-65
   title: Single-writer lock and fsync discipline
   type: story
-  status: backlog
+  status: ready
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-12
@@ -708,7 +708,7 @@ entries:
 - id: US-EMDB-66
   title: Runtime block map and scan fallback
   type: story
-  status: backlog
+  status: ready
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-12
@@ -4065,24 +4065,24 @@ entries:
 - id: US-EMDB-63-1
   title: 'Test: Writes alternate slots with incremented sequence and fsync'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-63
   epic_id: null
   tags: []
 - id: US-EMDB-63-2
   title: 'Test: Open validates both slots and picks the higher valid sequence'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-63
   epic_id: null
   tags: []
 - id: US-EMDB-63-3
   title: 'Test: A torn slot is detected via checksum and repaired on next update'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-63
   epic_id: null
   tags: []
@@ -4090,8 +4090,8 @@ entries:
   title: 'Test: Unknown IncompatFlags refuse open and unknown ReadOnlyCompatFlags
     force read-only'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-63
   epic_id: null
   tags: []
@@ -4099,15 +4099,15 @@ entries:
   title: 'Test: CleanShutdown set to 0 on first write after open and 1 on graceful
     close'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-63
   epic_id: null
   tags: []
 - id: US-EMDB-63-6
   title: Implement superblock slot serialization
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-63
   epic_id: null
@@ -4115,7 +4115,7 @@ entries:
 - id: US-EMDB-63-7
   title: Implement dual-slot write protocol
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-63
   epic_id: null
@@ -4123,7 +4123,7 @@ entries:
 - id: US-EMDB-63-8
   title: Implement open validation, feature flags, and CleanShutdown transitions
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-63
   epic_id: null
@@ -4132,7 +4132,7 @@ entries:
   title: 'Test: Round-trip write/read for every block type and encoding'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-64
   epic_id: null
   tags: []
@@ -4149,7 +4149,7 @@ entries:
     validated against MaxPayloadLength ...'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-64
   epic_id: null
   tags: []
@@ -4158,7 +4158,7 @@ entries:
     zero bytes'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-64
   epic_id: null
   tags: []
@@ -4166,7 +4166,7 @@ entries:
   title: 'Test: Footer TotalBlockLength supports backward walk from EOF'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-64
   epic_id: null
   tags: []
@@ -4174,7 +4174,7 @@ entries:
   title: 'Test: ULID generator stays monotonic under simulated clock regression'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-64
   epic_id: null
   tags: []
@@ -4183,14 +4183,14 @@ entries:
     guard'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-64
   epic_id: null
   tags: []
 - id: US-EMDB-64-7
   title: Implement monotonic ULID generator
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-64
   epic_id: null
@@ -4198,7 +4198,7 @@ entries:
 - id: US-EMDB-64-8
   title: Implement v3 header/footer serialization and checksums
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-64
   epic_id: null
@@ -4215,7 +4215,7 @@ entries:
   title: 'Test: Second writer fails fast with a clear error while readers open shared'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-65
   epic_id: null
   tags: []
@@ -4223,7 +4223,7 @@ entries:
   title: 'Test: fsync means flush-to-disk not stream flush'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-65
   epic_id: null
   tags: []
@@ -4231,7 +4231,7 @@ entries:
   title: 'Test: fsync failure poisons the handle and forces recovery on reopen'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-65
   epic_id: null
   tags: []
@@ -4239,7 +4239,7 @@ entries:
   title: 'Test: Directory fsync on file create and rename'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-65
   epic_id: null
   tags: []
@@ -4271,7 +4271,7 @@ entries:
   title: 'Test: Runtime map tracks all blocks appended this session'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-66
   epic_id: null
   tags: []
@@ -4280,7 +4280,7 @@ entries:
     valid header magic and logs the damaged range'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-66
   epic_id: null
   tags: []
@@ -4288,7 +4288,7 @@ entries:
   title: 'Test: Duplicate BlockIds resolve last-position-wins'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-66
   epic_id: null
   tags: []
@@ -4297,7 +4297,7 @@ entries:
     a torn tail'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-66
   epic_id: null
   tags: []
@@ -6154,8 +6154,8 @@ entries:
   story_id: US-EMDB-99
   epic_id: null
   tags: []
-total_points: 1166
-completed_points: 524
+total_points: 1185
+completed_points: 549
 story_count: 103
 task_count: 628
 epic_count: 22
