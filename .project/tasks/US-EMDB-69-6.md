@@ -5,7 +5,7 @@ depends_on:
 - US-EMDB-68-6
 id: US-EMDB-69-6
 points: 2
-status: in-progress
+status: done
 story_id: US-EMDB-69
 tags: []
 title: Implement write-path hash computation

@@ -1,10 +1,10 @@
 ---
-assignee: null
+assignee: claude
 created: '2026-07-01'
 depends_on: []
 id: US-EMDB-69-3
 points: 1
-status: todo
+status: done
 story_id: US-EMDB-69
 tags: []
 title: 'Test: Full-tree verification mode walks all nodes'

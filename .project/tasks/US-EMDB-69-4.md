@@ -1,10 +1,10 @@
 ---
-assignee: null
+assignee: claude
 created: '2026-07-01'
 depends_on: []
 id: US-EMDB-69-4
 points: 1
-status: todo
+status: done
 story_id: US-EMDB-69
 tags: []
 title: 'Test: Any single bit flip in any node fails the affected lookups with the

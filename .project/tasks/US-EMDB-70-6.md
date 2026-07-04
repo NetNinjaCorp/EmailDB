@@ -1,12 +1,12 @@
 ---
-assignee: null
+assignee: claude
 created: '2026-07-02'
 depends_on:
 - US-EMDB-70-5
 - US-EMDB-68-6
 id: US-EMDB-70-6
 points: 3
-status: todo
+status: done
 story_id: US-EMDB-70
 tags: []
 title: Implement WAL-buffered batch flush

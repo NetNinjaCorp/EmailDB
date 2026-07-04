@@ -732,7 +732,7 @@ entries:
 - id: US-EMDB-69
   title: Merkle integrity verification (path + full)
   type: story
-  status: ready
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-13
@@ -748,7 +748,7 @@ entries:
 - id: US-EMDB-70
   title: IndexRoot and WAL-buffered flush
   type: story
-  status: ready
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-13
@@ -4445,7 +4445,7 @@ entries:
   title: 'Test: Every traversed node verified against its parent ChildHash and root
     against IndexRoot.RootHash'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-69
   epic_id: null
@@ -4453,7 +4453,7 @@ entries:
 - id: US-EMDB-69-2
   title: 'Test: Verify-on-cache-load allows cached nodes to skip re-hashing'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-69
   epic_id: null
@@ -4461,7 +4461,7 @@ entries:
 - id: US-EMDB-69-3
   title: 'Test: Full-tree verification mode walks all nodes'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-69
   epic_id: null
@@ -4470,7 +4470,7 @@ entries:
   title: 'Test: Any single bit flip in any node fails the affected lookups with the
     contracted error'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-69
   epic_id: null
@@ -4478,7 +4478,7 @@ entries:
 - id: US-EMDB-69-5
   title: 'Test: Mismatch falls back per corruption contract'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-69
   epic_id: null
@@ -4486,7 +4486,7 @@ entries:
 - id: US-EMDB-69-6
   title: Implement write-path hash computation
   type: task
-  status: in-progress
+  status: done
   points: 2
   story_id: US-EMDB-69
   epic_id: null
@@ -4494,7 +4494,7 @@ entries:
 - id: US-EMDB-69-7
   title: Implement read-path verification with verify-on-cache-load
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-69
   epic_id: null
@@ -4502,7 +4502,7 @@ entries:
 - id: US-EMDB-69-8
   title: Implement full-tree verification mode
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-69
   epic_id: null
@@ -4554,7 +4554,7 @@ entries:
   title: 'Test: Flush triggers on count threshold and time threshold and explicit
     call'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-70
   epic_id: null
@@ -4562,7 +4562,7 @@ entries:
 - id: US-EMDB-70-2
   title: 'Test: Buffered entries sorted by key and applied in one COW pass'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-70
   epic_id: null
@@ -4570,7 +4570,7 @@ entries:
 - id: US-EMDB-70-3
   title: 'Test: IndexRoot Sequence increments monotonically per index'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-70
   epic_id: null
@@ -4579,7 +4579,7 @@ entries:
   title: 'Test: Failed node or root write leaves previous root authoritative with
     orphans reclaimed later'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-70
   epic_id: null
@@ -4587,7 +4587,7 @@ entries:
 - id: US-EMDB-70-5
   title: Implement IndexRoot serialization
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-70
   epic_id: null
@@ -4595,7 +4595,7 @@ entries:
 - id: US-EMDB-70-6
   title: Implement WAL-buffered batch flush
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-70
   epic_id: null
@@ -6155,7 +6155,7 @@ entries:
   epic_id: null
   tags: []
 total_points: 1204
-completed_points: 643
+completed_points: 677
 story_count: 103
 task_count: 628
 epic_count: 22

@@ -1,11 +1,11 @@
 ---
-assignee: null
+assignee: claude
 created: '2026-07-02'
 depends_on:
 - US-EMDB-67-5
 id: US-EMDB-70-5
 points: 2
-status: todo
+status: done
 story_id: US-EMDB-70
 tags: []
 title: Implement IndexRoot serialization
