@@ -408,26 +408,26 @@
 | [US-EMDB-66-5](tasks/US-EMDB-66-5.md) | Implement runtime ULID-to-offset map | ✅ done | 1 |  | claude | — | [US-EMDB-66](stories/US-EMDB-66.md) |
 | [US-EMDB-66-6](tasks/US-EMDB-66-6.md) | Implement forward scan with resynchronization | ✅ done | 3 |  | claude | US-EMDB-66-5 | [US-EMDB-66](stories/US-EMDB-66.md) |
 | [US-EMDB-66-7](tasks/US-EMDB-66-7.md) | Implement backward EOF footer walk | ✅ done | 2 |  | claude | — | [US-EMDB-66](stories/US-EMDB-66.md) |
-| [US-EMDB-67-1](tasks/US-EMDB-67-1.md) | Test: Leaf and internal nodes round-trip for IndexKinds 0/1/2 layouts | ⚪ todo | — |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
-| [US-EMDB-67-2](tasks/US-EMDB-67-2.md) | Test: Deserialization bounds-checks EntryCount against payload size and rejects overflow | ⚪ todo | — |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
-| [US-EMDB-67-3](tasks/US-EMDB-67-3.md) | Test: Capacities match spec: 83-entry primary leaves with 50-way internals and 124-entry location leaves with 71-way ... | ⚪ todo | — |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
-| [US-EMDB-67-4](tasks/US-EMDB-67-4.md) | Test: NodeContentHash computed over full serialized payload | ⚪ todo | — |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
-| [US-EMDB-67-5](tasks/US-EMDB-67-5.md) | Implement generic node models and serializers | ⚪ todo | 3 |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
-| [US-EMDB-67-6](tasks/US-EMDB-67-6.md) | Implement bounds-checked deserializers and capacity constants | ⚪ todo | 2 |  | — | US-EMDB-67-5 | [US-EMDB-67](stories/US-EMDB-67.md) |
-| [US-EMDB-68-1](tasks/US-EMDB-68-1.md) | Test: Insert splits propagate upward and grow height at root split | ⚪ todo | — |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
-| [US-EMDB-68-2](tasks/US-EMDB-68-2.md) | Test: Delete rebalances leaves and internal nodes and collapses single-child roots | ⚪ todo | — |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
-| [US-EMDB-68-3](tasks/US-EMDB-68-3.md) | Test: Range scans return sorted results across leaf boundaries via parent backtracking | ⚪ todo | — |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
-| [US-EMDB-68-4](tasks/US-EMDB-68-4.md) | Test: Old tree roots remain fully readable after mutations | ⚪ todo | — |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
-| [US-EMDB-68-5](tasks/US-EMDB-68-5.md) | Test: Randomized insert/delete stress against a reference model at 1M+ entries | ⚪ todo | — |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
-| [US-EMDB-68-6](tasks/US-EMDB-68-6.md) | Implement COW insert with splits | ⚪ todo | 5 |  | — | — | [US-EMDB-68](stories/US-EMDB-68.md) |
-| [US-EMDB-68-7](tasks/US-EMDB-68-7.md) | Implement delete with full rebalancing | ⚪ todo | 5 |  | — | US-EMDB-68-6 | [US-EMDB-68](stories/US-EMDB-68.md) |
-| [US-EMDB-68-8](tasks/US-EMDB-68-8.md) | Implement range scan with parent backtracking | ⚪ todo | 3 |  | — | US-EMDB-68-6 | [US-EMDB-68](stories/US-EMDB-68.md) |
-| [US-EMDB-69-1](tasks/US-EMDB-69-1.md) | Test: Every traversed node verified against its parent ChildHash and root against IndexRoot.RootHash | ⚪ todo | — |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
-| [US-EMDB-69-2](tasks/US-EMDB-69-2.md) | Test: Verify-on-cache-load allows cached nodes to skip re-hashing | ⚪ todo | — |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
-| [US-EMDB-69-3](tasks/US-EMDB-69-3.md) | Test: Full-tree verification mode walks all nodes | ⚪ todo | — |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
-| [US-EMDB-69-4](tasks/US-EMDB-69-4.md) | Test: Any single bit flip in any node fails the affected lookups with the contracted error | ⚪ todo | — |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
-| [US-EMDB-69-5](tasks/US-EMDB-69-5.md) | Test: Mismatch falls back per corruption contract | ⚪ todo | — |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
-| [US-EMDB-69-6](tasks/US-EMDB-69-6.md) | Implement write-path hash computation | ⚪ todo | 2 |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-67-1](tasks/US-EMDB-67-1.md) | Test: Leaf and internal nodes round-trip for IndexKinds 0/1/2 layouts | ✅ done | 1 |  | claude | — | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-67-2](tasks/US-EMDB-67-2.md) | Test: Deserialization bounds-checks EntryCount against payload size and rejects overflow | ✅ done | 1 |  | claude | — | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-67-3](tasks/US-EMDB-67-3.md) | Test: Capacities match spec: 83-entry primary leaves with 50-way internals and 124-entry location leaves with 71-way ... | ✅ done | 1 |  | claude | — | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-67-4](tasks/US-EMDB-67-4.md) | Test: NodeContentHash computed over full serialized payload | ✅ done | 1 |  | claude | — | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-67-5](tasks/US-EMDB-67-5.md) | Implement generic node models and serializers | ✅ done | 3 |  | claude | — | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-67-6](tasks/US-EMDB-67-6.md) | Implement bounds-checked deserializers and capacity constants | ✅ done | 2 |  | claude | US-EMDB-67-5 | [US-EMDB-67](stories/US-EMDB-67.md) |
+| [US-EMDB-68-1](tasks/US-EMDB-68-1.md) | Test: Insert splits propagate upward and grow height at root split | ✅ done | 1 |  | claude | — | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-2](tasks/US-EMDB-68-2.md) | Test: Delete rebalances leaves and internal nodes and collapses single-child roots | ✅ done | 1 |  | claude | — | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-3](tasks/US-EMDB-68-3.md) | Test: Range scans return sorted results across leaf boundaries via parent backtracking | ✅ done | 1 |  | claude | — | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-4](tasks/US-EMDB-68-4.md) | Test: Old tree roots remain fully readable after mutations | ✅ done | 1 |  | claude | — | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-5](tasks/US-EMDB-68-5.md) | Test: Randomized insert/delete stress against a reference model at 1M+ entries | ✅ done | 2 |  | claude | — | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-6](tasks/US-EMDB-68-6.md) | Implement COW insert with splits | ✅ done | 5 |  | claude | US-EMDB-67-5, US-EMDB-67-6 | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-7](tasks/US-EMDB-68-7.md) | Implement delete with full rebalancing | ✅ done | 5 |  | claude | US-EMDB-68-6 | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-68-8](tasks/US-EMDB-68-8.md) | Implement range scan with parent backtracking | ✅ done | 3 |  | claude | US-EMDB-68-6 | [US-EMDB-68](stories/US-EMDB-68.md) |
+| [US-EMDB-69-1](tasks/US-EMDB-69-1.md) | Test: Every traversed node verified against its parent ChildHash and root against IndexRoot.RootHash | ⚪ todo | 1 |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-2](tasks/US-EMDB-69-2.md) | Test: Verify-on-cache-load allows cached nodes to skip re-hashing | ⚪ todo | 1 |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-3](tasks/US-EMDB-69-3.md) | Test: Full-tree verification mode walks all nodes | ⚪ todo | 1 |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-4](tasks/US-EMDB-69-4.md) | Test: Any single bit flip in any node fails the affected lookups with the contracted error | ⚪ todo | 1 |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-5](tasks/US-EMDB-69-5.md) | Test: Mismatch falls back per corruption contract | ⚪ todo | 1 |  | — | — | [US-EMDB-69](stories/US-EMDB-69.md) |
+| [US-EMDB-69-6](tasks/US-EMDB-69-6.md) | Implement write-path hash computation | 🏃 in-progress | 2 |  | claude | US-EMDB-68-6 | [US-EMDB-69](stories/US-EMDB-69.md) |
 | [US-EMDB-69-7](tasks/US-EMDB-69-7.md) | Implement read-path verification with verify-on-cache-load | ⚪ todo | 3 |  | — | US-EMDB-69-6 | [US-EMDB-69](stories/US-EMDB-69.md) |
 | [US-EMDB-69-8](tasks/US-EMDB-69-8.md) | Implement full-tree verification mode | ⚪ todo | 2 |  | — | US-EMDB-69-7 | [US-EMDB-69](stories/US-EMDB-69.md) |
 | [US-EMDB-7-1](tasks/US-EMDB-7-1.md) | Test: FileStreamProvider implements IFileStreamProvider and routes through BlockManager | ⚪ todo | — |  | — | — | [US-EMDB-7](stories/US-EMDB-7.md) |
@@ -435,12 +435,12 @@
 | [US-EMDB-7-3](tasks/US-EMDB-7-3.md) | Test: WriteAheadLog/Provider implements IWriteAheadLog and routes through block storage | ⚪ todo | — |  | — | — | [US-EMDB-7](stories/US-EMDB-7.md) |
 | [US-EMDB-7-4](tasks/US-EMDB-7-4.md) | Test: ZoneTreeFactory creates properly configured ZoneTree instances | ⚪ todo | — |  | — | — | [US-EMDB-7](stories/US-EMDB-7.md) |
 | [US-EMDB-7-5](tasks/US-EMDB-7-5.md) | Test: ZoneTree can perform basic upsert/get/delete through the EMDB file | ⚪ todo | — |  | — | — | [US-EMDB-7](stories/US-EMDB-7.md) |
-| [US-EMDB-70-1](tasks/US-EMDB-70-1.md) | Test: Flush triggers on count threshold and time threshold and explicit call | ⚪ todo | — |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
-| [US-EMDB-70-2](tasks/US-EMDB-70-2.md) | Test: Buffered entries sorted by key and applied in one COW pass | ⚪ todo | — |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
-| [US-EMDB-70-3](tasks/US-EMDB-70-3.md) | Test: IndexRoot Sequence increments monotonically per index | ⚪ todo | — |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
-| [US-EMDB-70-4](tasks/US-EMDB-70-4.md) | Test: Failed node or root write leaves previous root authoritative with orphans reclaimed later | ⚪ todo | — |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
-| [US-EMDB-70-5](tasks/US-EMDB-70-5.md) | Implement IndexRoot serialization | ⚪ todo | 2 |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
-| [US-EMDB-70-6](tasks/US-EMDB-70-6.md) | Implement WAL-buffered batch flush | ⚪ todo | 3 |  | — | US-EMDB-70-5 | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-70-1](tasks/US-EMDB-70-1.md) | Test: Flush triggers on count threshold and time threshold and explicit call | ⚪ todo | 1 |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-70-2](tasks/US-EMDB-70-2.md) | Test: Buffered entries sorted by key and applied in one COW pass | ⚪ todo | 1 |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-70-3](tasks/US-EMDB-70-3.md) | Test: IndexRoot Sequence increments monotonically per index | ⚪ todo | 1 |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-70-4](tasks/US-EMDB-70-4.md) | Test: Failed node or root write leaves previous root authoritative with orphans reclaimed later | ⚪ todo | 1 |  | — | — | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-70-5](tasks/US-EMDB-70-5.md) | Implement IndexRoot serialization | ⚪ todo | 2 |  | — | US-EMDB-67-5 | [US-EMDB-70](stories/US-EMDB-70.md) |
+| [US-EMDB-70-6](tasks/US-EMDB-70-6.md) | Implement WAL-buffered batch flush | ⚪ todo | 3 |  | — | US-EMDB-70-5, US-EMDB-68-6 | [US-EMDB-70](stories/US-EMDB-70.md) |
 | [US-EMDB-71-1](tasks/US-EMDB-71-1.md) | Test: Entries for blocks since last checkpoint batch-insert at checkpoint time | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
 | [US-EMDB-71-2](tasks/US-EMDB-71-2.md) | Test: Internal nodes use ChildOffset not ChildBlockId | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
 | [US-EMDB-71-3](tasks/US-EMDB-71-3.md) | Test: Resolution precedence is runtime map then location index then full scan | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |

@@ -716,7 +716,7 @@ entries:
 - id: US-EMDB-67
   title: Generic node serialization (declared key/value sizes)
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-13
@@ -724,7 +724,7 @@ entries:
 - id: US-EMDB-68
   title: COW insert, delete, and range scan
   type: story
-  status: backlog
+  status: done
   points: 13
   story_id: null
   epic_id: EPIC-EMDB-13
@@ -732,7 +732,7 @@ entries:
 - id: US-EMDB-69
   title: Merkle integrity verification (path + full)
   type: story
-  status: backlog
+  status: ready
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-13
@@ -748,7 +748,7 @@ entries:
 - id: US-EMDB-70
   title: IndexRoot and WAL-buffered flush
   type: story
-  status: backlog
+  status: ready
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-13
@@ -4328,8 +4328,8 @@ entries:
 - id: US-EMDB-67-1
   title: 'Test: Leaf and internal nodes round-trip for IndexKinds 0/1/2 layouts'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-67
   epic_id: null
   tags: []
@@ -4337,8 +4337,8 @@ entries:
   title: 'Test: Deserialization bounds-checks EntryCount against payload size and
     rejects overflow'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-67
   epic_id: null
   tags: []
@@ -4346,23 +4346,23 @@ entries:
   title: 'Test: Capacities match spec: 83-entry primary leaves with 50-way internals
     and 124-entry location leaves with 71-way ...'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-67
   epic_id: null
   tags: []
 - id: US-EMDB-67-4
   title: 'Test: NodeContentHash computed over full serialized payload'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-67
   epic_id: null
   tags: []
 - id: US-EMDB-67-5
   title: Implement generic node models and serializers
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-67
   epic_id: null
@@ -4370,7 +4370,7 @@ entries:
 - id: US-EMDB-67-6
   title: Implement bounds-checked deserializers and capacity constants
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-67
   epic_id: null
@@ -4378,8 +4378,8 @@ entries:
 - id: US-EMDB-68-1
   title: 'Test: Insert splits propagate upward and grow height at root split'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-68
   epic_id: null
   tags: []
@@ -4387,8 +4387,8 @@ entries:
   title: 'Test: Delete rebalances leaves and internal nodes and collapses single-child
     roots'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-68
   epic_id: null
   tags: []
@@ -4396,31 +4396,31 @@ entries:
   title: 'Test: Range scans return sorted results across leaf boundaries via parent
     backtracking'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-68
   epic_id: null
   tags: []
 - id: US-EMDB-68-4
   title: 'Test: Old tree roots remain fully readable after mutations'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-68
   epic_id: null
   tags: []
 - id: US-EMDB-68-5
   title: 'Test: Randomized insert/delete stress against a reference model at 1M+ entries'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 2
   story_id: US-EMDB-68
   epic_id: null
   tags: []
 - id: US-EMDB-68-6
   title: Implement COW insert with splits
   type: task
-  status: todo
+  status: done
   points: 5
   story_id: US-EMDB-68
   epic_id: null
@@ -4428,7 +4428,7 @@ entries:
 - id: US-EMDB-68-7
   title: Implement delete with full rebalancing
   type: task
-  status: todo
+  status: done
   points: 5
   story_id: US-EMDB-68
   epic_id: null
@@ -4436,7 +4436,7 @@ entries:
 - id: US-EMDB-68-8
   title: Implement range scan with parent backtracking
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-68
   epic_id: null
@@ -4446,7 +4446,7 @@ entries:
     against IndexRoot.RootHash'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-69
   epic_id: null
   tags: []
@@ -4454,7 +4454,7 @@ entries:
   title: 'Test: Verify-on-cache-load allows cached nodes to skip re-hashing'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-69
   epic_id: null
   tags: []
@@ -4462,7 +4462,7 @@ entries:
   title: 'Test: Full-tree verification mode walks all nodes'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-69
   epic_id: null
   tags: []
@@ -4471,7 +4471,7 @@ entries:
     contracted error'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-69
   epic_id: null
   tags: []
@@ -4479,14 +4479,14 @@ entries:
   title: 'Test: Mismatch falls back per corruption contract'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-69
   epic_id: null
   tags: []
 - id: US-EMDB-69-6
   title: Implement write-path hash computation
   type: task
-  status: todo
+  status: in-progress
   points: 2
   story_id: US-EMDB-69
   epic_id: null
@@ -4555,7 +4555,7 @@ entries:
     call'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-70
   epic_id: null
   tags: []
@@ -4563,7 +4563,7 @@ entries:
   title: 'Test: Buffered entries sorted by key and applied in one COW pass'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-70
   epic_id: null
   tags: []
@@ -4571,7 +4571,7 @@ entries:
   title: 'Test: IndexRoot Sequence increments monotonically per index'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-70
   epic_id: null
   tags: []
@@ -4580,7 +4580,7 @@ entries:
     orphans reclaimed later'
   type: task
   status: todo
-  points: null
+  points: 1
   story_id: US-EMDB-70
   epic_id: null
   tags: []
@@ -6154,8 +6154,8 @@ entries:
   story_id: US-EMDB-99
   epic_id: null
   tags: []
-total_points: 1185
-completed_points: 597
+total_points: 1204
+completed_points: 643
 story_count: 103
 task_count: 628
 epic_count: 22

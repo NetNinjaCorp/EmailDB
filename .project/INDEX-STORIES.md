@@ -69,11 +69,11 @@
 | [US-EMDB-64](stories/US-EMDB-64.md) | v3 block writer and reader (ULID, checksums, length sanity) | ✅ done | must | 8 | v3, blocks, format | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 6 | 10 |
 | [US-EMDB-65](stories/US-EMDB-65.md) | Single-writer lock and fsync discipline | ✅ done | must | 5 | v3, concurrency, durability | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 4 | 7 |
 | [US-EMDB-66](stories/US-EMDB-66.md) | Runtime block map and scan fallback | ✅ done | must | 5 | v3, recovery, scan | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | 4 | 7 |
-| [US-EMDB-67](stories/US-EMDB-67.md) | Generic node serialization (declared key/value sizes) | 📋 backlog | must | 5 | v3, btree, serialization | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 6 |
-| [US-EMDB-68](stories/US-EMDB-68.md) | COW insert, delete, and range scan | 📋 backlog | must | 13 | v3, btree, cow | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 5 | 8 |
-| [US-EMDB-69](stories/US-EMDB-69.md) | Merkle integrity verification (path + full) | 📋 backlog | must | 8 | v3, btree, integrity, merkle | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 5 | 8 |
+| [US-EMDB-67](stories/US-EMDB-67.md) | Generic node serialization (declared key/value sizes) | ✅ done | must | 5 | v3, btree, serialization | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 6 |
+| [US-EMDB-68](stories/US-EMDB-68.md) | COW insert, delete, and range scan | ✅ done | must | 13 | v3, btree, cow | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 5 | 8 |
+| [US-EMDB-69](stories/US-EMDB-69.md) | Merkle integrity verification (path + full) | 🟢 ready | must | 8 | v3, btree, integrity, merkle | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 5 | 8 |
 | [US-EMDB-7](stories/US-EMDB-7.md) | Implement ZoneTree storage provider adapters | 📦 archived | must | 8 |  | [EPIC-EMDB-3](epics/EPIC-EMDB-3.md) | 5 | 5 |
-| [US-EMDB-70](stories/US-EMDB-70.md) | IndexRoot and WAL-buffered flush | 📋 backlog | must | 5 | v3, btree, wal | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 6 |
+| [US-EMDB-70](stories/US-EMDB-70.md) | IndexRoot and WAL-buffered flush | 🟢 ready | must | 5 | v3, btree, wal | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 6 |
 | [US-EMDB-71](stories/US-EMDB-71.md) | BlockLocationIndex (indirection table) | 📋 backlog | must | 8 | v3, location-index, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 5 | 8 |
 | [US-EMDB-72](stories/US-EMDB-72.md) | Checkpoint writer and reader | 📋 backlog | must | 5 | v3, checkpoint, commit | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 6 |
 | [US-EMDB-73](stories/US-EMDB-73.md) | WAL blocks with checkpoint replay fence | 📋 backlog | must | 5 | v3, wal, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 6 |

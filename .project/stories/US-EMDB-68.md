@@ -11,13 +11,13 @@ epic_id: EPIC-EMDB-13
 id: US-EMDB-68
 points: 13
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - btree
 - cow
 title: COW insert, delete, and range scan
-updated: '2026-07-01'
+updated: '2026-07-04'
 ---
 
 As the index engine, I want copy-on-write mutations with full rebalancing so that the tree stays balanced and old roots remain consistent snapshots (docs/BTree_Index.md Sections 4-5). Root-to-leaf path rewrite, splits with promotion, leaf AND internal underflow handling, root collapse, parent-backtrack range scans (no sibling pointers).

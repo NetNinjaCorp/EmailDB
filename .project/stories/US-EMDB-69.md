@@ -11,14 +11,14 @@ epic_id: EPIC-EMDB-13
 id: US-EMDB-69
 points: 8
 priority: must
-status: backlog
+status: ready
 tags:
 - v3
 - btree
 - integrity
 - merkle
 title: Merkle integrity verification (path + full)
-updated: '2026-07-01'
+updated: '2026-07-04'
 ---
 
 As the index engine, I want mandatory read-time Merkle verification so that index tampering and corruption are detected on the path traversed (spec Section 6, docs/BTree_Index.md Section 5). Write-only hashing is non-conforming.

@@ -9,7 +9,7 @@ status: todo
 story_id: US-EMDB-69
 tags: []
 title: Implement full-tree verification mode
-updated: '2026-07-02'
+updated: '2026-07-04'
 ---
 
 Walk the entire tree verifying all hashes; report the first divergent node path; used by integrity audit and post-recovery checks.

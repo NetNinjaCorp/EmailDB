@@ -11,13 +11,13 @@ epic_id: EPIC-EMDB-13
 id: US-EMDB-70
 points: 5
 priority: must
-status: backlog
+status: ready
 tags:
 - v3
 - btree
 - wal
 title: IndexRoot and WAL-buffered flush
-updated: '2026-07-01'
+updated: '2026-07-04'
 ---
 
 As the index engine, I want IndexRoot descriptors (68 B: IndexKind, RootBlockId, EntryCount, TreeHeight, RootHash, Sequence) and batched WAL-buffered flushes so that writes amortize and a failed flush is harmless (docs/BTree_Index.md Sections 4, 6).

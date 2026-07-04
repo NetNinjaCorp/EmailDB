@@ -11,13 +11,13 @@ epic_id: EPIC-EMDB-13
 id: US-EMDB-67
 points: 5
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - btree
 - serialization
 title: Generic node serialization (declared key/value sizes)
-updated: '2026-07-01'
+updated: '2026-07-04'
 ---
 
 As the index engine, I want one node format with a 12-byte header declaring IndexKind/KeySize/ValueSize (spec Section 6) so that every index shares block types 4/5 and future indexes need no format change.
