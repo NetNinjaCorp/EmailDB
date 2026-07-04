@@ -206,6 +206,39 @@ public class UlidGeneratorTests
         }
     }
 
+    [Fact]
+    public void ClockRegression_MultiStepJitteryClock_StaysStrictlyMonotonic()
+    {
+        // Deterministic random walk: the clock repeatedly jumps backward and forward
+        // by varying amounts (multi-step regression), never settling.
+        var rng = new Random(12345);
+        long clock = 1_000_000;
+        var generator = new UlidGenerator(() => clock);
+
+        var previous = generator.Next();
+        long highWater = ReadTimestamp(previous);
+
+        for (int i = 0; i < 5_000; i++)
+        {
+            // ~half the steps regress the clock, by anything from 1 ms to 10 s.
+            clock += rng.Next(0, 2) == 0
+                ? -rng.Next(1, 10_000)
+                : rng.Next(0, 100);
+            clock = Math.Max(clock, 0); // keep the simulated clock in the valid range
+
+            var current = generator.Next();
+            Assert.True(CompareBytes(current, previous) > 0,
+                $"ULID {i} regressed under a jittery clock (clock={clock}).");
+
+            // Timestamp field must never move backward, regardless of the clock.
+            long ts = ReadTimestamp(current);
+            Assert.True(ts >= highWater,
+                $"Timestamp field regressed at step {i}: {ts} < {highWater}.");
+            highWater = ts;
+            previous = current;
+        }
+    }
+
     // ---- Randomness sanity -------------------------------------------------------
 
     [Fact]
