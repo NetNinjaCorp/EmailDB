@@ -13,7 +13,7 @@ epic_id: EPIC-EMDB-12
 id: US-EMDB-64
 points: 8
 priority: must
-status: ready
+status: done
 tags:
 - v3
 - blocks

@@ -384,30 +384,30 @@
 | [US-EMDB-63-6](tasks/US-EMDB-63-6.md) | Implement superblock slot serialization | ✅ done | 2 |  | claude | — | [US-EMDB-63](stories/US-EMDB-63.md) |
 | [US-EMDB-63-7](tasks/US-EMDB-63-7.md) | Implement dual-slot write protocol | ✅ done | 2 |  | claude | US-EMDB-63-6 | [US-EMDB-63](stories/US-EMDB-63.md) |
 | [US-EMDB-63-8](tasks/US-EMDB-63-8.md) | Implement open validation, feature flags, and CleanShutdown transitions | ✅ done | 3 |  | claude | US-EMDB-63-7 | [US-EMDB-63](stories/US-EMDB-63.md) |
-| [US-EMDB-64-1](tasks/US-EMDB-64-1.md) | Test: Round-trip write/read for every block type and encoding | ⚪ todo | 1 |  | — | US-EMDB-64-10 | [US-EMDB-64](stories/US-EMDB-64.md) |
-| [US-EMDB-64-10](tasks/US-EMDB-64-10.md) | Implement compression pipeline | ⚪ todo | 2 |  | — | US-EMDB-64-9 | [US-EMDB-64](stories/US-EMDB-64.md) |
-| [US-EMDB-64-2](tasks/US-EMDB-64-2.md) | Test: Header checksum verified before trusting any header field and PayloadLength validated against MaxPayloadLength ... | ⚪ todo | 1 |  | — | US-EMDB-64-9 | [US-EMDB-64](stories/US-EMDB-64.md) |
-| [US-EMDB-64-3](tasks/US-EMDB-64-3.md) | Test: Payload checksum covers on-disk bytes and empty payload stores 16 zero bytes | ⚪ todo | 1 |  | — | US-EMDB-64-9 | [US-EMDB-64](stories/US-EMDB-64.md) |
-| [US-EMDB-64-4](tasks/US-EMDB-64-4.md) | Test: Footer TotalBlockLength supports backward walk from EOF | ⚪ todo | 1 |  | — | US-EMDB-64-9 | [US-EMDB-64](stories/US-EMDB-64.md) |
-| [US-EMDB-64-5](tasks/US-EMDB-64-5.md) | Test: ULID generator stays monotonic under simulated clock regression | ⚪ todo | 1 |  | — | US-EMDB-64-7 | [US-EMDB-64](stories/US-EMDB-64.md) |
-| [US-EMDB-64-6](tasks/US-EMDB-64-6.md) | Test: Compression byte round-trips None/LZ4/Zstd with decompression bomb guard | ⚪ todo | 1 |  | — | US-EMDB-64-10 | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-1](tasks/US-EMDB-64-1.md) | Test: Round-trip write/read for every block type and encoding | ✅ done | 1 |  | claude | US-EMDB-64-10 | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-10](tasks/US-EMDB-64-10.md) | Implement compression pipeline | ✅ done | 2 |  | claude | US-EMDB-64-9 | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-2](tasks/US-EMDB-64-2.md) | Test: Header checksum verified before trusting any header field and PayloadLength validated against MaxPayloadLength ... | ✅ done | 1 |  | claude | US-EMDB-64-9 | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-3](tasks/US-EMDB-64-3.md) | Test: Payload checksum covers on-disk bytes and empty payload stores 16 zero bytes | ✅ done | 1 |  | claude | US-EMDB-64-9 | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-4](tasks/US-EMDB-64-4.md) | Test: Footer TotalBlockLength supports backward walk from EOF | ✅ done | 1 |  | claude | US-EMDB-64-9 | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-5](tasks/US-EMDB-64-5.md) | Test: ULID generator stays monotonic under simulated clock regression | ✅ done | 1 |  | claude | US-EMDB-64-7 | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-64-6](tasks/US-EMDB-64-6.md) | Test: Compression byte round-trips None/LZ4/Zstd with decompression bomb guard | ✅ done | 1 |  | claude | US-EMDB-64-10 | [US-EMDB-64](stories/US-EMDB-64.md) |
 | [US-EMDB-64-7](tasks/US-EMDB-64-7.md) | Implement monotonic ULID generator | ✅ done | 2 |  | claude | — | [US-EMDB-64](stories/US-EMDB-64.md) |
 | [US-EMDB-64-8](tasks/US-EMDB-64-8.md) | Implement v3 header/footer serialization and checksums | ✅ done | 3 |  | claude | US-EMDB-64-7 | [US-EMDB-64](stories/US-EMDB-64.md) |
-| [US-EMDB-64-9](tasks/US-EMDB-64-9.md) | Implement append writer and verifying reader | ⚪ todo | 3 |  | — | US-EMDB-64-8 | [US-EMDB-64](stories/US-EMDB-64.md) |
-| [US-EMDB-65-1](tasks/US-EMDB-65-1.md) | Test: Second writer fails fast with a clear error while readers open shared | ⚪ todo | 1 |  | — | US-EMDB-65-5 | [US-EMDB-65](stories/US-EMDB-65.md) |
-| [US-EMDB-65-2](tasks/US-EMDB-65-2.md) | Test: fsync means flush-to-disk not stream flush | ⚪ todo | 1 |  | — | US-EMDB-65-6 | [US-EMDB-65](stories/US-EMDB-65.md) |
-| [US-EMDB-65-3](tasks/US-EMDB-65-3.md) | Test: fsync failure poisons the handle and forces recovery on reopen | ⚪ todo | 1 |  | — | US-EMDB-65-6 | [US-EMDB-65](stories/US-EMDB-65.md) |
-| [US-EMDB-65-4](tasks/US-EMDB-65-4.md) | Test: Directory fsync on file create and rename | ⚪ todo | 1 |  | — | US-EMDB-65-7 | [US-EMDB-65](stories/US-EMDB-65.md) |
-| [US-EMDB-65-5](tasks/US-EMDB-65-5.md) | Implement single-writer OS lock | ⚪ todo | 2 |  | — | — | [US-EMDB-65](stories/US-EMDB-65.md) |
-| [US-EMDB-65-6](tasks/US-EMDB-65-6.md) | Implement fsync wrapper with fatal-poison semantics | ⚪ todo | 2 |  | — | — | [US-EMDB-65](stories/US-EMDB-65.md) |
-| [US-EMDB-65-7](tasks/US-EMDB-65-7.md) | Implement directory fsync helpers | ⚪ todo | 1 |  | — | — | [US-EMDB-65](stories/US-EMDB-65.md) |
-| [US-EMDB-66-1](tasks/US-EMDB-66-1.md) | Test: Runtime map tracks all blocks appended this session | ⚪ todo | 1 |  | — | US-EMDB-66-5 | [US-EMDB-66](stories/US-EMDB-66.md) |
-| [US-EMDB-66-2](tasks/US-EMDB-66-2.md) | Test: Forward scan resynchronizes past a corrupt block by hunting the next valid header magic and logs the damaged range | ⚪ todo | 1 |  | — | US-EMDB-66-6 | [US-EMDB-66](stories/US-EMDB-66.md) |
-| [US-EMDB-66-3](tasks/US-EMDB-66-3.md) | Test: Duplicate BlockIds resolve last-position-wins | ⚪ todo | 1 |  | — | US-EMDB-66-5 | [US-EMDB-66](stories/US-EMDB-66.md) |
-| [US-EMDB-66-4](tasks/US-EMDB-66-4.md) | Test: Backward walk from EOF via footers finds the last valid block after a torn tail | ⚪ todo | 1 |  | — | US-EMDB-66-7 | [US-EMDB-66](stories/US-EMDB-66.md) |
-| [US-EMDB-66-5](tasks/US-EMDB-66-5.md) | Implement runtime ULID-to-offset map | ⚪ todo | 1 |  | — | — | [US-EMDB-66](stories/US-EMDB-66.md) |
-| [US-EMDB-66-6](tasks/US-EMDB-66-6.md) | Implement forward scan with resynchronization | ⚪ todo | 3 |  | — | US-EMDB-66-5 | [US-EMDB-66](stories/US-EMDB-66.md) |
-| [US-EMDB-66-7](tasks/US-EMDB-66-7.md) | Implement backward EOF footer walk | ⚪ todo | 2 |  | — | — | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-64-9](tasks/US-EMDB-64-9.md) | Implement append writer and verifying reader | ✅ done | 3 |  | claude | US-EMDB-64-8 | [US-EMDB-64](stories/US-EMDB-64.md) |
+| [US-EMDB-65-1](tasks/US-EMDB-65-1.md) | Test: Second writer fails fast with a clear error while readers open shared | ✅ done | 1 |  | claude | US-EMDB-65-5 | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-2](tasks/US-EMDB-65-2.md) | Test: fsync means flush-to-disk not stream flush | ✅ done | 1 |  | claude | US-EMDB-65-6 | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-3](tasks/US-EMDB-65-3.md) | Test: fsync failure poisons the handle and forces recovery on reopen | ✅ done | 1 |  | claude | US-EMDB-65-6 | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-4](tasks/US-EMDB-65-4.md) | Test: Directory fsync on file create and rename | ✅ done | 1 |  | claude | US-EMDB-65-7 | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-5](tasks/US-EMDB-65-5.md) | Implement single-writer OS lock | ✅ done | 2 |  | claude | — | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-6](tasks/US-EMDB-65-6.md) | Implement fsync wrapper with fatal-poison semantics | ✅ done | 2 |  | claude | — | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-65-7](tasks/US-EMDB-65-7.md) | Implement directory fsync helpers | ✅ done | 1 |  | claude | — | [US-EMDB-65](stories/US-EMDB-65.md) |
+| [US-EMDB-66-1](tasks/US-EMDB-66-1.md) | Test: Runtime map tracks all blocks appended this session | ✅ done | 1 |  | claude | US-EMDB-66-5 | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-2](tasks/US-EMDB-66-2.md) | Test: Forward scan resynchronizes past a corrupt block by hunting the next valid header magic and logs the damaged range | ✅ done | 1 |  | claude | US-EMDB-66-6 | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-3](tasks/US-EMDB-66-3.md) | Test: Duplicate BlockIds resolve last-position-wins | ✅ done | 1 |  | claude | US-EMDB-66-5 | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-4](tasks/US-EMDB-66-4.md) | Test: Backward walk from EOF via footers finds the last valid block after a torn tail | ✅ done | 1 |  | claude | US-EMDB-66-7 | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-5](tasks/US-EMDB-66-5.md) | Implement runtime ULID-to-offset map | ✅ done | 1 |  | claude | — | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-6](tasks/US-EMDB-66-6.md) | Implement forward scan with resynchronization | ✅ done | 3 |  | claude | US-EMDB-66-5 | [US-EMDB-66](stories/US-EMDB-66.md) |
+| [US-EMDB-66-7](tasks/US-EMDB-66-7.md) | Implement backward EOF footer walk | ✅ done | 2 |  | claude | — | [US-EMDB-66](stories/US-EMDB-66.md) |
 | [US-EMDB-67-1](tasks/US-EMDB-67-1.md) | Test: Leaf and internal nodes round-trip for IndexKinds 0/1/2 layouts | ⚪ todo | — |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
 | [US-EMDB-67-2](tasks/US-EMDB-67-2.md) | Test: Deserialization bounds-checks EntryCount against payload size and rejects overflow | ⚪ todo | — |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |
 | [US-EMDB-67-3](tasks/US-EMDB-67-3.md) | Test: Capacities match spec: 83-entry primary leaves with 50-way internals and 124-entry location leaves with 71-way ... | ⚪ todo | — |  | — | — | [US-EMDB-67](stories/US-EMDB-67.md) |

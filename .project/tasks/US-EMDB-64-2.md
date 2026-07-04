@@ -1,11 +1,11 @@
 ---
-assignee: null
+assignee: claude
 created: '2026-07-01'
 depends_on:
 - US-EMDB-64-9
 id: US-EMDB-64-2
 points: 1
-status: todo
+status: done
 story_id: US-EMDB-64
 tags: []
 title: 'Test: Header checksum verified before trusting any header field and PayloadLength

@@ -10,13 +10,13 @@ epic_id: EPIC-EMDB-12
 id: US-EMDB-65
 points: 5
 priority: must
-status: ready
+status: done
 tags:
 - v3
 - concurrency
 - durability
 title: Single-writer lock and fsync discipline
-updated: '2026-07-03'
+updated: '2026-07-04'
 ---
 
 As the storage engine, I want enforced single-writer access and strict fsync semantics (spec Sections 10.3, 12) so that concurrent writers cannot corrupt the file and durability failures are never papered over.

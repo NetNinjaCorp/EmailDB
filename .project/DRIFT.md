@@ -77,7 +77,7 @@
 - [INFO] Task US-EMDB-18-6 has a thin description (0 chars)
 - [INFO] Task US-EMDB-19-5 has a thin description (0 chars)
 - [INFO] Task US-EMDB-19-6 has a thin description (0 chars)
-- [INFO] PROJECT.md hasn't been updated in 127 days
+- [INFO] PROJECT.md hasn't been updated in 128 days
 - [WARN] Story US-EMDB-1 references non-existent epic EPIC-EMDB-1
 - [WARN] Story US-EMDB-10 references non-existent epic EPIC-EMDB-4
 - [WARN] Story US-EMDB-11 references non-existent epic EPIC-EMDB-5

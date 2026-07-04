@@ -692,7 +692,7 @@ entries:
 - id: US-EMDB-64
   title: v3 block writer and reader (ULID, checksums, length sanity)
   type: story
-  status: ready
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-12
@@ -700,7 +700,7 @@ entries:
 - id: US-EMDB-65
   title: Single-writer lock and fsync discipline
   type: story
-  status: ready
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-12
@@ -708,7 +708,7 @@ entries:
 - id: US-EMDB-66
   title: Runtime block map and scan fallback
   type: story
-  status: ready
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-12
@@ -4131,7 +4131,7 @@ entries:
 - id: US-EMDB-64-1
   title: 'Test: Round-trip write/read for every block type and encoding'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-64
   epic_id: null
@@ -4139,7 +4139,7 @@ entries:
 - id: US-EMDB-64-10
   title: Implement compression pipeline
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-64
   epic_id: null
@@ -4148,7 +4148,7 @@ entries:
   title: 'Test: Header checksum verified before trusting any header field and PayloadLength
     validated against MaxPayloadLength ...'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-64
   epic_id: null
@@ -4157,7 +4157,7 @@ entries:
   title: 'Test: Payload checksum covers on-disk bytes and empty payload stores 16
     zero bytes'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-64
   epic_id: null
@@ -4165,7 +4165,7 @@ entries:
 - id: US-EMDB-64-4
   title: 'Test: Footer TotalBlockLength supports backward walk from EOF'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-64
   epic_id: null
@@ -4173,7 +4173,7 @@ entries:
 - id: US-EMDB-64-5
   title: 'Test: ULID generator stays monotonic under simulated clock regression'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-64
   epic_id: null
@@ -4182,7 +4182,7 @@ entries:
   title: 'Test: Compression byte round-trips None/LZ4/Zstd with decompression bomb
     guard'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-64
   epic_id: null
@@ -4206,7 +4206,7 @@ entries:
 - id: US-EMDB-64-9
   title: Implement append writer and verifying reader
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-64
   epic_id: null
@@ -4214,7 +4214,7 @@ entries:
 - id: US-EMDB-65-1
   title: 'Test: Second writer fails fast with a clear error while readers open shared'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-65
   epic_id: null
@@ -4222,7 +4222,7 @@ entries:
 - id: US-EMDB-65-2
   title: 'Test: fsync means flush-to-disk not stream flush'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-65
   epic_id: null
@@ -4230,7 +4230,7 @@ entries:
 - id: US-EMDB-65-3
   title: 'Test: fsync failure poisons the handle and forces recovery on reopen'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-65
   epic_id: null
@@ -4238,7 +4238,7 @@ entries:
 - id: US-EMDB-65-4
   title: 'Test: Directory fsync on file create and rename'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-65
   epic_id: null
@@ -4246,7 +4246,7 @@ entries:
 - id: US-EMDB-65-5
   title: Implement single-writer OS lock
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-65
   epic_id: null
@@ -4254,7 +4254,7 @@ entries:
 - id: US-EMDB-65-6
   title: Implement fsync wrapper with fatal-poison semantics
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-65
   epic_id: null
@@ -4262,7 +4262,7 @@ entries:
 - id: US-EMDB-65-7
   title: Implement directory fsync helpers
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-65
   epic_id: null
@@ -4270,7 +4270,7 @@ entries:
 - id: US-EMDB-66-1
   title: 'Test: Runtime map tracks all blocks appended this session'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-66
   epic_id: null
@@ -4279,7 +4279,7 @@ entries:
   title: 'Test: Forward scan resynchronizes past a corrupt block by hunting the next
     valid header magic and logs the damaged range'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-66
   epic_id: null
@@ -4287,7 +4287,7 @@ entries:
 - id: US-EMDB-66-3
   title: 'Test: Duplicate BlockIds resolve last-position-wins'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-66
   epic_id: null
@@ -4296,7 +4296,7 @@ entries:
   title: 'Test: Backward walk from EOF via footers finds the last valid block after
     a torn tail'
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-66
   epic_id: null
@@ -4304,7 +4304,7 @@ entries:
 - id: US-EMDB-66-5
   title: Implement runtime ULID-to-offset map
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-66
   epic_id: null
@@ -4312,7 +4312,7 @@ entries:
 - id: US-EMDB-66-6
   title: Implement forward scan with resynchronization
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-66
   epic_id: null
@@ -4320,7 +4320,7 @@ entries:
 - id: US-EMDB-66-7
   title: Implement backward EOF footer walk
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-66
   epic_id: null
@@ -6155,7 +6155,7 @@ entries:
   epic_id: null
   tags: []
 total_points: 1185
-completed_points: 549
+completed_points: 597
 story_count: 103
 task_count: 628
 epic_count: 22
