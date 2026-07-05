@@ -13,13 +13,13 @@ epic_id: EPIC-EMDB-15
 id: US-EMDB-78
 points: 5
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - encryption
 - policy
 title: Policy-driven encryption on the write/read path
-updated: '2026-07-01'
+updated: '2026-07-05'
 ---
 
 As the storage engine, I want encryption applied per policy (spec Section 9.5) inside the block write/read pipeline so that encryption is a first-class path: Default and Full policies, per-block Encrypted flag + epoch stamping, checksum-on-ciphertext ordering, distinct error classes.

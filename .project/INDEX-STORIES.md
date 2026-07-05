@@ -8,7 +8,7 @@
 | [US-EMDB-101](stories/US-EMDB-101.md) | Delete v1 code paths | 📋 backlog | must | 5 | v3, cleanup | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 4 | 5 |
 | [US-EMDB-102](stories/US-EMDB-102.md) | Test suite migration to v3 | 📋 backlog | must | 8 | v3, testing, migration | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 4 | 6 |
 | [US-EMDB-103](stories/US-EMDB-103.md) | Solution hygiene | 📋 backlog | should | 3 | v3, cleanup, hygiene | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 3 | 4 |
-| [US-EMDB-104](stories/US-EMDB-104.md) | One-pass amortized bulk load for PutBatch | 📋 backlog | should | 5 | v3, btree, performance, write-amplification | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 4 |
+| [US-EMDB-104](stories/US-EMDB-104.md) | One-pass amortized bulk load for PutBatch | ✅ done | should | 5 | v3, btree, performance, write-amplification | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 5 |
 | [US-EMDB-11](stories/US-EMDB-11.md) | Implement MaintenanceManager compaction and cleanup | 📋 backlog | should | 5 |  | [EPIC-EMDB-5](epics/EPIC-EMDB-5.md) | 5 | 5 |
 | [US-EMDB-12](stories/US-EMDB-12.md) | Implement WAL-based crash recovery | 📋 backlog | should | 8 |  | [EPIC-EMDB-5](epics/EPIC-EMDB-5.md) | 5 | 5 |
 | [US-EMDB-13](stories/US-EMDB-13.md) | Fix broken test references and build test infrastructure | 📋 backlog | must | 5 |  | [EPIC-EMDB-6](epics/EPIC-EMDB-6.md) | 5 | 5 |
@@ -80,10 +80,10 @@
 | [US-EMDB-73](stories/US-EMDB-73.md) | WAL blocks with checkpoint replay fence | ✅ done | must | 5 | v3, wal, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 6 |
 | [US-EMDB-74](stories/US-EMDB-74.md) | Open protocol and crash recovery | ✅ done | must | 8 | v3, recovery, open | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 5 | 8 |
 | [US-EMDB-75](stories/US-EMDB-75.md) | Corruption-handling contract implementation | ✅ done | must | 8 | v3, corruption, testing | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 7 |
-| [US-EMDB-76](stories/US-EMDB-76.md) | Encryption bootstrap (superblock to provider) | 📋 backlog | must | 8 | v3, encryption, bootstrap | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 5 | 8 |
-| [US-EMDB-77](stories/US-EMDB-77.md) | AES-GCM v3 provider (random nonces, AAD, zeroization) | 📋 backlog | must | 5 | v3, encryption, aes-gcm | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 4 | 6 |
-| [US-EMDB-78](stories/US-EMDB-78.md) | Policy-driven encryption on the write/read path | 📋 backlog | must | 5 | v3, encryption, policy | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 4 | 6 |
-| [US-EMDB-79](stories/US-EMDB-79.md) | Password change and key rotation | 📋 backlog | must | 5 | v3, encryption, rotation | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 5 | 7 |
+| [US-EMDB-76](stories/US-EMDB-76.md) | Encryption bootstrap (superblock to provider) | ✅ done | must | 8 | v3, encryption, bootstrap | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 5 | 8 |
+| [US-EMDB-77](stories/US-EMDB-77.md) | AES-GCM v3 provider (random nonces, AAD, zeroization) | ✅ done | must | 5 | v3, encryption, aes-gcm | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 4 | 6 |
+| [US-EMDB-78](stories/US-EMDB-78.md) | Policy-driven encryption on the write/read path | ✅ done | must | 5 | v3, encryption, policy | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 4 | 6 |
+| [US-EMDB-79](stories/US-EMDB-79.md) | Password change and key rotation | ✅ done | must | 5 | v3, encryption, rotation | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 5 | 7 |
 | [US-EMDB-8](stories/US-EMDB-8.md) | Implement ZoneTree embedding-based vector search integration | 📦 archived | should | 5 |  | [EPIC-EMDB-3](epics/EPIC-EMDB-3.md) | 5 | 5 |
 | [US-EMDB-80](stories/US-EMDB-80.md) | Tier 2/3 email blocks (EmailMetadata + EmailContent) | 📋 backlog | must | 5 | v3, email, tiers | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 4 | 6 |
 | [US-EMDB-81](stories/US-EMDB-81.md) | FolderPage and FolderPageDirectory | 📋 backlog | must | 8 | v3, folders, pages | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 5 | 7 |

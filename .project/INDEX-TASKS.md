@@ -31,10 +31,11 @@
 | [US-EMDB-103-2](tasks/US-EMDB-103-2.md) | Test: No folder/project name mismatches remain | ⚪ todo | — |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
 | [US-EMDB-103-3](tasks/US-EMDB-103-3.md) | Test: PROJECT.md project table matches the sln | ⚪ todo | — |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
 | [US-EMDB-103-4](tasks/US-EMDB-103-4.md) | Fix solution and folder hygiene | ⚪ todo | 2 |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
-| [US-EMDB-104-1](tasks/US-EMDB-104-1.md) | Test: Xfail test Checkpoint_batch_insert_is_one_cow_pass_not_n_individual_inserts un-skipped and passing | ⚪ todo | — |  | — | — | [US-EMDB-104](stories/US-EMDB-104.md) |
-| [US-EMDB-104-2](tasks/US-EMDB-104-2.md) | Test: Batch of N sorted inserts rewrites each touched node path once not per-entry | ⚪ todo | — |  | — | — | [US-EMDB-104](stories/US-EMDB-104.md) |
-| [US-EMDB-104-3](tasks/US-EMDB-104-3.md) | Test: CowBTree model stress and Merkle verification suites pass unchanged | ⚪ todo | — |  | — | — | [US-EMDB-104](stories/US-EMDB-104.md) |
-| [US-EMDB-104-4](tasks/US-EMDB-104-4.md) | Test: docs/BTree_Index.md current-behavior note removed | ⚪ todo | — |  | — | — | [US-EMDB-104](stories/US-EMDB-104.md) |
+| [US-EMDB-104-1](tasks/US-EMDB-104-1.md) | Test: Xfail test Checkpoint_batch_insert_is_one_cow_pass_not_n_individual_inserts un-skipped and passing | ✅ done | 1 |  | claude | US-EMDB-104-5 | [US-EMDB-104](stories/US-EMDB-104.md) |
+| [US-EMDB-104-2](tasks/US-EMDB-104-2.md) | Test: Batch of N sorted inserts rewrites each touched node path once not per-entry | ✅ done | 1 |  | claude | US-EMDB-104-5 | [US-EMDB-104](stories/US-EMDB-104.md) |
+| [US-EMDB-104-3](tasks/US-EMDB-104-3.md) | Test: CowBTree model stress and Merkle verification suites pass unchanged | ✅ done | 1 |  | claude | US-EMDB-104-5 | [US-EMDB-104](stories/US-EMDB-104.md) |
+| [US-EMDB-104-4](tasks/US-EMDB-104-4.md) | Test: docs/BTree_Index.md current-behavior note removed | ✅ done | 1 |  | claude | US-EMDB-104-5 | [US-EMDB-104](stories/US-EMDB-104.md) |
+| [US-EMDB-104-5](tasks/US-EMDB-104-5.md) | Implement one-pass COW batch apply in CowBTree.PutBatch | ✅ done | 5 |  | claude | — | [US-EMDB-104](stories/US-EMDB-104.md) |
 | [US-EMDB-11-1](tasks/US-EMDB-11-1.md) | Test: MaintenanceManager uncommented and compiles | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
 | [US-EMDB-11-2](tasks/US-EMDB-11-2.md) | Test: CompactAsync creates a new file with only latest block versions | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
 | [US-EMDB-11-3](tasks/US-EMDB-11-3.md) | Test: Cleanup removes blocks listed in OutdatedOffsets | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
@@ -480,33 +481,33 @@
 | [US-EMDB-75-5](tasks/US-EMDB-75-5.md) | Implement error taxonomy | ✅ done | 2 |  | claude | — | [US-EMDB-75](stories/US-EMDB-75.md) |
 | [US-EMDB-75-6](tasks/US-EMDB-75-6.md) | Implement per-failure handlers | ✅ done | 3 |  | claude | US-EMDB-75-5 | [US-EMDB-75](stories/US-EMDB-75.md) |
 | [US-EMDB-75-7](tasks/US-EMDB-75-7.md) | Build fault-injection test harness | ✅ done | 3 |  | claude | US-EMDB-75-6 | [US-EMDB-75](stories/US-EMDB-75.md) |
-| [US-EMDB-76-1](tasks/US-EMDB-76-1.md) | Test: Password NFC-normalized then UTF-8 encoded before KDF | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
-| [US-EMDB-76-2](tasks/US-EMDB-76-2.md) | Test: KDF parameters read from superblock and honored even when they differ from defaults | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
-| [US-EMDB-76-3](tasks/US-EMDB-76-3.md) | Test: Wrong password fails fast via KeyVerificationToken with a distinct error | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
-| [US-EMDB-76-4](tasks/US-EMDB-76-4.md) | Test: Tampered Salt or KdfParams detected via token failure | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
-| [US-EMDB-76-5](tasks/US-EMDB-76-5.md) | Test: Provider decrypts blocks across multiple epochs from the loaded DEK table | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
-| [US-EMDB-76-6](tasks/US-EMDB-76-6.md) | Implement NFC normalization and parameterized Argon2id | ⚪ todo | 2 |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
-| [US-EMDB-76-7](tasks/US-EMDB-76-7.md) | Implement KeyVerificationToken create/verify | ⚪ todo | 2 |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
-| [US-EMDB-76-8](tasks/US-EMDB-76-8.md) | Implement bootstrap wiring | ⚪ todo | 3 |  | — | US-EMDB-76-6, US-EMDB-76-7 | [US-EMDB-76](stories/US-EMDB-76.md) |
-| [US-EMDB-77-1](tasks/US-EMDB-77-1.md) | Test: Nonces are 12 CSPRNG bytes and never derived from IDs or counters | ⚪ todo | — |  | — | — | [US-EMDB-77](stories/US-EMDB-77.md) |
-| [US-EMDB-77-2](tasks/US-EMDB-77-2.md) | Test: Encrypt and decrypt both require AAD and a ciphertext moved to another BlockId or BlockType or epoch or FileId ... | ⚪ todo | — |  | — | — | [US-EMDB-77](stories/US-EMDB-77.md) |
-| [US-EMDB-77-3](tasks/US-EMDB-77-3.md) | Test: On-disk layout is Nonce then Ciphertext then Tag adding exactly 28 bytes | ⚪ todo | — |  | — | — | [US-EMDB-77](stories/US-EMDB-77.md) |
-| [US-EMDB-77-4](tasks/US-EMDB-77-4.md) | Test: Password KEK and DEK buffers zeroized when scope ends | ⚪ todo | — |  | — | — | [US-EMDB-77](stories/US-EMDB-77.md) |
-| [US-EMDB-77-5](tasks/US-EMDB-77-5.md) | Implement AES-GCM encrypt/decrypt with random nonces and AAD | ⚪ todo | 3 |  | — | — | [US-EMDB-77](stories/US-EMDB-77.md) |
-| [US-EMDB-77-6](tasks/US-EMDB-77-6.md) | Implement epoch DEK lookup and zeroization | ⚪ todo | 2 |  | — | US-EMDB-77-5 | [US-EMDB-77](stories/US-EMDB-77.md) |
-| [US-EMDB-78-1](tasks/US-EMDB-78-1.md) | Test: Default policy encrypts content/folders/WAL/FTS/bloom and leaves BTree/Metadata/Checkpoint plaintext | ⚪ todo | — |  | — | — | [US-EMDB-78](stories/US-EMDB-78.md) |
-| [US-EMDB-78-2](tasks/US-EMDB-78-2.md) | Test: Full policy encrypts everything except Metadata/Cleanup/Checkpoint/KeyStore-rules per spec | ⚪ todo | — |  | — | — | [US-EMDB-78](stories/US-EMDB-78.md) |
-| [US-EMDB-78-3](tasks/US-EMDB-78-3.md) | Test: Read verifies checksum before GCM tag and corruption vs wrong-key vs tamper are three distinct errors | ⚪ todo | — |  | — | — | [US-EMDB-78](stories/US-EMDB-78.md) |
-| [US-EMDB-78-4](tasks/US-EMDB-78-4.md) | Test: Mixed-policy files read correctly block-by-block via the Encrypted flag | ⚪ todo | — |  | — | — | [US-EMDB-78](stories/US-EMDB-78.md) |
-| [US-EMDB-78-5](tasks/US-EMDB-78-5.md) | Implement policy sets and write-path stamping | ⚪ todo | 2 |  | — | — | [US-EMDB-78](stories/US-EMDB-78.md) |
-| [US-EMDB-78-6](tasks/US-EMDB-78-6.md) | Wire decrypt and error taxonomy into read path | ⚪ todo | 3 |  | — | US-EMDB-78-5 | [US-EMDB-78](stories/US-EMDB-78.md) |
-| [US-EMDB-79-1](tasks/US-EMDB-79-1.md) | Test: Password change writes one KeyStore block and one superblock update with zero data blocks touched | ⚪ todo | — |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
-| [US-EMDB-79-2](tasks/US-EMDB-79-2.md) | Test: Crash before the superblock write leaves the old password fully working | ⚪ todo | — |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
-| [US-EMDB-79-3](tasks/US-EMDB-79-3.md) | Test: Old password rejected and new password accepted after completion | ⚪ todo | — |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
-| [US-EMDB-79-4](tasks/US-EMDB-79-4.md) | Test: Rotation adds epoch N+1 and old-epoch blocks remain readable | ⚪ todo | — |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
-| [US-EMDB-79-5](tasks/US-EMDB-79-5.md) | Test: Rotation fails cleanly at epoch 65535 instead of wrapping | ⚪ todo | — |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
-| [US-EMDB-79-6](tasks/US-EMDB-79-6.md) | Implement ChangePassword | ⚪ todo | 3 |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
-| [US-EMDB-79-7](tasks/US-EMDB-79-7.md) | Implement RotateKey with epoch bound | ⚪ todo | 2 |  | — | — | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-76-1](tasks/US-EMDB-76-1.md) | Test: Password NFC-normalized then UTF-8 encoded before KDF | ✅ done | 1 |  | claude | US-EMDB-76-6 | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-2](tasks/US-EMDB-76-2.md) | Test: KDF parameters read from superblock and honored even when they differ from defaults | ✅ done | 1 |  | claude | US-EMDB-76-6, US-EMDB-76-8 | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-3](tasks/US-EMDB-76-3.md) | Test: Wrong password fails fast via KeyVerificationToken with a distinct error | ✅ done | 1 |  | claude | US-EMDB-76-7 | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-4](tasks/US-EMDB-76-4.md) | Test: Tampered Salt or KdfParams detected via token failure | ✅ done | 1 |  | claude | US-EMDB-76-7 | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-5](tasks/US-EMDB-76-5.md) | Test: Provider decrypts blocks across multiple epochs from the loaded DEK table | ✅ done | 1 |  | claude | US-EMDB-76-8 | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-6](tasks/US-EMDB-76-6.md) | Implement NFC normalization and parameterized Argon2id | ✅ done | 2 |  | claude | — | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-7](tasks/US-EMDB-76-7.md) | Implement KeyVerificationToken create/verify | ✅ done | 2 |  | claude | — | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-76-8](tasks/US-EMDB-76-8.md) | Implement bootstrap wiring | ✅ done | 3 |  | claude | US-EMDB-76-6, US-EMDB-76-7, US-EMDB-77-6 | [US-EMDB-76](stories/US-EMDB-76.md) |
+| [US-EMDB-77-1](tasks/US-EMDB-77-1.md) | Test: Nonces are 12 CSPRNG bytes and never derived from IDs or counters | ✅ done | 1 |  | claude | US-EMDB-77-5 | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-77-2](tasks/US-EMDB-77-2.md) | Test: Encrypt and decrypt both require AAD and a ciphertext moved to another BlockId or BlockType or epoch or FileId ... | ✅ done | 1 |  | claude | US-EMDB-77-5 | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-77-3](tasks/US-EMDB-77-3.md) | Test: On-disk layout is Nonce then Ciphertext then Tag adding exactly 28 bytes | ✅ done | 1 |  | claude | US-EMDB-77-5 | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-77-4](tasks/US-EMDB-77-4.md) | Test: Password KEK and DEK buffers zeroized when scope ends | ✅ done | 1 |  | claude | US-EMDB-77-6 | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-77-5](tasks/US-EMDB-77-5.md) | Implement AES-GCM encrypt/decrypt with random nonces and AAD | ✅ done | 3 |  | claude | — | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-77-6](tasks/US-EMDB-77-6.md) | Implement epoch DEK lookup and zeroization | ✅ done | 2 |  | claude | US-EMDB-77-5 | [US-EMDB-77](stories/US-EMDB-77.md) |
+| [US-EMDB-78-1](tasks/US-EMDB-78-1.md) | Test: Default policy encrypts content/folders/WAL/FTS/bloom and leaves BTree/Metadata/Checkpoint plaintext | ✅ done | 1 |  | claude | US-EMDB-78-5 | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-78-2](tasks/US-EMDB-78-2.md) | Test: Full policy encrypts everything except Metadata/Cleanup/Checkpoint/KeyStore-rules per spec | ✅ done | 1 |  | claude | US-EMDB-78-5 | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-78-3](tasks/US-EMDB-78-3.md) | Test: Read verifies checksum before GCM tag and corruption vs wrong-key vs tamper are three distinct errors | ✅ done | 1 |  | claude | US-EMDB-78-6 | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-78-4](tasks/US-EMDB-78-4.md) | Test: Mixed-policy files read correctly block-by-block via the Encrypted flag | ✅ done | 1 |  | claude | US-EMDB-78-6 | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-78-5](tasks/US-EMDB-78-5.md) | Implement policy sets and write-path stamping | ✅ done | 2 |  | claude | US-EMDB-77-5 | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-78-6](tasks/US-EMDB-78-6.md) | Wire decrypt and error taxonomy into read path | ✅ done | 3 |  | claude | US-EMDB-78-5 | [US-EMDB-78](stories/US-EMDB-78.md) |
+| [US-EMDB-79-1](tasks/US-EMDB-79-1.md) | Test: Password change writes one KeyStore block and one superblock update with zero data blocks touched | ✅ done | 1 |  | claude | US-EMDB-79-6 | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-2](tasks/US-EMDB-79-2.md) | Test: Crash before the superblock write leaves the old password fully working | ✅ done | 1 |  | claude | US-EMDB-79-6 | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-3](tasks/US-EMDB-79-3.md) | Test: Old password rejected and new password accepted after completion | ✅ done | 1 |  | claude | US-EMDB-79-6 | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-4](tasks/US-EMDB-79-4.md) | Test: Rotation adds epoch N+1 and old-epoch blocks remain readable | ✅ done | 1 |  | claude | US-EMDB-79-7 | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-5](tasks/US-EMDB-79-5.md) | Test: Rotation fails cleanly at epoch 65535 instead of wrapping | ✅ done | 1 |  | claude | US-EMDB-79-7 | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-6](tasks/US-EMDB-79-6.md) | Implement ChangePassword | ✅ done | 3 |  | claude | US-EMDB-76-8 | [US-EMDB-79](stories/US-EMDB-79.md) |
+| [US-EMDB-79-7](tasks/US-EMDB-79-7.md) | Implement RotateKey with epoch bound | ✅ done | 2 |  | claude | — | [US-EMDB-79](stories/US-EMDB-79.md) |
 | [US-EMDB-8-1](tasks/US-EMDB-8-1.md) | Test: HashedSearchEngine configured with EmailHashedID key type | ⚪ todo | — |  | — | — | [US-EMDB-8](stories/US-EMDB-8.md) |
 | [US-EMDB-8-2](tasks/US-EMDB-8-2.md) | Test: Email subject/from/to/body indexed on add | ⚪ todo | — |  | — | — | [US-EMDB-8](stories/US-EMDB-8.md) |
 | [US-EMDB-8-3](tasks/US-EMDB-8-3.md) | Test: SearchEmailsAsync returns matching EmailHashedIDs | ⚪ todo | — |  | — | — | [US-EMDB-8](stories/US-EMDB-8.md) |

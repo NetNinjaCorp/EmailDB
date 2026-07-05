@@ -226,7 +226,7 @@ entries:
 - id: US-EMDB-104
   title: One-pass amortized bulk load for PutBatch
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-13
@@ -804,7 +804,7 @@ entries:
 - id: US-EMDB-76
   title: Encryption bootstrap (superblock to provider)
   type: story
-  status: backlog
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-15
@@ -812,7 +812,7 @@ entries:
 - id: US-EMDB-77
   title: AES-GCM v3 provider (random nonces, AAD, zeroization)
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-15
@@ -820,7 +820,7 @@ entries:
 - id: US-EMDB-78
   title: Policy-driven encryption on the write/read path
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-15
@@ -828,7 +828,7 @@ entries:
 - id: US-EMDB-79
   title: Password change and key rotation
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-15
@@ -1247,8 +1247,8 @@ entries:
   title: 'Test: Xfail test Checkpoint_batch_insert_is_one_cow_pass_not_n_individual_inserts
     un-skipped and passing'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-104
   epic_id: null
   tags: []
@@ -1256,24 +1256,32 @@ entries:
   title: 'Test: Batch of N sorted inserts rewrites each touched node path once not
     per-entry'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-104
   epic_id: null
   tags: []
 - id: US-EMDB-104-3
   title: 'Test: CowBTree model stress and Merkle verification suites pass unchanged'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-104
   epic_id: null
   tags: []
 - id: US-EMDB-104-4
   title: 'Test: docs/BTree_Index.md current-behavior note removed'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
+  story_id: US-EMDB-104
+  epic_id: null
+  tags: []
+- id: US-EMDB-104-5
+  title: Implement one-pass COW batch apply in CowBTree.PutBatch
+  type: task
+  status: done
+  points: 5
   story_id: US-EMDB-104
   epic_id: null
   tags: []
@@ -4934,8 +4942,8 @@ entries:
 - id: US-EMDB-76-1
   title: 'Test: Password NFC-normalized then UTF-8 encoded before KDF'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-76
   epic_id: null
   tags: []
@@ -4943,8 +4951,8 @@ entries:
   title: 'Test: KDF parameters read from superblock and honored even when they differ
     from defaults'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-76
   epic_id: null
   tags: []
@@ -4952,16 +4960,16 @@ entries:
   title: 'Test: Wrong password fails fast via KeyVerificationToken with a distinct
     error'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-76
   epic_id: null
   tags: []
 - id: US-EMDB-76-4
   title: 'Test: Tampered Salt or KdfParams detected via token failure'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-76
   epic_id: null
   tags: []
@@ -4969,15 +4977,15 @@ entries:
   title: 'Test: Provider decrypts blocks across multiple epochs from the loaded DEK
     table'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-76
   epic_id: null
   tags: []
 - id: US-EMDB-76-6
   title: Implement NFC normalization and parameterized Argon2id
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-76
   epic_id: null
@@ -4985,7 +4993,7 @@ entries:
 - id: US-EMDB-76-7
   title: Implement KeyVerificationToken create/verify
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-76
   epic_id: null
@@ -4993,7 +5001,7 @@ entries:
 - id: US-EMDB-76-8
   title: Implement bootstrap wiring
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-76
   epic_id: null
@@ -5001,8 +5009,8 @@ entries:
 - id: US-EMDB-77-1
   title: 'Test: Nonces are 12 CSPRNG bytes and never derived from IDs or counters'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-77
   epic_id: null
   tags: []
@@ -5010,8 +5018,8 @@ entries:
   title: 'Test: Encrypt and decrypt both require AAD and a ciphertext moved to another
     BlockId or BlockType or epoch or FileId ...'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-77
   epic_id: null
   tags: []
@@ -5019,23 +5027,23 @@ entries:
   title: 'Test: On-disk layout is Nonce then Ciphertext then Tag adding exactly 28
     bytes'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-77
   epic_id: null
   tags: []
 - id: US-EMDB-77-4
   title: 'Test: Password KEK and DEK buffers zeroized when scope ends'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-77
   epic_id: null
   tags: []
 - id: US-EMDB-77-5
   title: Implement AES-GCM encrypt/decrypt with random nonces and AAD
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-77
   epic_id: null
@@ -5043,7 +5051,7 @@ entries:
 - id: US-EMDB-77-6
   title: Implement epoch DEK lookup and zeroization
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-77
   epic_id: null
@@ -5052,8 +5060,8 @@ entries:
   title: 'Test: Default policy encrypts content/folders/WAL/FTS/bloom and leaves BTree/Metadata/Checkpoint
     plaintext'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-78
   epic_id: null
   tags: []
@@ -5061,8 +5069,8 @@ entries:
   title: 'Test: Full policy encrypts everything except Metadata/Cleanup/Checkpoint/KeyStore-rules
     per spec'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-78
   epic_id: null
   tags: []
@@ -5070,8 +5078,8 @@ entries:
   title: 'Test: Read verifies checksum before GCM tag and corruption vs wrong-key
     vs tamper are three distinct errors'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-78
   epic_id: null
   tags: []
@@ -5079,15 +5087,15 @@ entries:
   title: 'Test: Mixed-policy files read correctly block-by-block via the Encrypted
     flag'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-78
   epic_id: null
   tags: []
 - id: US-EMDB-78-5
   title: Implement policy sets and write-path stamping
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-78
   epic_id: null
@@ -5095,7 +5103,7 @@ entries:
 - id: US-EMDB-78-6
   title: Wire decrypt and error taxonomy into read path
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-78
   epic_id: null
@@ -5104,47 +5112,47 @@ entries:
   title: 'Test: Password change writes one KeyStore block and one superblock update
     with zero data blocks touched'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-79
   epic_id: null
   tags: []
 - id: US-EMDB-79-2
   title: 'Test: Crash before the superblock write leaves the old password fully working'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-79
   epic_id: null
   tags: []
 - id: US-EMDB-79-3
   title: 'Test: Old password rejected and new password accepted after completion'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-79
   epic_id: null
   tags: []
 - id: US-EMDB-79-4
   title: 'Test: Rotation adds epoch N+1 and old-epoch blocks remain readable'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-79
   epic_id: null
   tags: []
 - id: US-EMDB-79-5
   title: 'Test: Rotation fails cleanly at epoch 65535 instead of wrapping'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-79
   epic_id: null
   tags: []
 - id: US-EMDB-79-6
   title: Implement ChangePassword
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-79
   epic_id: null
@@ -5152,7 +5160,7 @@ entries:
 - id: US-EMDB-79-7
   title: Implement RotateKey with epoch bound
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-79
   epic_id: null
@@ -6196,8 +6204,8 @@ entries:
   story_id: US-EMDB-99
   epic_id: null
   tags: []
-total_points: 1231
-completed_points: 767
+total_points: 1258
+completed_points: 844
 story_count: 104
-task_count: 632
+task_count: 633
 epic_count: 22

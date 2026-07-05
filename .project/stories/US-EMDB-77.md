@@ -11,13 +11,13 @@ epic_id: EPIC-EMDB-15
 id: US-EMDB-77
 points: 5
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - encryption
 - aes-gcm
 title: AES-GCM v3 provider (random nonces, AAD, zeroization)
-updated: '2026-07-01'
+updated: '2026-07-05'
 ---
 
 As the storage engine, I want the per-block encryption primitive per spec Section 9.3: AES-256-GCM, 12 fully random CSPRNG nonces, mandatory AAD (FileId|BlockId|BlockType|KeyEpoch), epoch-based DEK lookup on decrypt, and key-material zeroization.

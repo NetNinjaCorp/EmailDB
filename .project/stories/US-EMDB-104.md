@@ -11,7 +11,7 @@ epic_id: EPIC-EMDB-13
 id: US-EMDB-104
 points: 5
 priority: should
-status: backlog
+status: done
 tags:
 - v3
 - btree

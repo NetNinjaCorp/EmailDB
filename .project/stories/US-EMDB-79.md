@@ -12,13 +12,13 @@ epic_id: EPIC-EMDB-15
 id: US-EMDB-79
 points: 5
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - encryption
 - rotation
 title: Password change and key rotation
-updated: '2026-07-01'
+updated: '2026-07-05'
 ---
 
 As a user, I want O(1) password change and key rotation (docs/Encryption.md Section 5) so that credential changes never rewrite data: password change touches only KeyStore + superblock and is crash-safe via dual slots; rotation appends a new DEK epoch.

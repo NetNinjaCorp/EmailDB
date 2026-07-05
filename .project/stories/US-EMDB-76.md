@@ -11,13 +11,13 @@ epic_id: EPIC-EMDB-15
 id: US-EMDB-76
 points: 8
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - encryption
 - bootstrap
 title: Encryption bootstrap (superblock to provider)
-updated: '2026-07-01'
+updated: '2026-07-05'
 ---
 
 As a user, I want opening an encrypted file to derive keys entirely from the file plus my password (docs/Encryption.md Section 2): NFC normalization, Argon2id from stored KdfParams/Salt, KeyVerificationToken fast-fail, KeyStore decryption, provider construction from the DEK table. No compiled-in KDF constants anywhere.
