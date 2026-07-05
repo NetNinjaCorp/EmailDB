@@ -49,9 +49,7 @@ The indirection table: `BlockId → (Offset, Length)` for every live block. Full
 1. Inserts/deletes accumulate in the in-memory WAL buffer; each is also appended to a WAL block (BlockType 1) carrying the current `CheckpointBlockId` — durability comes from the WAL block, not the buffer.
 2. Flush triggers: buffer reaches one leaf's worth (default 83), a time threshold, or an explicit call.
 3. Flush: sort buffered entries by key → apply to the tree in one pass (COW; splits propagate upward, root split adds a level) → write all new nodes → fsync → write IndexRoot (Sequence + 1) → the batch commits at the next Checkpoint → clear buffer.
-4. Write amplification: a batch of 100 inserts touching ~10 leaves writes ~15 nodes instead of 400.
-
-> **Current implementation note:** `PutBatch` today applies the sorted batch as N individual COW inserts, so the step-4 amortization target is not yet met (a 30-entry batch writes 96 node blocks, same as 30 single Puts). Correctness and delta-at-checkpoint semantics are fully tested; the one-pass bulk load is tracked in US-EMDB-104, whose executable spec is the skipped test `Checkpoint_batch_insert_is_one_cow_pass_not_n_individual_inserts`.
+4. Write amplification: a batch of 100 inserts touching ~10 leaves writes ~15 nodes instead of 400. `CowBTree.InsertBatch` (the bulk load behind `BlockLocationIndex.PutBatch`) applies a sorted batch in one COW descent — each shared leaf and internal path is rewritten once and splits propagate once — meeting this target.
 
 Underflow on delete: leaves below minimum occupancy merge with or borrow from a neighbor; internal nodes rebalance the same way; a root with one child collapses (height − 1). Both leaf and internal rebalancing are required — leaf-only rebalancing degrades fill factor over time.
 

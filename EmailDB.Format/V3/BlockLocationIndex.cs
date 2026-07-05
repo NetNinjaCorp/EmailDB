@@ -136,11 +136,14 @@ public sealed class BlockLocationIndex : IBlockIdResolver
     /// <summary>
     /// Copy-on-write batch upsert — the checkpoint-time insert path (spec
     /// Section 7: "entries for blocks appended since the last Checkpoint are
-    /// batch-inserted"). Applies every location in ONE ascending-key COW pass
-    /// (sorting internally by unsigned-lexicographic BlockId so shared leaves are
-    /// rewritten once, not once per entry), advancing <see cref="Root"/> only if
-    /// every insert succeeds; on any failure <see cref="Root"/> is left at its
-    /// pre-batch version and the partial nodes are orphans. An empty batch is a
+    /// batch-inserted"). Collapses duplicates (last-wins) and sorts by
+    /// unsigned-lexicographic BlockId, then applies the whole batch in ONE
+    /// amortized COW pass via <see cref="CowBTree.InsertBatch"/>: each shared
+    /// leaf and internal path is rewritten once, not once per entry, so a batch
+    /// of 100 inserts touching ~10 leaves writes ~15 node blocks rather than
+    /// ~400 (BTree_Index.md Section 4). <see cref="Root"/> advances only if
+    /// every node write succeeds; on any failure it is left at its pre-batch
+    /// version and the partial nodes are orphans. An empty batch is a
     /// successful no-op.
     /// </summary>
     /// <param name="locations">The blocks to insert; duplicates resolve last-wins within the batch.</param>
@@ -148,9 +151,9 @@ public sealed class BlockLocationIndex : IBlockIdResolver
     {
         ArgumentNullException.ThrowIfNull(locations);
 
-        // Collapse duplicates (last wins) and sort by key so the COW pass touches
-        // each shared leaf once — the batch-amortized write amplification the
-        // spec's per-Checkpoint delta relies on.
+        // Collapse duplicates (last wins) and sort by key so the one-pass COW
+        // bulk load touches each shared leaf once — the batch-amortized write
+        // amplification the spec's per-Checkpoint delta relies on.
         var ordered = new SortedDictionary<byte[], BlockLocation>(UnsignedByteComparer.Instance);
         foreach (var location in locations)
         {
@@ -163,18 +166,19 @@ public sealed class BlockLocationIndex : IBlockIdResolver
         if (ordered.Count == 0)
             return Result.Success();
 
-        var working = Root;
-        Span<byte> value = stackalloc byte[LocationValueSize];
+        var entries = new List<BTreeLeafEntry>(ordered.Count);
         foreach (var (key, location) in ordered)
         {
+            var value = new byte[LocationValueSize];
             EncodeValue(location.Offset, location.TotalBlockLength, value);
-            var inserted = _tree.Insert(working, key, value);
-            if (inserted.IsFailure)
-                return Result.Failure(inserted.Error);
-            working = inserted.Value;
+            entries.Add(new BTreeLeafEntry(key, value));
         }
 
-        Root = working;
+        var inserted = _tree.InsertBatch(Root, entries);
+        if (inserted.IsFailure)
+            return Result.Failure(inserted.Error);
+
+        Root = inserted.Value;
         return Result.Success();
     }
 

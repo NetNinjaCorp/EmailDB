@@ -26,10 +26,12 @@ namespace EmailDB.UnitTests;
 /// suite is the one place the whole table is asserted systematically, reusing those
 /// same code paths rather than duplicating their deep edge-case assertions.</para>
 ///
-/// <para><b>GCM rows (Row06) are a known gap:</b> V3 has no decrypt call site yet, so
-/// a GCM tag / AAD failure cannot be produced end-to-end. That row is covered at the
-/// taxonomy boundary and the missing end-to-end site is flagged with an explicit
-/// skipped-with-reason test — never faked.</para>
+/// <para><b>GCM rows (Row06):</b> decrypt-on-read is wired (US-EMDB-78-6,
+/// <see cref="EncryptedBlockStore.ReadDecrypted"/>), so the tag / AAD failure is now
+/// asserted both at the taxonomy boundary
+/// (<see cref="Row06_GcmTagFailure_IsADistinctErrorClass_NotCorruption"/>) and end-to-end
+/// through the real read path (<see cref="Row06_Gap_GcmTagFailureEndToEndThroughReadPath"/>):
+/// a wrong-key read passes the ciphertext checksum FIRST, then fails GCM authentication.</para>
 /// </summary>
 //
 // ===================== Section 13 row -> test coverage map =====================
@@ -46,7 +48,7 @@ namespace EmailDB.UnitTests;
 //  PayloadChecksum mismatch (resync)                | Row05a_PayloadChecksumMismatch_BlockDead_Resynchronizes
 //  PayloadChecksum mismatch (referenced live)       | Row05b_PayloadChecksumMismatch_OnReferencedLiveBlock_SurfacesDataLossNamingBlockId
 //  GCM tag / AAD failure (taxonomy boundary)        | Row06_GcmTagFailure_IsADistinctErrorClass_NotCorruption
-//  GCM tag / AAD failure (end-to-end)               | Row06_Gap_GcmTagFailureEndToEndThroughReadPath  [Skip: no V3 decrypt call site yet]
+//  GCM tag / AAD failure (end-to-end)               | Row06_Gap_GcmTagFailureEndToEndThroughReadPath  [wrong-key read: checksum passes, GCM tag fails]
 //  Merkle ChildHash mismatch                        | Row07_MerkleChildHashMismatch_FailsLookup_AsIntegrityError_KeyingTheFallback
 //  Checkpoint invalid (walk previous chain)         | Row08_TornCheckpoint_WalksPreviousChainToTheLastValidCommitPoint
 //  Checkpoint invalid (matching WAL replayed)       | Row08b_PostCheckpointMatchingWal_IsReplayed_ThenCommittedFresh
@@ -331,15 +333,41 @@ public class Section13ContractTests : IDisposable
         Assert.Equal(TamperCause.GcmTag, caught.Cause);
     }
 
-    [Fact(Skip = "GAP: V3 has no decrypt call site yet — a GCM tag/AAD failure cannot be " +
-                 "produced end-to-end through a read path. The taxonomy boundary is asserted by " +
-                 "Row06_GcmTagFailure_IsADistinctErrorClass_NotCorruption; this row is intentionally " +
-                 "skipped (not faked) until decrypt-on-read is wired (spec Section 4.6, 13).")]
+    [Fact]
     public void Row06_Gap_GcmTagFailureEndToEndThroughReadPath()
     {
-        // Intentionally empty: when BlockManager gains a decrypt-on-read site, drive a
-        // wrong-key/tampered read here and assert it surfaces WrongKeyOrTamperError
-        // (TamperCause.GcmTag) AFTER a passing PayloadChecksum, without bruting epochs.
+        // Decrypt-on-read is now wired (EncryptedBlockStore.ReadDecrypted, US-EMDB-78-6),
+        // so the GCM tag / AAD failure is produced END-TO-END: write an encrypted block,
+        // then read it back under the WRONG DEK. The on-disk ciphertext is untouched, so
+        // the PayloadChecksum (over ciphertext) passes FIRST; only then does the GCM tag
+        // fail — surfacing WrongKeyOrTamperError (TamperCause.GcmTag) at the header's
+        // KeyEpoch, never a CorruptionError, and never bruting other epochs.
+        var fileId = Enumerable.Range(0, 16).Select(i => (byte)(0xB0 + i)).ToArray();
+        const ushort epoch = 4;
+        byte[] Dek(byte seed) => Enumerable.Range(0, AesGcmBlockCipher.KeySize).Select(i => (byte)(i + seed)).ToArray();
+
+        var path = NewPath();
+        long offset;
+        using (var provider = new EpochDekProvider(fileId, epoch, new[] { new EpochDekProvider.EpochDek(epoch, Dek(1)) }))
+        using (var manager = new BlockManager(OpenRW(path), firstBlockOffset: 0, ownsStream: true))
+        {
+            var store = new EncryptedBlockStore(manager, provider, EncryptionPolicy.Default);
+            offset = store.Append(BlockType.EmailContent, PayloadEncoding.RawBytes, SamplePayload(96)).Value.Offset;
+            Ok(manager.Flush());
+        }
+
+        using var wrongKey = new EpochDekProvider(fileId, epoch, new[] { new EpochDekProvider.EpochDek(epoch, Dek(200)) });
+        using var reader = new BlockManager(OpenRW(path), firstBlockOffset: 0, ownsStream: true);
+
+        // Checksum-first: the raw read succeeds because the ciphertext bytes are intact.
+        Ok(reader.Read(offset));
+
+        var decryptStore = new EncryptedBlockStore(reader, wrongKey, EncryptionPolicy.Default);
+        var error = Assert.Throws<WrongKeyOrTamperError>(() => decryptStore.ReadDecrypted(offset));
+        Assert.Equal(VerificationFailureKind.WrongKeyOrTamper, error.Kind);
+        Assert.Equal(TamperCause.GcmTag, error.Cause);
+        Assert.Equal(epoch, error.KeyEpoch);          // attempted only under the header epoch
+        Assert.IsNotType<CorruptionError>(error);     // distinct from corruption
     }
 
     // ============================================================= Row 07

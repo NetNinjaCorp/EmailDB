@@ -307,19 +307,14 @@ public class LocationIndexCheckpointTests : IDisposable
         Assert.False(absent.Value.Found, "Old snapshot must not see a delta block.");
     }
 
-    // KNOWN SPEC DEVIATION (US-EMDB-71-1 verification): docs/BTree_Index.md Section 3
-    // defines the checkpoint batch-insert as a single amortized COW pass — "sort
-    // buffered entries by key -> apply to the tree in one pass" so "a batch of 100
-    // inserts touching ~10 leaves writes ~15 nodes instead of 400" (lines 52, 54).
-    // BlockLocationIndex.PutBatch does NOT do this: it loops CowBTree.Insert once per
-    // entry (CowBTree exposes only a single-key Insert), so each entry rewrites a full
-    // root-to-leaf path. Measured: a 30-entry PutBatch appends 96 node blocks — exactly
-    // equal to 30 individual Put calls — i.e. the "400" write amplification the spec
-    // says batch-insert must avoid. Skipped until a true one-pass bulk load lands; the
-    // assertion below is the target contract, kept executable for that follow-up.
-    [Fact(Skip = "PutBatch loops single-key CowBTree.Insert; no amortized one-pass bulk load yet " +
-                 "(docs/BTree_Index.md Section 3: batch of 100 should write ~15 nodes not 400). " +
-                 "Measured 96 node writes for 30 entries, equal to 30 individual inserts.")]
+    // docs/BTree_Index.md Section 4 defines the checkpoint batch-insert as a single
+    // amortized COW pass — "sort buffered entries by key -> apply to the tree in one
+    // pass" so "a batch of 100 inserts touching ~10 leaves writes ~15 nodes instead of
+    // 400". BlockLocationIndex.PutBatch delegates to CowBTree.InsertBatch, which descends
+    // the tree once and rewrites each shared leaf and internal path a single time, so a
+    // batch writes strictly — and substantially — fewer node blocks than N individual
+    // inserts (US-EMDB-104).
+    [Fact]
     public void Checkpoint_batch_insert_is_one_cow_pass_not_n_individual_inserts()
     {
         // "batch-insert ... in ONE COW pass": inserting the same sorted entries as a

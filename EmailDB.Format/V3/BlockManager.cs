@@ -122,6 +122,12 @@ public sealed class BlockManager : IDisposable
     /// <param name="compression">Compression applied to the payload bytes.</param>
     /// <param name="encrypted">Whether the payload bytes are encrypted (flags bit 0).</param>
     /// <param name="keyEpoch">DEK epoch; must be 0 when not encrypted (spec Section 4).</param>
+    /// <param name="blockId">
+    /// Pre-minted 16-byte BlockId to stamp, or null to mint a fresh monotonic ULID. The
+    /// encryption layer must know the BlockId <em>before</em> appending — it is an AAD
+    /// component (spec Section 9.3) — so it mints one via <see cref="MintBlockId"/>, encrypts
+    /// against it, then appends the ciphertext under that same BlockId.
+    /// </param>
     /// <returns>The minted BlockId, file offset, and total on-disk length.</returns>
     public Result<BlockLocation> Append(
         BlockType type,
@@ -129,7 +135,8 @@ public sealed class BlockManager : IDisposable
         ReadOnlySpan<byte> payload,
         CompressionAlgorithm compression = CompressionAlgorithm.None,
         bool encrypted = false,
-        ushort keyEpoch = 0)
+        ushort keyEpoch = 0,
+        byte[]? blockId = null)
     {
         ThrowIfDisposed();
 
@@ -139,6 +146,9 @@ public sealed class BlockManager : IDisposable
         if (!encrypted && keyEpoch != 0)
             return Result<BlockLocation>.Failure(
                 $"KeyEpoch must be 0 when the payload is not encrypted, got {keyEpoch}.");
+        if (blockId is not null && blockId.Length != UlidGenerator.UlidSize)
+            return Result<BlockLocation>.Failure(
+                $"Supplied BlockId must be exactly {UlidGenerator.UlidSize} bytes, got {blockId.Length}.");
 
         lock (_streamLock)
         {
@@ -153,7 +163,7 @@ public sealed class BlockManager : IDisposable
                 Compression = compression,
                 IsEncrypted = encrypted,
                 KeyEpoch = keyEpoch,
-                BlockId = _ulidGenerator.Next(),
+                BlockId = blockId is null ? _ulidGenerator.Next() : (byte[])blockId.Clone(),
                 PayloadLength = payload.Length,
             };
 
@@ -177,6 +187,20 @@ public sealed class BlockManager : IDisposable
                 TotalBlockLength = blockBytes.Length,
             });
         }
+    }
+
+    /// <summary>
+    /// Mints the next monotonic ULID BlockId from this manager's generator without appending
+    /// anything. The encryption layer needs the BlockId before it can encrypt (it is an AAD
+    /// component, spec Section 9.3): it mints here, encrypts against the returned id, then calls
+    /// <see cref="Append"/> passing that same id as <c>blockId</c>. Drawing from the manager's
+    /// own generator keeps encrypted and plaintext appends on one monotonic ULID stream.
+    /// </summary>
+    public byte[] MintBlockId()
+    {
+        ThrowIfDisposed();
+        lock (_streamLock)
+            return _ulidGenerator.Next();
     }
 
     /// <summary>

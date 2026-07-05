@@ -342,6 +342,352 @@ public sealed class CowBTree
         });
     }
 
+    // ----------------------------------------------------------- Batch insert
+
+    /// <summary>
+    /// One-pass COW bulk upsert of a whole sorted batch (BTree_Index.md
+    /// Section 4: "sort buffered entries by key → apply to the tree in one
+    /// pass"). Unlike looping <see cref="Insert"/> — which rewrites a full
+    /// root-to-leaf path per entry — this descends the tree ONCE: entries are
+    /// partitioned by target subtree at each level, every touched leaf and
+    /// internal node on the shared spine is rewritten exactly once, and splits
+    /// propagate up a single time. The result is semantically identical to
+    /// applying the entries one-by-one (same key→value mapping, last value wins
+    /// on a duplicate/existing key); only the node layout differs — a permitted
+    /// bulk-load difference (BTree_Index.md Section 4) — so a batch of 100
+    /// inserts touching ~10 leaves writes ~15 node blocks, not ~400.
+    ///
+    /// <paramref name="entries"/> MUST be sorted strictly ascending by key with
+    /// no duplicates (the caller collapses duplicates last-wins before sorting).
+    /// Every key/value width is validated. Occupancy invariants hold exactly as
+    /// for single inserts: touched leaves and internal nodes never fall below
+    /// minimum occupancy (they only grow), and every produced node stays within
+    /// [min, max] except a lone root, which is exempt. A node-write failure
+    /// returns a failed result and leaves <paramref name="root"/> untouched —
+    /// the half-written nodes are orphans for compaction, exactly like
+    /// <see cref="Insert"/>.
+    /// </summary>
+    /// <param name="root">The tree version to mutate, or null to bulk-build a fresh tree.</param>
+    /// <param name="entries">The batch, sorted strictly ascending by key, each key/value exactly the declared width.</param>
+    /// <exception cref="ArgumentException">A key or value width is wrong, or the batch is not strictly ascending.</exception>
+    public Result<BTreeRoot> InsertBatch(BTreeRoot? root, IReadOnlyList<BTreeLeafEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        if (entries.Count == 0)
+        {
+            if (root is not null)
+                return Result<BTreeRoot>.Success(root);
+            throw new ArgumentException("InsertBatch requires a non-empty batch when the tree is empty.", nameof(entries));
+        }
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            ValidateKeyWidth(entries[i].Key);
+            ValidateValueWidth(entries[i].Value);
+            if (i > 0 && entries[i - 1].Key.AsSpan().SequenceCompareTo(entries[i].Key) >= 0)
+                throw new ArgumentException("InsertBatch requires entries sorted strictly ascending with no duplicate keys.", nameof(entries));
+        }
+
+        // Empty tree: bulk-build the leaf row from every entry, then build the
+        // internal spine up to a single root.
+        if (root is null)
+        {
+            var leaves = SplitLeafRun(entries, 0, entries.Count);
+            if (leaves.IsFailure)
+                return Result<BTreeRoot>.Failure(leaves.Error);
+            var built = BuildUp(leaves.Value.Nodes, leaves.Value.Separators, childHeight: 1);
+            if (built.IsFailure)
+                return Result<BTreeRoot>.Failure(built.Error);
+            return Result<BTreeRoot>.Success(new BTreeRoot
+            {
+                RootRef = built.Value.Node,
+                Height = built.Value.Height,
+                EntryCount = entries.Count,
+            });
+        }
+
+        var applied = ApplyBatch(root.RootRef, root.Height, entries, 0, entries.Count);
+        if (applied.IsFailure)
+            return Result<BTreeRoot>.Failure(applied.Error);
+
+        var top = BuildUp(applied.Value.Nodes, applied.Value.Separators, childHeight: root.Height);
+        if (top.IsFailure)
+            return Result<BTreeRoot>.Failure(top.Error);
+        return Result<BTreeRoot>.Success(new BTreeRoot
+        {
+            RootRef = top.Value.Node,
+            Height = top.Value.Height,
+            EntryCount = root.EntryCount + applied.Value.AddedKeys,
+        });
+    }
+
+    /// <summary>
+    /// The replacement nodes a batch produced for one subtree position: one or
+    /// more sibling nodes in key order (more than one when the subtree split),
+    /// the <see cref="Separators"/> between them (count = Nodes.Count − 1), and
+    /// how many genuinely new keys the batch added under this subtree.
+    /// </summary>
+    private sealed class BatchNodes
+    {
+        public required long AddedKeys { get; init; }
+        public required List<BTreeNodeRef> Nodes { get; init; }
+        public required List<byte[]> Separators { get; init; }
+    }
+
+    /// <summary>The single node a <see cref="BuildUp"/> collapsed a level into, and the resulting tree height.</summary>
+    private readonly record struct BuiltRoot(BTreeNodeRef Node, int Height);
+
+    /// <summary>
+    /// Recursive one-pass COW descent for a batch: applies the slice
+    /// <c>entries[lo, hi)</c> — all of which route into the subtree at
+    /// <paramref name="nodeRef"/> — rewriting this node once and returning its
+    /// replacement sibling(s). Height counts down to 1 at the leaves.
+    /// </summary>
+    private Result<BatchNodes> ApplyBatch(
+        BTreeNodeRef nodeRef, int height, IReadOnlyList<BTreeLeafEntry> entries, int lo, int hi)
+    {
+        if (height <= 1)
+        {
+            var loaded = ReadLeaf(nodeRef);
+            if (loaded.IsFailure)
+                return Result<BatchNodes>.Failure(loaded.Error);
+
+            var merged = MergeLeaf(loaded.Value.Entries, entries, lo, hi, out long addedKeys);
+            var split = SplitLeafRun(merged, 0, merged.Count);
+            if (split.IsFailure)
+                return split;
+            return Result<BatchNodes>.Success(new BatchNodes
+            {
+                AddedKeys = addedKeys,
+                Nodes = split.Value.Nodes,
+                Separators = split.Value.Separators,
+            });
+        }
+
+        var loadedNode = ReadInternal(nodeRef);
+        if (loadedNode.IsFailure)
+            return Result<BatchNodes>.Failure(loadedNode.Error);
+        var node = loadedNode.Value;
+
+        // Rebuild this node's children/keys in one pass. Entries are sorted and
+        // routing is monotonic, so each child owns a contiguous entry range;
+        // children with no entries are copied verbatim (shared subtrees).
+        var childrenOut = new List<byte[]>(node.Children.Count);
+        var keysOut = new List<byte[]>(node.Keys.Count);
+        long added = 0;
+        int cursor = lo;
+        for (int childIndex = 0; childIndex < node.Children.Count; childIndex++)
+        {
+            if (childIndex > 0)
+                keysOut.Add(node.Keys[childIndex - 1]);
+
+            // The routed slice for this child ends at the first entry that routes
+            // to a later child (i.e. is >= this child's right separator).
+            int sliceEnd = cursor;
+            if (childIndex < node.Keys.Count)
+            {
+                var separator = node.Keys[childIndex];
+                while (sliceEnd < hi && entries[sliceEnd].Key.AsSpan().SequenceCompareTo(separator) < 0)
+                    sliceEnd++;
+            }
+            else
+            {
+                sliceEnd = hi; // rightmost child absorbs everything left
+            }
+
+            if (sliceEnd == cursor)
+            {
+                childrenOut.Add(node.Children[childIndex]); // untouched — shared subtree
+                continue;
+            }
+
+            var childRef = BTreeNodeRef.FromChildRecord(Addressing, node.Children[childIndex]);
+            if (childRef.IsFailure)
+                return Result<BatchNodes>.Failure(childRef.Error);
+
+            var sub = ApplyBatch(childRef.Value, height - 1, entries, cursor, sliceEnd);
+            if (sub.IsFailure)
+                return sub;
+            added += sub.Value.AddedKeys;
+
+            for (int n = 0; n < sub.Value.Nodes.Count; n++)
+            {
+                if (n > 0)
+                    keysOut.Add(sub.Value.Separators[n - 1]);
+                childrenOut.Add(sub.Value.Nodes[n].ToChildRecord());
+            }
+            cursor = sliceEnd;
+        }
+
+        var splitInternal = SplitInternalRun(childrenOut, keysOut);
+        if (splitInternal.IsFailure)
+            return splitInternal;
+        return Result<BatchNodes>.Success(new BatchNodes
+        {
+            AddedKeys = added,
+            Nodes = splitInternal.Value.Nodes,
+            Separators = splitInternal.Value.Separators,
+        });
+    }
+
+    /// <summary>
+    /// Merges a leaf's existing entries with the sorted batch slice
+    /// <c>entries[lo, hi)</c> into one strictly-ascending list: on a key that
+    /// already exists the batch value wins (upsert, not counted); a brand-new
+    /// key is inserted and counted in <paramref name="addedKeys"/>.
+    /// </summary>
+    private static List<BTreeLeafEntry> MergeLeaf(
+        List<BTreeLeafEntry> existing, IReadOnlyList<BTreeLeafEntry> entries, int lo, int hi, out long addedKeys)
+    {
+        var merged = new List<BTreeLeafEntry>(existing.Count + (hi - lo));
+        addedKeys = 0;
+        int a = 0, b = lo;
+        while (a < existing.Count && b < hi)
+        {
+            int cmp = existing[a].Key.AsSpan().SequenceCompareTo(entries[b].Key);
+            if (cmp < 0)
+                merged.Add(existing[a++]);
+            else if (cmp > 0)
+            {
+                merged.Add(entries[b++]);
+                addedKeys++;
+            }
+            else
+            {
+                merged.Add(entries[b]); // upsert: batch value replaces the existing one
+                a++;
+                b++;
+            }
+        }
+        while (a < existing.Count)
+            merged.Add(existing[a++]);
+        while (b < hi)
+        {
+            merged.Add(entries[b++]);
+            addedKeys++;
+        }
+        return merged;
+    }
+
+    /// <summary>
+    /// Writes a run of leaf entries as one or more leaves, each within
+    /// [<see cref="MinLeafEntries"/>, <see cref="MaxLeafEntries"/>] (a single
+    /// leaf may hold fewer only when it is the whole, soon-to-be-root tree). An
+    /// over-capacity run is split into evenly sized leaves — even distribution
+    /// guarantees every piece stays at or above the minimum — with each right
+    /// sibling's first key promoted as its separator (B+-tree leaf split).
+    /// </summary>
+    private Result<BatchNodes> SplitLeafRun(IReadOnlyList<BTreeLeafEntry> entries, int lo, int hi)
+    {
+        int total = hi - lo;
+        var nodes = new List<BTreeNodeRef>();
+        var separators = new List<byte[]>();
+
+        int pieces = (total + MaxLeafEntries - 1) / MaxLeafEntries;
+        if (pieces < 1)
+            pieces = 1;
+        int baseSize = total / pieces;
+        int remainder = total % pieces;
+
+        int start = lo;
+        for (int p = 0; p < pieces; p++)
+        {
+            int size = baseSize + (p < remainder ? 1 : 0);
+            var leaf = NewLeaf();
+            for (int i = 0; i < size; i++)
+                leaf.Entries.Add(entries[start + i]);
+            if (p > 0)
+                separators.Add((byte[])entries[start].Key.Clone());
+
+            var write = WriteLeaf(leaf);
+            if (write.IsFailure)
+                return Result<BatchNodes>.Failure(write.Error);
+            nodes.Add(write.Value);
+            start += size;
+        }
+
+        return Result<BatchNodes>.Success(new BatchNodes { AddedKeys = 0, Nodes = nodes, Separators = separators });
+    }
+
+    /// <summary>
+    /// Writes a run of child records (with their in-between routing keys) as one
+    /// or more internal nodes, each within [<see cref="MinInternalKeys"/>,
+    /// <see cref="MaxInternalKeys"/>] (a single node may hold fewer keys only
+    /// when it is the root). An over-capacity run is split into evenly sized
+    /// internal nodes — even distribution keeps every piece at or above the
+    /// minimum — with the routing key straddling each split boundary promoted
+    /// UP as the separator (internal split moves the middle key up, unlike a
+    /// leaf split which copies it).
+    /// </summary>
+    private Result<BatchNodes> SplitInternalRun(List<byte[]> childRecords, List<byte[]> keys)
+    {
+        int childCount = childRecords.Count;
+        int maxChildren = MaxInternalKeys + 1;
+        var nodes = new List<BTreeNodeRef>();
+        var separators = new List<byte[]>();
+
+        int pieces = (childCount + maxChildren - 1) / maxChildren;
+        if (pieces < 1)
+            pieces = 1;
+        int baseSize = childCount / pieces;
+        int remainder = childCount % pieces;
+
+        int childStart = 0;
+        int keyStart = 0;
+        for (int p = 0; p < pieces; p++)
+        {
+            int size = baseSize + (p < remainder ? 1 : 0); // children in this piece
+            if (p > 0)
+            {
+                // The routing key immediately before this piece is promoted to
+                // the parent — it is consumed by neither sibling.
+                separators.Add(keys[keyStart]);
+                keyStart++;
+            }
+
+            var internalNode = NewInternal();
+            for (int i = 0; i < size; i++)
+                internalNode.Children.Add(childRecords[childStart + i]);
+            for (int i = 0; i < size - 1; i++)
+                internalNode.Keys.Add(keys[keyStart + i]);
+
+            var write = WriteInternal(internalNode);
+            if (write.IsFailure)
+                return Result<BatchNodes>.Failure(write.Error);
+            nodes.Add(write.Value);
+            childStart += size;
+            keyStart += size - 1;
+        }
+
+        return Result<BatchNodes>.Success(new BatchNodes { AddedKeys = 0, Nodes = nodes, Separators = separators });
+    }
+
+    /// <summary>
+    /// Builds the internal spine above a produced level: while the level has
+    /// more than one node it is grouped into a parent level of internal nodes
+    /// (splitting where a level exceeds the fan-out, promoting straddling
+    /// separators), growing the height by one each round, until a single root
+    /// remains. A one-node level is already the root at <paramref name="childHeight"/>.
+    /// </summary>
+    private Result<BuiltRoot> BuildUp(List<BTreeNodeRef> nodes, List<byte[]> separators, int childHeight)
+    {
+        int height = childHeight;
+        while (nodes.Count > 1)
+        {
+            var records = new List<byte[]>(nodes.Count);
+            foreach (var node in nodes)
+                records.Add(node.ToChildRecord());
+
+            var grouped = SplitInternalRun(records, separators);
+            if (grouped.IsFailure)
+                return Result<BuiltRoot>.Failure(grouped.Error);
+            nodes = grouped.Value.Nodes;
+            separators = grouped.Value.Separators;
+            height++;
+        }
+        return Result<BuiltRoot>.Success(new BuiltRoot(nodes[0], height));
+    }
+
     // ---------------------------------------------------------------- Delete
 
     /// <summary>Result of a COW delete.</summary>
