@@ -11,13 +11,13 @@ epic_id: EPIC-EMDB-14
 id: US-EMDB-73
 points: 5
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - wal
 - recovery
 title: WAL blocks with checkpoint replay fence
-updated: '2026-07-01'
+updated: '2026-07-04'
 ---
 
 As the storage engine, I want WAL entries as standard append-only blocks carrying CheckpointBlockId (spec Section 10.4) so that recovery replays exactly the uncommitted operations and nothing else. Retires the v1 raw fixed-region WAL.

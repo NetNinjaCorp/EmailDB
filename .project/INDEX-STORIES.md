@@ -74,11 +74,11 @@
 | [US-EMDB-69](stories/US-EMDB-69.md) | Merkle integrity verification (path + full) | ✅ done | must | 8 | v3, btree, integrity, merkle | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 5 | 8 |
 | [US-EMDB-7](stories/US-EMDB-7.md) | Implement ZoneTree storage provider adapters | 📦 archived | must | 8 |  | [EPIC-EMDB-3](epics/EPIC-EMDB-3.md) | 5 | 5 |
 | [US-EMDB-70](stories/US-EMDB-70.md) | IndexRoot and WAL-buffered flush | ✅ done | must | 5 | v3, btree, wal | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 6 |
-| [US-EMDB-71](stories/US-EMDB-71.md) | BlockLocationIndex (indirection table) | 📋 backlog | must | 8 | v3, location-index, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 5 | 8 |
-| [US-EMDB-72](stories/US-EMDB-72.md) | Checkpoint writer and reader | 📋 backlog | must | 5 | v3, checkpoint, commit | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 6 |
-| [US-EMDB-73](stories/US-EMDB-73.md) | WAL blocks with checkpoint replay fence | 📋 backlog | must | 5 | v3, wal, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 6 |
-| [US-EMDB-74](stories/US-EMDB-74.md) | Open protocol and crash recovery | 📋 backlog | must | 8 | v3, recovery, open | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 5 | 8 |
-| [US-EMDB-75](stories/US-EMDB-75.md) | Corruption-handling contract implementation | 📋 backlog | must | 8 | v3, corruption, testing | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 7 |
+| [US-EMDB-71](stories/US-EMDB-71.md) | BlockLocationIndex (indirection table) | 🟢 ready | must | 8 | v3, location-index, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 5 | 8 |
+| [US-EMDB-72](stories/US-EMDB-72.md) | Checkpoint writer and reader | ✅ done | must | 5 | v3, checkpoint, commit | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 6 |
+| [US-EMDB-73](stories/US-EMDB-73.md) | WAL blocks with checkpoint replay fence | ✅ done | must | 5 | v3, wal, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 6 |
+| [US-EMDB-74](stories/US-EMDB-74.md) | Open protocol and crash recovery | ✅ done | must | 8 | v3, recovery, open | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 5 | 8 |
+| [US-EMDB-75](stories/US-EMDB-75.md) | Corruption-handling contract implementation | ✅ done | must | 8 | v3, corruption, testing | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 7 |
 | [US-EMDB-76](stories/US-EMDB-76.md) | Encryption bootstrap (superblock to provider) | 📋 backlog | must | 8 | v3, encryption, bootstrap | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 5 | 8 |
 | [US-EMDB-77](stories/US-EMDB-77.md) | AES-GCM v3 provider (random nonces, AAD, zeroization) | 📋 backlog | must | 5 | v3, encryption, aes-gcm | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 4 | 6 |
 | [US-EMDB-78](stories/US-EMDB-78.md) | Policy-driven encryption on the write/read path | 📋 backlog | must | 5 | v3, encryption, policy | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 4 | 6 |

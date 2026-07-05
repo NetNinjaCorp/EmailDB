@@ -441,41 +441,41 @@
 | [US-EMDB-70-4](tasks/US-EMDB-70-4.md) | Test: Failed node or root write leaves previous root authoritative with orphans reclaimed later | ✅ done | 1 |  | claude | — | [US-EMDB-70](stories/US-EMDB-70.md) |
 | [US-EMDB-70-5](tasks/US-EMDB-70-5.md) | Implement IndexRoot serialization | ✅ done | 2 |  | claude | US-EMDB-67-5 | [US-EMDB-70](stories/US-EMDB-70.md) |
 | [US-EMDB-70-6](tasks/US-EMDB-70-6.md) | Implement WAL-buffered batch flush | ✅ done | 3 |  | claude | US-EMDB-70-5, US-EMDB-68-6 | [US-EMDB-70](stories/US-EMDB-70.md) |
-| [US-EMDB-71-1](tasks/US-EMDB-71-1.md) | Test: Entries for blocks since last checkpoint batch-insert at checkpoint time | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
-| [US-EMDB-71-2](tasks/US-EMDB-71-2.md) | Test: Internal nodes use ChildOffset not ChildBlockId | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
-| [US-EMDB-71-3](tasks/US-EMDB-71-3.md) | Test: Resolution precedence is runtime map then location index then full scan | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
-| [US-EMDB-71-4](tasks/US-EMDB-71-4.md) | Test: Index regenerates from a full scan and matches | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
-| [US-EMDB-71-5](tasks/US-EMDB-71-5.md) | Test: Lookup of any committed block is O(log n) with upper levels cached | ⚪ todo | — |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
-| [US-EMDB-71-6](tasks/US-EMDB-71-6.md) | Implement offset-addressed location tree variant | ⚪ todo | 3 |  | — | — | [US-EMDB-71](stories/US-EMDB-71.md) |
-| [US-EMDB-71-7](tasks/US-EMDB-71-7.md) | Implement checkpoint-time batch insert | ⚪ todo | 2 |  | — | US-EMDB-71-6 | [US-EMDB-71](stories/US-EMDB-71.md) |
-| [US-EMDB-71-8](tasks/US-EMDB-71-8.md) | Implement resolution precedence and scan regeneration | ⚪ todo | 3 |  | — | US-EMDB-71-7 | [US-EMDB-71](stories/US-EMDB-71.md) |
-| [US-EMDB-72-1](tasks/US-EMDB-72-1.md) | Test: Checkpoint written last in every mutation batch after fsync of its contents | ⚪ todo | — |  | — | — | [US-EMDB-72](stories/US-EMDB-72.md) |
-| [US-EMDB-72-2](tasks/US-EMDB-72-2.md) | Test: Offset hints verified by BlockId match on use and re-resolved on mismatch without error | ⚪ todo | — |  | — | — | [US-EMDB-72](stories/US-EMDB-72.md) |
-| [US-EMDB-72-3](tasks/US-EMDB-72-3.md) | Test: Secondary index table round-trips arbitrary IndexKind entries | ⚪ todo | — |  | — | — | [US-EMDB-72](stories/US-EMDB-72.md) |
-| [US-EMDB-72-4](tasks/US-EMDB-72-4.md) | Test: CheckpointSequence monotonic and previous-checkpoint chain walkable | ⚪ todo | — |  | — | — | [US-EMDB-72](stories/US-EMDB-72.md) |
-| [US-EMDB-72-5](tasks/US-EMDB-72-5.md) | Implement Checkpoint payload serialization | ⚪ todo | 2 |  | — | — | [US-EMDB-72](stories/US-EMDB-72.md) |
-| [US-EMDB-72-6](tasks/US-EMDB-72-6.md) | Implement checkpoint write protocol and reader | ⚪ todo | 3 |  | — | US-EMDB-72-5 | [US-EMDB-72](stories/US-EMDB-72.md) |
-| [US-EMDB-73-1](tasks/US-EMDB-73-1.md) | Test: WAL blocks after Checkpoint N carry N's BlockId | ⚪ todo | — |  | — | — | [US-EMDB-73](stories/US-EMDB-73.md) |
-| [US-EMDB-73-2](tasks/US-EMDB-73-2.md) | Test: Recovery replays only WAL matching the last valid Checkpoint then writes a fresh Checkpoint | ⚪ todo | — |  | — | — | [US-EMDB-73](stories/US-EMDB-73.md) |
-| [US-EMDB-73-3](tasks/US-EMDB-73-3.md) | Test: WAL referencing older checkpoints is treated as committed history | ⚪ todo | — |  | — | — | [US-EMDB-73](stories/US-EMDB-73.md) |
-| [US-EMDB-73-4](tasks/US-EMDB-73-4.md) | Test: WAL payload round-trips insert/delete/folder ops | ⚪ todo | — |  | — | — | [US-EMDB-73](stories/US-EMDB-73.md) |
-| [US-EMDB-73-5](tasks/US-EMDB-73-5.md) | Implement WAL block payload and writer | ⚪ todo | 2 |  | — | — | [US-EMDB-73](stories/US-EMDB-73.md) |
-| [US-EMDB-73-6](tasks/US-EMDB-73-6.md) | Implement WAL replay | ⚪ todo | 3 |  | — | US-EMDB-73-5 | [US-EMDB-73](stories/US-EMDB-73.md) |
-| [US-EMDB-74-1](tasks/US-EMDB-74-1.md) | Test: Clean open performs zero scanning beyond superblock and checkpoint reads | ⚪ todo | — |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
-| [US-EMDB-74-2](tasks/US-EMDB-74-2.md) | Test: Dirty open scans only bytes written after the last checkpoint | ⚪ todo | — |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
-| [US-EMDB-74-3](tasks/US-EMDB-74-3.md) | Test: Crash between checkpoint and superblock update is healed by the forward scan | ⚪ todo | — |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
-| [US-EMDB-74-4](tasks/US-EMDB-74-4.md) | Test: No valid superblock falls back to full scan from 8192 and no valid checkpoint to full rebuild | ⚪ todo | — |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
-| [US-EMDB-74-5](tasks/US-EMDB-74-5.md) | Test: Open is O(log n) on every normal path | ⚪ todo | — |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
-| [US-EMDB-74-6](tasks/US-EMDB-74-6.md) | Implement clean-open fast path | ⚪ todo | 2 |  | — | — | [US-EMDB-74](stories/US-EMDB-74.md) |
-| [US-EMDB-74-7](tasks/US-EMDB-74-7.md) | Implement dirty-open scan and heal | ⚪ todo | 3 |  | — | US-EMDB-74-6 | [US-EMDB-74](stories/US-EMDB-74.md) |
-| [US-EMDB-74-8](tasks/US-EMDB-74-8.md) | Implement disaster fallbacks | ⚪ todo | 3 |  | — | US-EMDB-74-7 | [US-EMDB-74](stories/US-EMDB-74.md) |
-| [US-EMDB-75-1](tasks/US-EMDB-75-1.md) | Test: Each contract row has a dedicated fault-injection test that asserts the required behavior | ⚪ todo | — |  | — | — | [US-EMDB-75](stories/US-EMDB-75.md) |
-| [US-EMDB-75-2](tasks/US-EMDB-75-2.md) | Test: Corruption and wrong-key and tamper surface as distinct error types | ⚪ todo | — |  | — | — | [US-EMDB-75](stories/US-EMDB-75.md) |
-| [US-EMDB-75-3](tasks/US-EMDB-75-3.md) | Test: Damaged byte ranges are logged with offsets | ⚪ todo | — |  | — | — | [US-EMDB-75](stories/US-EMDB-75.md) |
-| [US-EMDB-75-4](tasks/US-EMDB-75-4.md) | Test: Referenced live data loss surfaces the affected BlockId | ⚪ todo | — |  | — | — | [US-EMDB-75](stories/US-EMDB-75.md) |
-| [US-EMDB-75-5](tasks/US-EMDB-75-5.md) | Implement error taxonomy | ⚪ todo | 2 |  | — | — | [US-EMDB-75](stories/US-EMDB-75.md) |
-| [US-EMDB-75-6](tasks/US-EMDB-75-6.md) | Implement per-failure handlers | ⚪ todo | 3 |  | — | US-EMDB-75-5 | [US-EMDB-75](stories/US-EMDB-75.md) |
-| [US-EMDB-75-7](tasks/US-EMDB-75-7.md) | Build fault-injection test harness | ⚪ todo | 3 |  | — | US-EMDB-75-6 | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-71-1](tasks/US-EMDB-71-1.md) | Test: Entries for blocks since last checkpoint batch-insert at checkpoint time | 🔍 review | 1 |  | claude | US-EMDB-71-7 | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-2](tasks/US-EMDB-71-2.md) | Test: Internal nodes use ChildOffset not ChildBlockId | ✅ done | 1 |  | claude | US-EMDB-71-6 | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-3](tasks/US-EMDB-71-3.md) | Test: Resolution precedence is runtime map then location index then full scan | ✅ done | 1 |  | claude | US-EMDB-71-8 | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-4](tasks/US-EMDB-71-4.md) | Test: Index regenerates from a full scan and matches | ✅ done | 1 |  | claude | US-EMDB-71-8 | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-5](tasks/US-EMDB-71-5.md) | Test: Lookup of any committed block is O(log n) with upper levels cached | ✅ done | 1 |  | claude | US-EMDB-71-7 | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-6](tasks/US-EMDB-71-6.md) | Implement offset-addressed location tree variant | ✅ done | 3 |  | claude | — | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-7](tasks/US-EMDB-71-7.md) | Implement checkpoint-time batch insert | ✅ done | 2 |  | claude | US-EMDB-71-6 | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-8](tasks/US-EMDB-71-8.md) | Implement resolution precedence and scan regeneration | ✅ done | 3 |  | claude | US-EMDB-71-7 | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-72-1](tasks/US-EMDB-72-1.md) | Test: Checkpoint written last in every mutation batch after fsync of its contents | ✅ done | 1 |  | claude | US-EMDB-72-6 | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-72-2](tasks/US-EMDB-72-2.md) | Test: Offset hints verified by BlockId match on use and re-resolved on mismatch without error | ✅ done | 1 |  | claude | US-EMDB-72-6 | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-72-3](tasks/US-EMDB-72-3.md) | Test: Secondary index table round-trips arbitrary IndexKind entries | ✅ done | 1 |  | claude | US-EMDB-72-5 | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-72-4](tasks/US-EMDB-72-4.md) | Test: CheckpointSequence monotonic and previous-checkpoint chain walkable | ✅ done | 1 |  | claude | US-EMDB-72-6 | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-72-5](tasks/US-EMDB-72-5.md) | Implement Checkpoint payload serialization | ✅ done | 2 |  | claude | — | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-72-6](tasks/US-EMDB-72-6.md) | Implement checkpoint write protocol and reader | ✅ done | 3 |  | claude | US-EMDB-72-5 | [US-EMDB-72](stories/US-EMDB-72.md) |
+| [US-EMDB-73-1](tasks/US-EMDB-73-1.md) | Test: WAL blocks after Checkpoint N carry N's BlockId | ✅ done | 1 |  | claude | US-EMDB-73-5 | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-73-2](tasks/US-EMDB-73-2.md) | Test: Recovery replays only WAL matching the last valid Checkpoint then writes a fresh Checkpoint | ✅ done | 1 |  | claude | US-EMDB-73-6 | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-73-3](tasks/US-EMDB-73-3.md) | Test: WAL referencing older checkpoints is treated as committed history | ✅ done | 1 |  | claude | US-EMDB-73-6 | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-73-4](tasks/US-EMDB-73-4.md) | Test: WAL payload round-trips insert/delete/folder ops | ✅ done | 1 |  | claude | US-EMDB-73-5 | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-73-5](tasks/US-EMDB-73-5.md) | Implement WAL block payload and writer | ✅ done | 2 |  | claude | — | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-73-6](tasks/US-EMDB-73-6.md) | Implement WAL replay | ✅ done | 3 |  | claude | US-EMDB-73-5 | [US-EMDB-73](stories/US-EMDB-73.md) |
+| [US-EMDB-74-1](tasks/US-EMDB-74-1.md) | Test: Clean open performs zero scanning beyond superblock and checkpoint reads | ✅ done | 1 |  | claude | US-EMDB-74-6 | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-2](tasks/US-EMDB-74-2.md) | Test: Dirty open scans only bytes written after the last checkpoint | ✅ done | 1 |  | claude | US-EMDB-74-7 | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-3](tasks/US-EMDB-74-3.md) | Test: Crash between checkpoint and superblock update is healed by the forward scan | ✅ done | 1 |  | claude | US-EMDB-74-7 | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-4](tasks/US-EMDB-74-4.md) | Test: No valid superblock falls back to full scan from 8192 and no valid checkpoint to full rebuild | ✅ done | 1 |  | claude | US-EMDB-74-8 | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-5](tasks/US-EMDB-74-5.md) | Test: Open is O(log n) on every normal path | ✅ done | 1 |  | claude | US-EMDB-74-7 | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-6](tasks/US-EMDB-74-6.md) | Implement clean-open fast path | ✅ done | 2 |  | claude | — | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-7](tasks/US-EMDB-74-7.md) | Implement dirty-open scan and heal | ✅ done | 3 |  | claude | US-EMDB-74-6 | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-74-8](tasks/US-EMDB-74-8.md) | Implement disaster fallbacks | ✅ done | 3 |  | claude | US-EMDB-74-7 | [US-EMDB-74](stories/US-EMDB-74.md) |
+| [US-EMDB-75-1](tasks/US-EMDB-75-1.md) | Test: Each contract row has a dedicated fault-injection test that asserts the required behavior | ✅ done | 1 |  | claude | US-EMDB-75-7 | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-2](tasks/US-EMDB-75-2.md) | Test: Corruption and wrong-key and tamper surface as distinct error types | ✅ done | 1 |  | claude | US-EMDB-75-6 | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-3](tasks/US-EMDB-75-3.md) | Test: Damaged byte ranges are logged with offsets | ✅ done | 1 |  | claude | US-EMDB-75-6 | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-4](tasks/US-EMDB-75-4.md) | Test: Referenced live data loss surfaces the affected BlockId | ✅ done | 1 |  | claude | US-EMDB-75-6 | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-5](tasks/US-EMDB-75-5.md) | Implement error taxonomy | ✅ done | 2 |  | claude | — | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-6](tasks/US-EMDB-75-6.md) | Implement per-failure handlers | ✅ done | 3 |  | claude | US-EMDB-75-5 | [US-EMDB-75](stories/US-EMDB-75.md) |
+| [US-EMDB-75-7](tasks/US-EMDB-75-7.md) | Build fault-injection test harness | ✅ done | 3 |  | claude | US-EMDB-75-6 | [US-EMDB-75](stories/US-EMDB-75.md) |
 | [US-EMDB-76-1](tasks/US-EMDB-76-1.md) | Test: Password NFC-normalized then UTF-8 encoded before KDF | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
 | [US-EMDB-76-2](tasks/US-EMDB-76-2.md) | Test: KDF parameters read from superblock and honored even when they differ from defaults | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |
 | [US-EMDB-76-3](tasks/US-EMDB-76-3.md) | Test: Wrong password fails fast via KeyVerificationToken with a distinct error | ⚪ todo | — |  | — | — | [US-EMDB-76](stories/US-EMDB-76.md) |

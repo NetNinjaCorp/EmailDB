@@ -1,6 +1,6 @@
 # Project Audit Report
 
-**Errors:** 0 | **Warnings:** 60 | **Info:** 79
+**Errors:** 0 | **Warnings:** 60 | **Info:** 84
 
 - [INFO] Story US-EMDB-1 has 5pts but tasks sum to 9pts
 - [INFO] Story US-EMDB-100 has 3pts but tasks sum to 2pts
@@ -54,6 +54,11 @@
 - [INFO] Story US-EMDB-68 has 13pts but tasks sum to 19pts
 - [INFO] Story US-EMDB-69 has 8pts but tasks sum to 12pts
 - [INFO] Story US-EMDB-70 has 5pts but tasks sum to 9pts
+- [INFO] Story US-EMDB-71 has 8pts but tasks sum to 13pts
+- [INFO] Story US-EMDB-72 has 5pts but tasks sum to 9pts
+- [INFO] Story US-EMDB-73 has 5pts but tasks sum to 9pts
+- [INFO] Story US-EMDB-74 has 8pts but tasks sum to 13pts
+- [INFO] Story US-EMDB-75 has 8pts but tasks sum to 12pts
 - [INFO] Story US-EMDB-76 has 8pts but tasks sum to 7pts
 - [INFO] Story US-EMDB-81 has 8pts but tasks sum to 6pts
 - [INFO] Story US-EMDB-83 has 3pts but tasks sum to 2pts
@@ -80,7 +85,7 @@
 - [INFO] Task US-EMDB-18-6 has a thin description (0 chars)
 - [INFO] Task US-EMDB-19-5 has a thin description (0 chars)
 - [INFO] Task US-EMDB-19-6 has a thin description (0 chars)
-- [INFO] PROJECT.md hasn't been updated in 128 days
+- [INFO] PROJECT.md hasn't been updated in 129 days
 - [WARN] Story US-EMDB-1 references non-existent epic EPIC-EMDB-1
 - [WARN] Story US-EMDB-10 references non-existent epic EPIC-EMDB-4
 - [WARN] Story US-EMDB-11 references non-existent epic EPIC-EMDB-5

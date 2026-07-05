@@ -756,7 +756,7 @@ entries:
 - id: US-EMDB-71
   title: BlockLocationIndex (indirection table)
   type: story
-  status: backlog
+  status: ready
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-14
@@ -764,7 +764,7 @@ entries:
 - id: US-EMDB-72
   title: Checkpoint writer and reader
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-14
@@ -772,7 +772,7 @@ entries:
 - id: US-EMDB-73
   title: WAL blocks with checkpoint replay fence
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-14
@@ -780,7 +780,7 @@ entries:
 - id: US-EMDB-74
   title: Open protocol and crash recovery
   type: story
-  status: backlog
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-14
@@ -788,7 +788,7 @@ entries:
 - id: US-EMDB-75
   title: Corruption-handling contract implementation
   type: story
-  status: backlog
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-14
@@ -4604,16 +4604,16 @@ entries:
   title: 'Test: Entries for blocks since last checkpoint batch-insert at checkpoint
     time'
   type: task
-  status: todo
-  points: null
+  status: review
+  points: 1
   story_id: US-EMDB-71
   epic_id: null
   tags: []
 - id: US-EMDB-71-2
   title: 'Test: Internal nodes use ChildOffset not ChildBlockId'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-71
   epic_id: null
   tags: []
@@ -4621,31 +4621,31 @@ entries:
   title: 'Test: Resolution precedence is runtime map then location index then full
     scan'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-71
   epic_id: null
   tags: []
 - id: US-EMDB-71-4
   title: 'Test: Index regenerates from a full scan and matches'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-71
   epic_id: null
   tags: []
 - id: US-EMDB-71-5
   title: 'Test: Lookup of any committed block is O(log n) with upper levels cached'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-71
   epic_id: null
   tags: []
 - id: US-EMDB-71-6
   title: Implement offset-addressed location tree variant
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-71
   epic_id: null
@@ -4653,7 +4653,7 @@ entries:
 - id: US-EMDB-71-7
   title: Implement checkpoint-time batch insert
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-71
   epic_id: null
@@ -4661,7 +4661,7 @@ entries:
 - id: US-EMDB-71-8
   title: Implement resolution precedence and scan regeneration
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-71
   epic_id: null
@@ -4670,8 +4670,8 @@ entries:
   title: 'Test: Checkpoint written last in every mutation batch after fsync of its
     contents'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-72
   epic_id: null
   tags: []
@@ -4679,31 +4679,31 @@ entries:
   title: 'Test: Offset hints verified by BlockId match on use and re-resolved on mismatch
     without error'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-72
   epic_id: null
   tags: []
 - id: US-EMDB-72-3
   title: 'Test: Secondary index table round-trips arbitrary IndexKind entries'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-72
   epic_id: null
   tags: []
 - id: US-EMDB-72-4
   title: 'Test: CheckpointSequence monotonic and previous-checkpoint chain walkable'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-72
   epic_id: null
   tags: []
 - id: US-EMDB-72-5
   title: Implement Checkpoint payload serialization
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-72
   epic_id: null
@@ -4711,7 +4711,7 @@ entries:
 - id: US-EMDB-72-6
   title: Implement checkpoint write protocol and reader
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-72
   epic_id: null
@@ -4719,8 +4719,8 @@ entries:
 - id: US-EMDB-73-1
   title: 'Test: WAL blocks after Checkpoint N carry N''s BlockId'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-73
   epic_id: null
   tags: []
@@ -4728,31 +4728,31 @@ entries:
   title: 'Test: Recovery replays only WAL matching the last valid Checkpoint then
     writes a fresh Checkpoint'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-73
   epic_id: null
   tags: []
 - id: US-EMDB-73-3
   title: 'Test: WAL referencing older checkpoints is treated as committed history'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-73
   epic_id: null
   tags: []
 - id: US-EMDB-73-4
   title: 'Test: WAL payload round-trips insert/delete/folder ops'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-73
   epic_id: null
   tags: []
 - id: US-EMDB-73-5
   title: Implement WAL block payload and writer
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-73
   epic_id: null
@@ -4760,7 +4760,7 @@ entries:
 - id: US-EMDB-73-6
   title: Implement WAL replay
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-73
   epic_id: null
@@ -4769,16 +4769,16 @@ entries:
   title: 'Test: Clean open performs zero scanning beyond superblock and checkpoint
     reads'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-74
   epic_id: null
   tags: []
 - id: US-EMDB-74-2
   title: 'Test: Dirty open scans only bytes written after the last checkpoint'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-74
   epic_id: null
   tags: []
@@ -4786,8 +4786,8 @@ entries:
   title: 'Test: Crash between checkpoint and superblock update is healed by the forward
     scan'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-74
   epic_id: null
   tags: []
@@ -4795,23 +4795,23 @@ entries:
   title: 'Test: No valid superblock falls back to full scan from 8192 and no valid
     checkpoint to full rebuild'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-74
   epic_id: null
   tags: []
 - id: US-EMDB-74-5
   title: 'Test: Open is O(log n) on every normal path'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-74
   epic_id: null
   tags: []
 - id: US-EMDB-74-6
   title: Implement clean-open fast path
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-74
   epic_id: null
@@ -4819,7 +4819,7 @@ entries:
 - id: US-EMDB-74-7
   title: Implement dirty-open scan and heal
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-74
   epic_id: null
@@ -4827,7 +4827,7 @@ entries:
 - id: US-EMDB-74-8
   title: Implement disaster fallbacks
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-74
   epic_id: null
@@ -4836,39 +4836,39 @@ entries:
   title: 'Test: Each contract row has a dedicated fault-injection test that asserts
     the required behavior'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-75
   epic_id: null
   tags: []
 - id: US-EMDB-75-2
   title: 'Test: Corruption and wrong-key and tamper surface as distinct error types'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-75
   epic_id: null
   tags: []
 - id: US-EMDB-75-3
   title: 'Test: Damaged byte ranges are logged with offsets'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-75
   epic_id: null
   tags: []
 - id: US-EMDB-75-4
   title: 'Test: Referenced live data loss surfaces the affected BlockId'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-75
   epic_id: null
   tags: []
 - id: US-EMDB-75-5
   title: Implement error taxonomy
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-75
   epic_id: null
@@ -4876,7 +4876,7 @@ entries:
 - id: US-EMDB-75-6
   title: Implement per-failure handlers
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-75
   epic_id: null
@@ -4884,7 +4884,7 @@ entries:
 - id: US-EMDB-75-7
   title: Build fault-injection test harness
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-75
   epic_id: null
@@ -6154,8 +6154,8 @@ entries:
   story_id: US-EMDB-99
   epic_id: null
   tags: []
-total_points: 1204
-completed_points: 677
+total_points: 1226
+completed_points: 758
 story_count: 103
 task_count: 628
 epic_count: 22

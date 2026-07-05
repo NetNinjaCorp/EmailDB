@@ -1,15 +1,16 @@
 ---
-assignee: null
+assignee: claude
 created: '2026-07-01'
-depends_on: []
+depends_on:
+- US-EMDB-75-7
 id: US-EMDB-75-1
-points: null
-status: todo
+points: 1
+status: done
 story_id: US-EMDB-75
 tags: []
 title: 'Test: Each contract row has a dedicated fault-injection test that asserts
   the required behavior'
-updated: '2026-07-01'
+updated: '2026-07-05'
 ---
 
 Verify acceptance criterion for story US-EMDB-75:

@@ -11,13 +11,13 @@ epic_id: EPIC-EMDB-14
 id: US-EMDB-75
 points: 8
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - corruption
 - testing
 title: Corruption-handling contract implementation
-updated: '2026-07-01'
+updated: '2026-07-05'
 ---
 
 As the storage engine, I want every verification failure to behave exactly as spec Section 13 requires so that corruption handling is deterministic, not improvised. Covers superblock slots, header/payload checksums, insane lengths, GCM tag failures, Merkle mismatches, torn checkpoints, torn tails, stale offset hints, decompression bombs.

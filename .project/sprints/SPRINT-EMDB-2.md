@@ -1,5 +1,5 @@
 ---
-completed_points: 0
+completed_points: 31
 created: '2026-07-04'
 end_date: '2026-07-18'
 goal: A complete, spec-conformant COW B+-tree engine — generic node format, insert/delete/range
@@ -15,7 +15,7 @@ planned_stories:
 - US-EMDB-69
 - US-EMDB-70
 start_date: '2026-07-04'
-status: active
+status: completed
 updated: '2026-07-04'
 ---
 

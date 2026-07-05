@@ -12,13 +12,13 @@ epic_id: EPIC-EMDB-14
 id: US-EMDB-74
 points: 8
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - recovery
 - open
 title: Open protocol and crash recovery
-updated: '2026-07-01'
+updated: '2026-07-04'
 ---
 
 As a user, I want opening a mailbox to be fast and crash-safe (spec Section 10.2): superblock selection, clean-shutdown fast path, bounded dirty scan for newer checkpoints and unreplayed WAL, location index load, and full-scan fallbacks only on disaster.
