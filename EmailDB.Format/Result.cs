@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic; // Added for EqualityComparer
+using EmailDB.Format.V3; // VerificationError (v3 corruption-handling taxonomy)
 
 namespace EmailDB.Format; // Updated namespace
 
@@ -14,7 +15,17 @@ public class Result<T>
     public T Value { get; }
     public string Error { get; }
 
-    private Result(bool isSuccess, T value, string error)
+    /// <summary>
+    /// The structured v3 corruption-handling error (EmailDB_FileFormat_Spec.md
+    /// Section 13) when this failure was a verification failure, else
+    /// <see langword="null"/>. Its <see cref="Format.V3.VerificationError.Message"/>
+    /// equals <see cref="Error"/>; callers branch on
+    /// <see cref="Format.V3.VerificationError.Kind"/> to tell corruption from
+    /// wrong-key/tamper from integrity failures without string-matching.
+    /// </summary>
+    public VerificationError? VerificationError { get; }
+
+    private Result(bool isSuccess, T value, string error, VerificationError? verificationError = null)
     {
         if (isSuccess && error != null)
             throw new InvalidOperationException("Successful result cannot have an error message.");
@@ -29,6 +40,7 @@ public class Result<T>
         IsSuccess = isSuccess;
         Value = value;
         Error = error;
+        VerificationError = verificationError;
     }
 
     public static Result<T> Success(T value)
@@ -42,6 +54,18 @@ public class Result<T>
         return new Result<T>(false, default(T), error ?? "Unknown error");
     }
 
+    /// <summary>
+    /// Fails carrying a structured v3 verification error (spec Section 13): the
+    /// <see cref="Error"/> string is the error's message and
+    /// <see cref="VerificationError"/> is the typed error, so a caller can either
+    /// read the message or branch on the failure kind.
+    /// </summary>
+    public static Result<T> Failure(VerificationError error)
+    {
+        ArgumentNullException.ThrowIfNull(error);
+        return new Result<T>(false, default(T), error.Message, error);
+    }
+
     // Implicit conversion from T to Result<T> for convenience (optional, can be removed if causing issues)
     // public static implicit operator Result<T>(T value) => Success(value);
 }
@@ -53,7 +77,13 @@ public class Result
     public bool IsFailure => !IsSuccess;
     public string Error { get; }
 
-    private Result(bool isSuccess, string error)
+    /// <summary>
+    /// The structured v3 corruption-handling error (spec Section 13) when this
+    /// failure was a verification failure, else <see langword="null"/>.
+    /// </summary>
+    public VerificationError? VerificationError { get; }
+
+    private Result(bool isSuccess, string error, VerificationError? verificationError = null)
     {
          if (isSuccess && error != null)
             throw new InvalidOperationException("Successful result cannot have an error message.");
@@ -62,6 +92,7 @@ public class Result
 
         IsSuccess = isSuccess;
         Error = error;
+        VerificationError = verificationError;
     }
 
      public static Result Success()
@@ -72,5 +103,14 @@ public class Result
     public static Result Failure(string error)
     {
         return new Result(false, error ?? "Unknown error");
+    }
+
+    /// <summary>
+    /// Fails carrying a structured v3 verification error (spec Section 13).
+    /// </summary>
+    public static Result Failure(VerificationError error)
+    {
+        ArgumentNullException.ThrowIfNull(error);
+        return new Result(false, error.Message, error);
     }
 }

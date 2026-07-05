@@ -22,7 +22,7 @@ namespace EmailDB.Format.V3;
 /// of entries to insert into the BlockLocationIndex and <see cref="Clear"/>
 /// drops them once the Checkpoint block is durable.
 /// </summary>
-public sealed class RuntimeBlockOffsetMap : IBlockOffsetMap
+public sealed class RuntimeBlockOffsetMap : IBlockOffsetMap, IBlockIdResolver
 {
     private readonly ConcurrentDictionary<UlidKey, Location> _entries = new();
 

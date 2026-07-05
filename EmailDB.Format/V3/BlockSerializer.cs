@@ -141,8 +141,15 @@ public static class BlockSerializer
     /// </summary>
     /// <param name="source">At least 64 bytes starting at a block boundary.</param>
     /// <param name="maxPayloadLength">Sanity bound for PayloadLength, from the superblock.</param>
+    /// <param name="atOffset">
+    /// File offset of this block's first header byte, used only to populate the
+    /// typed <see cref="CorruptionError"/> raised on a header-checksum or insane-length
+    /// failure (spec Section 13). Callers over a bare span with no file offset may
+    /// leave the default 0.
+    /// </param>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxPayloadLength"/> is not positive.</exception>
-    public static Result<BlockHeader> DeserializeHeader(ReadOnlySpan<byte> source, long maxPayloadLength)
+    public static Result<BlockHeader> DeserializeHeader(
+        ReadOnlySpan<byte> source, long maxPayloadLength, long atOffset = 0)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxPayloadLength);
 
@@ -150,11 +157,17 @@ public static class BlockSerializer
             return Result<BlockHeader>.Failure(
                 $"Block header requires at least {SerializedHeaderSize} bytes, got {source.Length}.");
 
-        // 1. Verify the header checksum before trusting any field.
+        // 1. Verify the header checksum before trusting any field. A mismatch is the
+        //    Section 13 "HeaderChecksum mismatch" row: block dead, resynchronize.
         Span<byte> expected = stackalloc byte[ChecksumSize];
         ComputeChecksum(source.Slice(0, HeaderSize), expected);
         if (!expected.SequenceEqual(source.Slice(HeaderChecksumOffset, ChecksumSize)))
-            return Result<BlockHeader>.Failure("Block header checksum mismatch (torn or corrupt header).");
+            // The header (and its checksum) is the damaged span: [atOffset, +64). The
+            // reader cannot trust PayloadLength, so this is as much as it can attribute.
+            return CorruptionError.HeaderChecksumMismatch(
+                atOffset,
+                new DamagedRange(atOffset, atOffset + SerializedHeaderSize, "header checksum mismatch"))
+                .ToResult<BlockHeader>();
 
         // 2. Header bytes are now trustworthy; validate the fields.
         var magic = BinaryPrimitives.ReadUInt64LittleEndian(source.Slice(MagicOffset, 8));
@@ -180,8 +193,8 @@ public static class BlockSerializer
         if (payloadLength < 0)
             return Result<BlockHeader>.Failure($"PayloadLength must be non-negative, got {payloadLength}.");
         if (payloadLength > maxPayloadLength)
-            return Result<BlockHeader>.Failure(
-                $"PayloadLength {payloadLength} exceeds MaxPayloadLength {maxPayloadLength} (corrupt header).");
+            // Section 13 "PayloadLength insane" row: never allocate on it.
+            return CorruptionError.InsaneLength(atOffset, payloadLength, maxPayloadLength).ToResult<BlockHeader>();
 
         var header = new BlockHeader
         {
@@ -303,15 +316,20 @@ public static class BlockSerializer
     /// </summary>
     /// <param name="block">The complete block bytes, exactly one block.</param>
     /// <param name="maxPayloadLength">Sanity bound for PayloadLength, from the superblock.</param>
-    public static Result<Block> Deserialize(ReadOnlySpan<byte> block, long maxPayloadLength)
+    /// <param name="atOffset">
+    /// File offset of this block's first header byte, used only to populate the typed
+    /// <see cref="CorruptionError"/> raised on a checksum/insane-length failure
+    /// (spec Section 13). Callers over a bare span may leave the default 0.
+    /// </param>
+    public static Result<Block> Deserialize(ReadOnlySpan<byte> block, long maxPayloadLength, long atOffset = 0)
     {
         if (block.Length < FixedOverhead)
             return Result<Block>.Failure(
                 $"Block requires at least {FixedOverhead} bytes, got {block.Length}.");
 
-        var headerResult = DeserializeHeader(block, maxPayloadLength);
+        var headerResult = DeserializeHeader(block, maxPayloadLength, atOffset);
         if (headerResult.IsFailure)
-            return Result<Block>.Failure(headerResult.Error);
+            return PropagateHeaderFailure(headerResult);
         var header = headerResult.Value;
 
         long expectedTotal = GetTotalBlockLength(header.PayloadLength);
@@ -322,7 +340,16 @@ public static class BlockSerializer
         int payloadLength = (int)header.PayloadLength;
         var payload = block.Slice(PayloadOffset, payloadLength);
         if (!VerifyPayloadChecksum(payload, block.Slice(PayloadOffset + payloadLength, ChecksumSize)))
-            return Result<Block>.Failure("Block payload checksum mismatch (corrupt payload).");
+            // Section 13 "PayloadChecksum mismatch" row: block dead, resynchronize.
+            // Names the block's own BlockId so a caller resolving a live reference can
+            // upgrade this to a referenced-live data-loss error (spec Section 13). The
+            // damaged span is the payload region: [atOffset+PayloadOffset, +PayloadLength).
+            return CorruptionError.PayloadChecksumMismatch(
+                atOffset, header.BlockId,
+                new DamagedRange(
+                    atOffset + PayloadOffset, atOffset + PayloadOffset + payloadLength,
+                    "payload checksum mismatch"))
+                .ToResult<Block>();
 
         var footerResult = DeserializeFooter(block.Slice(block.Length - FooterSize, FooterSize));
         if (footerResult.IsFailure)
@@ -337,6 +364,16 @@ public static class BlockSerializer
             Payload = payload.ToArray(),
         });
     }
+
+    /// <summary>
+    /// Re-types a failed header result to <see cref="Result{Block}"/> while preserving
+    /// any typed <see cref="VerificationError"/> the header failure carried (so a
+    /// Section 13 corruption cause is not flattened back to a bare string).
+    /// </summary>
+    private static Result<Block> PropagateHeaderFailure(Result<BlockHeader> headerResult) =>
+        headerResult.VerificationError is not null
+            ? Result<Block>.Failure(headerResult.VerificationError)
+            : Result<Block>.Failure(headerResult.Error);
 
     /// <summary>
     /// Computes the BLAKE3-128 checksum (first 16 bytes of BLAKE3-256) over the given bytes.

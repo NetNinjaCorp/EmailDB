@@ -237,8 +237,18 @@ public sealed class BlockManager : IDisposable
         var decompressed = BlockCompressor.Decompress(
             block.Payload, block.Header.Compression, MaxPayloadLength);
         if (decompressed.IsFailure)
+        {
+            // A bomb guard trip / corrupt frame is Section 13 payload corruption. The
+            // compressor works on a bare buffer, so re-stamp the typed error with this
+            // block's offset and BlockId before surfacing it.
+            if (decompressed.VerificationError is CorruptionError corruption)
+                return new CorruptionError(
+                    $"Block at offset {offset}: {corruption.Message}",
+                    corruption.Cause, offset, block.Header.BlockId,
+                    innerException: corruption.InnerException).ToResult<Block>();
             return Result<Block>.Failure(
                 $"Block at offset {offset}: {decompressed.Error}");
+        }
 
         return Result<Block>.Success(new Block
         {
@@ -274,8 +284,14 @@ public sealed class BlockManager : IDisposable
             {
                 fileLength = _stream.Length;
                 if (offset + BlockSerializer.SerializedHeaderSize > fileLength)
-                    return Result<Block>.Failure(
-                        $"Block header at offset {offset} extends past EOF (file length {fileLength}).");
+                    // The 64 header bytes do not fit before EOF: a torn final append
+                    // (spec Section 13). Nothing to allocate from an unread length.
+                    return new CorruptionError(
+                        $"Block header at offset {offset} extends past EOF (file length {fileLength}); torn or truncated append.",
+                        CorruptionCause.TornTail, offset,
+                        // Everything from the torn block's start to EOF is unattributable.
+                        damagedRange: new DamagedRange(offset, fileLength, "torn tail (header past EOF)"))
+                        .ToResult<Block>();
 
                 _stream.Seek(offset);
                 _stream.ReadExactly(headerBytes);
@@ -286,15 +302,22 @@ public sealed class BlockManager : IDisposable
             }
 
             // Verifies the header checksum before trusting any field, then validates
-            // PayloadLength <= MaxPayloadLength — no payload-sized allocation yet.
-            var headerResult = BlockSerializer.DeserializeHeader(headerBytes, MaxPayloadLength);
+            // PayloadLength <= MaxPayloadLength — no payload-sized allocation yet. A
+            // failure carries the typed Section 13 corruption cause; thread the file
+            // offset so the error names where the damage is.
+            var headerResult = BlockSerializer.DeserializeHeader(headerBytes, MaxPayloadLength, offset);
             if (headerResult.IsFailure)
-                return Result<Block>.Failure(headerResult.Error);
+                return headerResult.VerificationError is not null
+                    ? Result<Block>.Failure(headerResult.VerificationError)
+                    : Result<Block>.Failure(headerResult.Error);
 
             var totalLength = BlockSerializer.GetTotalBlockLength(headerResult.Value.PayloadLength);
             if (offset + totalLength > fileLength)
-                return Result<Block>.Failure(
-                    $"Block at offset {offset} with PayloadLength {headerResult.Value.PayloadLength} extends past EOF (file length {fileLength}); corrupt header or torn append.");
+                // A checksum-valid header whose declared length runs past EOF: an
+                // insane length / torn append (spec Section 13). Never allocate on it.
+                return new CorruptionError(
+                    $"Block at offset {offset} with PayloadLength {headerResult.Value.PayloadLength} extends past EOF (file length {fileLength}); corrupt header or torn append.",
+                    CorruptionCause.InsaneLength, offset).ToResult<Block>();
             if (totalLength > int.MaxValue)
                 return Result<Block>.Failure(
                     $"Block at offset {offset} is too large to buffer ({totalLength} bytes).");
@@ -312,8 +335,9 @@ public sealed class BlockManager : IDisposable
                 return Result<Block>.Failure($"Block payload read at offset {offset} failed: {ex.Message}");
             }
 
-            // Re-verifies the header, then payload checksum, then footer.
-            return BlockSerializer.Deserialize(blockBytes, MaxPayloadLength);
+            // Re-verifies the header, then payload checksum, then footer. Typed
+            // Section 13 corruption errors carry this block's file offset.
+            return BlockSerializer.Deserialize(blockBytes, MaxPayloadLength, offset);
         }
     }
 
@@ -513,9 +537,17 @@ public sealed class BlockManager : IDisposable
     /// <param name="log">
     /// Optional sink receiving one human-readable message per damaged range.
     /// </param>
+    /// <param name="startOffset">
+    /// Block-aligned file offset to begin the walk at, so a bounded scan reads
+    /// only the bytes from there to EOF (crash recovery scans forward from the
+    /// last Checkpoint — bounded by post-Checkpoint data, not file size, spec
+    /// Section 10.2). Negative (the default) starts at
+    /// <see cref="FirstBlockOffset"/>, scanning the whole block stream.
+    /// </param>
     public Result<ForwardScanResult> ScanForward(
         IBlockOffsetMap? offsetMap = null,
-        Action<string>? log = null)
+        Action<string>? log = null,
+        long startOffset = -1)
     {
         ThrowIfDisposed();
 
@@ -528,7 +560,7 @@ public sealed class BlockManager : IDisposable
         var blocks = new List<BlockLocation>();
         var damagedRanges = new List<DamagedRange>();
 
-        long offset = FirstBlockOffset;
+        long offset = startOffset >= 0 ? startOffset : FirstBlockOffset;
         while (offset + BlockSerializer.FixedOverhead <= fileLength)
         {
             var blockResult = Read(offset);

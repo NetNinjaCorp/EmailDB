@@ -110,9 +110,11 @@ public static class BlockCompressor
                 catch (Exception ex)
                 {
                     // Decoders surface corrupt frames as library-specific exceptions;
-                    // corruption must be a failed result, not a throw (spec Section 13).
-                    return Result<byte[]>.Failure(
-                        $"{compression} decompression failed; treating payload as corrupt: {ex.Message}");
+                    // corruption must be a failed result, not a throw. A frame that will
+                    // not decode is payload corruption (spec Section 13).
+                    return new CorruptionError(
+                        $"{compression} decompression failed; treating payload as corrupt: {ex.Message}",
+                        CorruptionCause.Other, innerException: ex).ToResult<byte[]>();
                 }
             }
 
@@ -138,8 +140,8 @@ public static class BlockCompressor
         {
             total += read;
             if (total > maxDecompressedLength)
-                return Result<byte[]>.Failure(
-                    $"{compression} decompression exceeded the bomb guard of {maxDecompressedLength} bytes (MaxPayloadLength × {BombGuardMultiplier}); treating payload as corrupt (spec Sections 4.4, 13).");
+                // Section 13 "Decompressed size exceeds bomb guard" row → payload corruption.
+                return CorruptionError.DecompressionBomb(maxDecompressedLength).ToResult<byte[]>();
             output.Write(buffer, 0, read);
         }
         return Result<byte[]>.Success(output.ToArray());

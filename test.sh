@@ -12,12 +12,18 @@
 # Examples:
 #   ./test.sh WriterLock
 #   ./test.sh 'ForwardScan|BlockManagerV3'
+#
+# Stress tests (excluded from the default filter, run explicitly):
+#   ./test.sh MillionEntryModelStress    # US-EMDB-68: randomized insert/delete
+#       stress of the COW B+-tree to 1M+ live entries against a reference
+#       model (Category=Stress). Takes ~2.5 minutes and appends a ~3.2 GB
+#       store to /dev/shm (deleted afterwards).
 set -euo pipefail
 cd "$(dirname "$0")"
 
 export DOTNET_ROLL_FORWARD=LatestMajor
 
-DEFAULT_V3_FILTER='WriterLock|DurableStream|DirectoryFsync|BlockManagerFsync|BlockManagerV3|Superblock|Ulid|BlockSerializer|BlockCompressor|RuntimeBlockOffsetMap|ForwardScan|FindLastValidBlock'
+DEFAULT_V3_FILTER='WriterLock|DurableStream|DirectoryFsync|BlockManagerFsync|BlockManagerV3|Superblock|Ulid|BlockSerializer|BlockCompressor|RuntimeBlockOffsetMap|ForwardScan|FindLastValidBlock|BTreeNodeDeserialization|BTreeNodeContentHash|CowBTree|IndexRootSerialization|WalBufferedIndex|WalCheckpointFence|WalSerialization|WalWriter|WalReplayer|BlockLocationIndex|LocationIndexCheckpoint|CompositeBlockIdResolver|LocationIndexRegenerator|CheckpointSerialization|CheckpointWriterReader|CleanOpen|DirtyOpen|DisasterOpen|OpenComplexity|VerificationErrorTaxonomy|VerificationErrorDistinctness|PerFailureHandler|DamagedRangeOffset|ReferencedDataLoss|Section13Contract'
 
 if [[ "${1:-}" == "--all" ]]; then
     exec dotnet test EmailDB.UnitTests "${@:2}"
