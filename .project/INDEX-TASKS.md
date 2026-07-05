@@ -31,6 +31,10 @@
 | [US-EMDB-103-2](tasks/US-EMDB-103-2.md) | Test: No folder/project name mismatches remain | ⚪ todo | — |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
 | [US-EMDB-103-3](tasks/US-EMDB-103-3.md) | Test: PROJECT.md project table matches the sln | ⚪ todo | — |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
 | [US-EMDB-103-4](tasks/US-EMDB-103-4.md) | Fix solution and folder hygiene | ⚪ todo | 2 |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
+| [US-EMDB-104-1](tasks/US-EMDB-104-1.md) | Test: Xfail test Checkpoint_batch_insert_is_one_cow_pass_not_n_individual_inserts un-skipped and passing | ⚪ todo | — |  | — | — | [US-EMDB-104](stories/US-EMDB-104.md) |
+| [US-EMDB-104-2](tasks/US-EMDB-104-2.md) | Test: Batch of N sorted inserts rewrites each touched node path once not per-entry | ⚪ todo | — |  | — | — | [US-EMDB-104](stories/US-EMDB-104.md) |
+| [US-EMDB-104-3](tasks/US-EMDB-104-3.md) | Test: CowBTree model stress and Merkle verification suites pass unchanged | ⚪ todo | — |  | — | — | [US-EMDB-104](stories/US-EMDB-104.md) |
+| [US-EMDB-104-4](tasks/US-EMDB-104-4.md) | Test: docs/BTree_Index.md current-behavior note removed | ⚪ todo | — |  | — | — | [US-EMDB-104](stories/US-EMDB-104.md) |
 | [US-EMDB-11-1](tasks/US-EMDB-11-1.md) | Test: MaintenanceManager uncommented and compiles | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
 | [US-EMDB-11-2](tasks/US-EMDB-11-2.md) | Test: CompactAsync creates a new file with only latest block versions | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
 | [US-EMDB-11-3](tasks/US-EMDB-11-3.md) | Test: Cleanup removes blocks listed in OutdatedOffsets | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
@@ -441,7 +445,7 @@
 | [US-EMDB-70-4](tasks/US-EMDB-70-4.md) | Test: Failed node or root write leaves previous root authoritative with orphans reclaimed later | ✅ done | 1 |  | claude | — | [US-EMDB-70](stories/US-EMDB-70.md) |
 | [US-EMDB-70-5](tasks/US-EMDB-70-5.md) | Implement IndexRoot serialization | ✅ done | 2 |  | claude | US-EMDB-67-5 | [US-EMDB-70](stories/US-EMDB-70.md) |
 | [US-EMDB-70-6](tasks/US-EMDB-70-6.md) | Implement WAL-buffered batch flush | ✅ done | 3 |  | claude | US-EMDB-70-5, US-EMDB-68-6 | [US-EMDB-70](stories/US-EMDB-70.md) |
-| [US-EMDB-71-1](tasks/US-EMDB-71-1.md) | Test: Entries for blocks since last checkpoint batch-insert at checkpoint time | 🔍 review | 1 |  | claude | US-EMDB-71-7 | [US-EMDB-71](stories/US-EMDB-71.md) |
+| [US-EMDB-71-1](tasks/US-EMDB-71-1.md) | Test: Entries for blocks since last checkpoint batch-insert at checkpoint time | ✅ done | 1 |  | claude | US-EMDB-71-7 | [US-EMDB-71](stories/US-EMDB-71.md) |
 | [US-EMDB-71-2](tasks/US-EMDB-71-2.md) | Test: Internal nodes use ChildOffset not ChildBlockId | ✅ done | 1 |  | claude | US-EMDB-71-6 | [US-EMDB-71](stories/US-EMDB-71.md) |
 | [US-EMDB-71-3](tasks/US-EMDB-71-3.md) | Test: Resolution precedence is runtime map then location index then full scan | ✅ done | 1 |  | claude | US-EMDB-71-8 | [US-EMDB-71](stories/US-EMDB-71.md) |
 | [US-EMDB-71-4](tasks/US-EMDB-71-4.md) | Test: Index regenerates from a full scan and matches | ✅ done | 1 |  | claude | US-EMDB-71-8 | [US-EMDB-71](stories/US-EMDB-71.md) |

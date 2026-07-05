@@ -11,13 +11,13 @@ epic_id: EPIC-EMDB-14
 id: US-EMDB-71
 points: 8
 priority: must
-status: ready
+status: done
 tags:
 - v3
 - location-index
 - recovery
 title: BlockLocationIndex (indirection table)
-updated: '2026-07-04'
+updated: '2026-07-05'
 ---
 
 As the storage engine, I want a persistent BlockId-to-(Offset,Length) index (spec Section 7, IndexKind 1) so that ULID-only logical pointers resolve in O(log n) and open never scans the file. Offset-addressed internally (it cannot depend on itself); derived data rebuilt by compaction or full scan.

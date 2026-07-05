@@ -1,5 +1,5 @@
 ---
-completed_points: 0
+completed_points: 34
 created: '2026-07-04'
 end_date: '2026-07-18'
 goal: Crash at any write boundary recovers to a consistent committed state — BlockLocationIndex,
@@ -16,8 +16,8 @@ planned_stories:
 - US-EMDB-74
 - US-EMDB-75
 start_date: '2026-07-04'
-status: active
-updated: '2026-07-04'
+status: completed
+updated: '2026-07-05'
 ---
 
 Crash at any write boundary recovers to a consistent committed state — BlockLocationIndex, checkpoint commit point, WAL replay fence, O(log n) open, and the full Section-13 corruption contract under fault injection (EmailDB_FileFormat_Spec.md Sections 7, 10, 13).

@@ -762,3 +762,12 @@
 {"event_type":"update","item_id":"US-EMDB-75-1","item_type":"task","changes":{"status":{"before":"in-progress","after":"done"}},"timestamp":"2026-07-05T00:58:34.289117Z","actor":"Ryan Tregea","source":"cli"}
 {"event_type":"update","item_id":"US-EMDB-75-1","item_type":"task","changes":{},"timestamp":"2026-07-05T00:59:18.745826Z","actor":"Ryan Tregea","source":"cli"}
 {"event_type":"update","item_id":"US-EMDB-75","item_type":"story","changes":{"status":{"before":"ready","after":"done"}},"timestamp":"2026-07-05T00:59:19.432302Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-104","item_type":"story","changes":{},"timestamp":"2026-07-05T02:01:23.846391Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-104-1","item_type":"task","changes":{},"timestamp":"2026-07-05T02:01:25.886086Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-104-2","item_type":"task","changes":{},"timestamp":"2026-07-05T02:01:26.261934Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-104-3","item_type":"task","changes":{},"timestamp":"2026-07-05T02:01:26.574233Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-104-4","item_type":"task","changes":{},"timestamp":"2026-07-05T02:01:26.873881Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"update","item_id":"US-EMDB-104","item_type":"story","changes":{"epic_id":{"before":null,"after":"EPIC-EMDB-13"}},"timestamp":"2026-07-05T02:01:27.066046Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"update","item_id":"US-EMDB-71-1","item_type":"task","changes":{"status":{"before":"review","after":"done"}},"timestamp":"2026-07-05T02:01:48.164020Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"update","item_id":"US-EMDB-71","item_type":"story","changes":{"status":{"before":"ready","after":"done"}},"timestamp":"2026-07-05T02:01:48.820149Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"update","item_id":"SPRINT-EMDB-3","item_type":"sprint","changes":{"status":{"before":"active","after":"completed"}},"timestamp":"2026-07-05T02:01:54.369546Z","actor":"Ryan Tregea","source":"cli"}

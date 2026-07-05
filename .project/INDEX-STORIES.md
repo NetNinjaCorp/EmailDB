@@ -8,6 +8,7 @@
 | [US-EMDB-101](stories/US-EMDB-101.md) | Delete v1 code paths | 📋 backlog | must | 5 | v3, cleanup | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 4 | 5 |
 | [US-EMDB-102](stories/US-EMDB-102.md) | Test suite migration to v3 | 📋 backlog | must | 8 | v3, testing, migration | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 4 | 6 |
 | [US-EMDB-103](stories/US-EMDB-103.md) | Solution hygiene | 📋 backlog | should | 3 | v3, cleanup, hygiene | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 3 | 4 |
+| [US-EMDB-104](stories/US-EMDB-104.md) | One-pass amortized bulk load for PutBatch | 📋 backlog | should | 5 | v3, btree, performance, write-amplification | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 4 |
 | [US-EMDB-11](stories/US-EMDB-11.md) | Implement MaintenanceManager compaction and cleanup | 📋 backlog | should | 5 |  | [EPIC-EMDB-5](epics/EPIC-EMDB-5.md) | 5 | 5 |
 | [US-EMDB-12](stories/US-EMDB-12.md) | Implement WAL-based crash recovery | 📋 backlog | should | 8 |  | [EPIC-EMDB-5](epics/EPIC-EMDB-5.md) | 5 | 5 |
 | [US-EMDB-13](stories/US-EMDB-13.md) | Fix broken test references and build test infrastructure | 📋 backlog | must | 5 |  | [EPIC-EMDB-6](epics/EPIC-EMDB-6.md) | 5 | 5 |
@@ -74,7 +75,7 @@
 | [US-EMDB-69](stories/US-EMDB-69.md) | Merkle integrity verification (path + full) | ✅ done | must | 8 | v3, btree, integrity, merkle | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 5 | 8 |
 | [US-EMDB-7](stories/US-EMDB-7.md) | Implement ZoneTree storage provider adapters | 📦 archived | must | 8 |  | [EPIC-EMDB-3](epics/EPIC-EMDB-3.md) | 5 | 5 |
 | [US-EMDB-70](stories/US-EMDB-70.md) | IndexRoot and WAL-buffered flush | ✅ done | must | 5 | v3, btree, wal | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 6 |
-| [US-EMDB-71](stories/US-EMDB-71.md) | BlockLocationIndex (indirection table) | 🟢 ready | must | 8 | v3, location-index, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 5 | 8 |
+| [US-EMDB-71](stories/US-EMDB-71.md) | BlockLocationIndex (indirection table) | ✅ done | must | 8 | v3, location-index, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 5 | 8 |
 | [US-EMDB-72](stories/US-EMDB-72.md) | Checkpoint writer and reader | ✅ done | must | 5 | v3, checkpoint, commit | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 6 |
 | [US-EMDB-73](stories/US-EMDB-73.md) | WAL blocks with checkpoint replay fence | ✅ done | must | 5 | v3, wal, recovery | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 4 | 6 |
 | [US-EMDB-74](stories/US-EMDB-74.md) | Open protocol and crash recovery | ✅ done | must | 8 | v3, recovery, open | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | 5 | 8 |

@@ -223,6 +223,14 @@ entries:
   story_id: null
   epic_id: EPIC-EMDB-22
   tags: []
+- id: US-EMDB-104
+  title: One-pass amortized bulk load for PutBatch
+  type: story
+  status: backlog
+  points: 5
+  story_id: null
+  epic_id: EPIC-EMDB-13
+  tags: []
 - id: US-EMDB-11
   title: Implement MaintenanceManager compaction and cleanup
   type: story
@@ -756,7 +764,7 @@ entries:
 - id: US-EMDB-71
   title: BlockLocationIndex (indirection table)
   type: story
-  status: ready
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-14
@@ -1233,6 +1241,40 @@ entries:
   status: todo
   points: 2
   story_id: US-EMDB-103
+  epic_id: null
+  tags: []
+- id: US-EMDB-104-1
+  title: 'Test: Xfail test Checkpoint_batch_insert_is_one_cow_pass_not_n_individual_inserts
+    un-skipped and passing'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-104
+  epic_id: null
+  tags: []
+- id: US-EMDB-104-2
+  title: 'Test: Batch of N sorted inserts rewrites each touched node path once not
+    per-entry'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-104
+  epic_id: null
+  tags: []
+- id: US-EMDB-104-3
+  title: 'Test: CowBTree model stress and Merkle verification suites pass unchanged'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-104
+  epic_id: null
+  tags: []
+- id: US-EMDB-104-4
+  title: 'Test: docs/BTree_Index.md current-behavior note removed'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-104
   epic_id: null
   tags: []
 - id: US-EMDB-11-1
@@ -4604,7 +4646,7 @@ entries:
   title: 'Test: Entries for blocks since last checkpoint batch-insert at checkpoint
     time'
   type: task
-  status: review
+  status: done
   points: 1
   story_id: US-EMDB-71
   epic_id: null
@@ -6154,8 +6196,8 @@ entries:
   story_id: US-EMDB-99
   epic_id: null
   tags: []
-total_points: 1226
-completed_points: 758
-story_count: 103
-task_count: 628
+total_points: 1231
+completed_points: 767
+story_count: 104
+task_count: 632
 epic_count: 22

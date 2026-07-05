@@ -6,7 +6,7 @@
 | [EPIC-EMDB-10](epics/EPIC-EMDB-10.md) | BLAKE3-128 Block Checksums | 📦 archived | must | integrity, security, format | 4 | 15 |
 | [EPIC-EMDB-11](epics/EPIC-EMDB-11.md) | Two-Tier Email Storage (Metadata + Content Blocks) | 📦 archived | must | storage, email, metadata, architecture, core | 5 | 21 |
 | [EPIC-EMDB-12](epics/EPIC-EMDB-12.md) | v3 BlockStore Foundation | 📝 draft | must | v3, core, format, foundation | 4 | 26 |
-| [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | Generic B+-Tree Engine | 📝 draft | must | v3, btree, index, core | 4 | 31 |
+| [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | Generic B+-Tree Engine | 📝 draft | must | v3, btree, index, core | 5 | 36 |
 | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | Checkpoint, WAL &amp; Recovery | 📝 draft | must | v3, recovery, checkpoint, wal, durability | 5 | 34 |
 | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | Encryption v3 | 📝 draft | must | v3, security, encryption | 4 | 23 |
 | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | Folder System &amp; Three-Tier Storage | 📝 draft | must | v3, folders, storage, three-tier | 4 | 24 |
