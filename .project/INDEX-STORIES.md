@@ -5,9 +5,9 @@
 | [US-EMDB-1](stories/US-EMDB-1.md) | Fix async/lock concurrency issues in managers | ✅ done | must | 5 |  | [EPIC-EMDB-1](epics/EPIC-EMDB-1.md) | 5 | 5 |
 | [US-EMDB-10](stories/US-EMDB-10.md) | Implement IStorageManager with two-tier storage and soft-delete | 📋 backlog | must | 5 |  | [EPIC-EMDB-4](epics/EPIC-EMDB-4.md) | 6 | 5 |
 | [US-EMDB-100](stories/US-EMDB-100.md) | KeyStore sync ordering protocol | 📋 backlog | could | 3 | v3, sync, keystore | [EPIC-EMDB-21](epics/EPIC-EMDB-21.md) | 3 | 4 |
-| [US-EMDB-101](stories/US-EMDB-101.md) | Delete v1 code paths | 📋 backlog | must | 5 | v3, cleanup | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 4 | 5 |
-| [US-EMDB-102](stories/US-EMDB-102.md) | Test suite migration to v3 | 📋 backlog | must | 8 | v3, testing, migration | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 4 | 6 |
-| [US-EMDB-103](stories/US-EMDB-103.md) | Solution hygiene | 📋 backlog | should | 3 | v3, cleanup, hygiene | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 3 | 4 |
+| [US-EMDB-101](stories/US-EMDB-101.md) | Delete v1 code paths | ✅ done | must | 5 | v3, cleanup | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 4 | 5 |
+| [US-EMDB-102](stories/US-EMDB-102.md) | Test suite migration to v3 | ✅ done | must | 8 | v3, testing, migration | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 4 | 6 |
+| [US-EMDB-103](stories/US-EMDB-103.md) | Solution hygiene | ✅ done | should | 3 | v3, cleanup, hygiene | [EPIC-EMDB-22](epics/EPIC-EMDB-22.md) | 3 | 4 |
 | [US-EMDB-104](stories/US-EMDB-104.md) | One-pass amortized bulk load for PutBatch | ✅ done | should | 5 | v3, btree, performance, write-amplification | [EPIC-EMDB-13](epics/EPIC-EMDB-13.md) | 4 | 5 |
 | [US-EMDB-11](stories/US-EMDB-11.md) | Implement MaintenanceManager compaction and cleanup | 📋 backlog | should | 5 |  | [EPIC-EMDB-5](epics/EPIC-EMDB-5.md) | 5 | 5 |
 | [US-EMDB-12](stories/US-EMDB-12.md) | Implement WAL-based crash recovery | 📋 backlog | should | 8 |  | [EPIC-EMDB-5](epics/EPIC-EMDB-5.md) | 5 | 5 |
@@ -94,9 +94,9 @@
 | [US-EMDB-86](stories/US-EMDB-86.md) | GetEmail and open-email read path | ✅ done | must | 5 | v3, api, read-path | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 5 |
 | [US-EMDB-87](stories/US-EMDB-87.md) | Move, delete, flag, and list operations | ✅ done | must | 5 | v3, api, operations | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 6 |
 | [US-EMDB-88](stories/US-EMDB-88.md) | Dead-block accounting and compaction triggers | ✅ done | should | 5 | v3, compaction, accounting | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 4 | 6 |
-| [US-EMDB-89](stories/US-EMDB-89.md) | Side-file compaction and atomic swap | 📋 backlog | must | 8 | v3, compaction, swap | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 5 | 8 |
+| [US-EMDB-89](stories/US-EMDB-89.md) | Side-file compaction and atomic swap | ✅ done | must | 8 | v3, compaction, swap | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 5 | 8 |
 | [US-EMDB-9](stories/US-EMDB-9.md) | Implement EmailManager with two-tier storage (metadata + content blocks) | 📋 backlog | must | 8 |  | [EPIC-EMDB-4](epics/EPIC-EMDB-4.md) | 7 | 6 |
-| [US-EMDB-90](stories/US-EMDB-90.md) | Compaction re-encryption and DEK pruning | 📋 backlog | should | 5 | v3, compaction, encryption | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 4 | 6 |
+| [US-EMDB-90](stories/US-EMDB-90.md) | Compaction re-encryption and DEK pruning | ✅ done | should | 5 | v3, compaction, encryption | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 4 | 6 |
 | [US-EMDB-91](stories/US-EMDB-91.md) | Address trigram FTS index | 📋 backlog | should | 13 | v3, search, fts, trigram | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 5 | 8 |
 | [US-EMDB-92](stories/US-EMDB-92.md) | Listing page scan search | 📋 backlog | should | 3 | v3, search, scan | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 3 | 4 |
 | [US-EMDB-93](stories/US-EMDB-93.md) | Date BTree secondary index | ✅ done | should | 5 | v3, search, date-index | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 4 | 5 |

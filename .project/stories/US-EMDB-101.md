@@ -11,12 +11,12 @@ epic_id: EPIC-EMDB-22
 id: US-EMDB-101
 points: 5
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - cleanup
 title: Delete v1 code paths
-updated: '2026-07-02'
+updated: '2026-07-10'
 ---
 
 As a maintainer, I want the ADR-016 retirement list executed: ZonetreeSegmentIO.cs, commented-out EmailManager/MaintenanceManager, SegmentManager/FolderManager and Segment/Folder models, duplicate EmailDB.Format.Protobuf models + its MetadataManager, int64 BlockIdGenerator range partitioning, OverrideLocation and raw-region WAL paths, ZonetreeRef project.

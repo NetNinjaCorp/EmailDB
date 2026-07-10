@@ -16,21 +16,21 @@
 | [US-EMDB-100-2](tasks/US-EMDB-100-2.md) | Test: A backup never holds a content block whose epoch DEK it lacks | ⚪ todo | — |  | — | — | [US-EMDB-100](stories/US-EMDB-100.md) |
 | [US-EMDB-100-3](tasks/US-EMDB-100-3.md) | Test: Interrupted sync during epoch transition recovers correctly | ⚪ todo | — |  | — | — | [US-EMDB-100](stories/US-EMDB-100.md) |
 | [US-EMDB-100-4](tasks/US-EMDB-100-4.md) | Design and implement KeyStore ordering protocol | ⚪ todo | 2 |  | — | — | [US-EMDB-100](stories/US-EMDB-100.md) |
-| [US-EMDB-101-1](tasks/US-EMDB-101-1.md) | Test: All listed files and code paths removed | ⚪ todo | — |  | — | — | [US-EMDB-101](stories/US-EMDB-101.md) |
-| [US-EMDB-101-2](tasks/US-EMDB-101-2.md) | Test: Solution builds with zero warnings about missing references | ⚪ todo | — |  | — | — | [US-EMDB-101](stories/US-EMDB-101.md) |
-| [US-EMDB-101-3](tasks/US-EMDB-101-3.md) | Test: No remaining reference to ZoneTree or OverrideLocation or int64 BlockId generation in EmailDB.Format | ⚪ todo | — |  | — | — | [US-EMDB-101](stories/US-EMDB-101.md) |
-| [US-EMDB-101-4](tasks/US-EMDB-101-4.md) | Test: git grep confirms no dead namespaces remain | ⚪ todo | — |  | — | — | [US-EMDB-101](stories/US-EMDB-101.md) |
-| [US-EMDB-101-5](tasks/US-EMDB-101-5.md) | Delete v1 files and code paths | ⚪ todo | 3 |  | — | — | [US-EMDB-101](stories/US-EMDB-101.md) |
-| [US-EMDB-102-1](tasks/US-EMDB-102-1.md) | Test: v1-format tests removed or rewritten against v3 | ⚪ todo | — |  | — | — | [US-EMDB-102](stories/US-EMDB-102.md) |
-| [US-EMDB-102-2](tasks/US-EMDB-102-2.md) | Test: Crypto-primitive tests retained and passing | ⚪ todo | — |  | — | — | [US-EMDB-102](stories/US-EMDB-102.md) |
-| [US-EMDB-102-3](tasks/US-EMDB-102-3.md) | Test: Full suite green in CI on Linux | ⚪ todo | — |  | — | — | [US-EMDB-102](stories/US-EMDB-102.md) |
-| [US-EMDB-102-4](tasks/US-EMDB-102-4.md) | Test: Coverage exists for every v3 spec section with a MUST | ⚪ todo | — |  | — | — | [US-EMDB-102](stories/US-EMDB-102.md) |
-| [US-EMDB-102-5](tasks/US-EMDB-102-5.md) | Triage existing test suite | ⚪ todo | 2 |  | — | — | [US-EMDB-102](stories/US-EMDB-102.md) |
-| [US-EMDB-102-6](tasks/US-EMDB-102-6.md) | Port retained tests to v3 APIs | ⚪ todo | 5 |  | — | US-EMDB-102-5 | [US-EMDB-102](stories/US-EMDB-102.md) |
-| [US-EMDB-103-1](tasks/US-EMDB-103-1.md) | Test: Every project on disk is in the sln and vice versa | ⚪ todo | — |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
-| [US-EMDB-103-2](tasks/US-EMDB-103-2.md) | Test: No folder/project name mismatches remain | ⚪ todo | — |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
-| [US-EMDB-103-3](tasks/US-EMDB-103-3.md) | Test: PROJECT.md project table matches the sln | ⚪ todo | — |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
-| [US-EMDB-103-4](tasks/US-EMDB-103-4.md) | Fix solution and folder hygiene | ⚪ todo | 2 |  | — | — | [US-EMDB-103](stories/US-EMDB-103.md) |
+| [US-EMDB-101-1](tasks/US-EMDB-101-1.md) | Test: All listed files and code paths removed | ✅ done | 1 |  | claude | US-EMDB-101-5 | [US-EMDB-101](stories/US-EMDB-101.md) |
+| [US-EMDB-101-2](tasks/US-EMDB-101-2.md) | Test: Solution builds with zero warnings about missing references | ✅ done | 1 |  | claude | US-EMDB-101-5 | [US-EMDB-101](stories/US-EMDB-101.md) |
+| [US-EMDB-101-3](tasks/US-EMDB-101-3.md) | Test: No remaining reference to ZoneTree or OverrideLocation or int64 BlockId generation in EmailDB.Format | ✅ done | 1 |  | claude | US-EMDB-101-5 | [US-EMDB-101](stories/US-EMDB-101.md) |
+| [US-EMDB-101-4](tasks/US-EMDB-101-4.md) | Test: git grep confirms no dead namespaces remain | ✅ done | 1 |  | claude | US-EMDB-101-5 | [US-EMDB-101](stories/US-EMDB-101.md) |
+| [US-EMDB-101-5](tasks/US-EMDB-101-5.md) | Delete v1 files and code paths | ✅ done | 3 |  | claude | US-EMDB-102-6 | [US-EMDB-101](stories/US-EMDB-101.md) |
+| [US-EMDB-102-1](tasks/US-EMDB-102-1.md) | Test: v1-format tests removed or rewritten against v3 | ✅ done | 1 |  | claude | US-EMDB-102-6 | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-102-2](tasks/US-EMDB-102-2.md) | Test: Crypto-primitive tests retained and passing | ✅ done | 1 |  | claude | US-EMDB-102-6 | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-102-3](tasks/US-EMDB-102-3.md) | Test: Full suite green in CI on Linux | ✅ done | 1 |  | claude | US-EMDB-102-6 | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-102-4](tasks/US-EMDB-102-4.md) | Test: Coverage exists for every v3 spec section with a MUST | ✅ done | 1 |  | claude | US-EMDB-102-6 | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-102-5](tasks/US-EMDB-102-5.md) | Triage existing test suite | ✅ done | 2 |  | claude | — | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-102-6](tasks/US-EMDB-102-6.md) | Port retained tests to v3 APIs | ✅ done | 5 |  | claude | US-EMDB-102-5 | [US-EMDB-102](stories/US-EMDB-102.md) |
+| [US-EMDB-103-1](tasks/US-EMDB-103-1.md) | Test: Every project on disk is in the sln and vice versa | ✅ done | 1 |  | claude | US-EMDB-103-4 | [US-EMDB-103](stories/US-EMDB-103.md) |
+| [US-EMDB-103-2](tasks/US-EMDB-103-2.md) | Test: No folder/project name mismatches remain | ✅ done | 1 |  | claude | US-EMDB-103-4 | [US-EMDB-103](stories/US-EMDB-103.md) |
+| [US-EMDB-103-3](tasks/US-EMDB-103-3.md) | Test: PROJECT.md project table matches the sln | ✅ done | 1 |  | claude | US-EMDB-103-4 | [US-EMDB-103](stories/US-EMDB-103.md) |
+| [US-EMDB-103-4](tasks/US-EMDB-103-4.md) | Fix solution and folder hygiene | ✅ done | 2 |  | claude | — | [US-EMDB-103](stories/US-EMDB-103.md) |
 | [US-EMDB-104-1](tasks/US-EMDB-104-1.md) | Test: Xfail test Checkpoint_batch_insert_is_one_cow_pass_not_n_individual_inserts un-skipped and passing | ✅ done | 1 |  | claude | US-EMDB-104-5 | [US-EMDB-104](stories/US-EMDB-104.md) |
 | [US-EMDB-104-2](tasks/US-EMDB-104-2.md) | Test: Batch of N sorted inserts rewrites each touched node path once not per-entry | ✅ done | 1 |  | claude | US-EMDB-104-5 | [US-EMDB-104](stories/US-EMDB-104.md) |
 | [US-EMDB-104-3](tasks/US-EMDB-104-3.md) | Test: CowBTree model stress and Merkle verification suites pass unchanged | ✅ done | 1 |  | claude | US-EMDB-104-5 | [US-EMDB-104](stories/US-EMDB-104.md) |
@@ -568,26 +568,26 @@
 | [US-EMDB-88-4](tasks/US-EMDB-88-4.md) | Test: Cleanup blocks record superseded BlockIds for audit | ✅ done | 1 |  | claude | US-EMDB-88-5 | [US-EMDB-88](stories/US-EMDB-88.md) |
 | [US-EMDB-88-5](tasks/US-EMDB-88-5.md) | Implement live/dead byte accounting and Cleanup blocks | ✅ done | 3 |  | claude | — | [US-EMDB-88](stories/US-EMDB-88.md) |
 | [US-EMDB-88-6](tasks/US-EMDB-88-6.md) | Implement trigger evaluation | ✅ done | 1 |  | claude | US-EMDB-88-5 | [US-EMDB-88](stories/US-EMDB-88.md) |
-| [US-EMDB-89-1](tasks/US-EMDB-89-1.md) | Test: Compacted file contains exactly the live blocks with identical BlockIds and content | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
-| [US-EMDB-89-2](tasks/US-EMDB-89-2.md) | Test: BlockLocationIndex rebuilt for the new layout and verifies | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
-| [US-EMDB-89-3](tasks/US-EMDB-89-3.md) | Test: Kill at every step of the swap yields either the complete old file or the complete new file | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
-| [US-EMDB-89-4](tasks/US-EMDB-89-4.md) | Test: Leftover .compact file is deleted on next open | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
-| [US-EMDB-89-5](tasks/US-EMDB-89-5.md) | Test: FolderVersions and CheckpointSequence continue across the swap so sync is unaffected | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
-| [US-EMDB-89-6](tasks/US-EMDB-89-6.md) | Implement live-block walk and side-file copy | ⚪ todo | 3 |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
-| [US-EMDB-89-7](tasks/US-EMDB-89-7.md) | Implement location index rebuild during copy | ⚪ todo | 2 |  | — | US-EMDB-89-6 | [US-EMDB-89](stories/US-EMDB-89.md) |
-| [US-EMDB-89-8](tasks/US-EMDB-89-8.md) | Implement atomic swap and leftover cleanup | ⚪ todo | 2 |  | — | US-EMDB-89-7 | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-1](tasks/US-EMDB-89-1.md) | Test: Compacted file contains exactly the live blocks with identical BlockIds and content | ✅ done | 1 |  | claude | US-EMDB-89-8 | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-2](tasks/US-EMDB-89-2.md) | Test: BlockLocationIndex rebuilt for the new layout and verifies | ✅ done | 1 |  | claude | US-EMDB-89-8 | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-3](tasks/US-EMDB-89-3.md) | Test: Kill at every step of the swap yields either the complete old file or the complete new file | ✅ done | 1 |  | claude | US-EMDB-89-8 | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-4](tasks/US-EMDB-89-4.md) | Test: Leftover .compact file is deleted on next open | ✅ done | 1 |  | claude | US-EMDB-89-8 | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-5](tasks/US-EMDB-89-5.md) | Test: FolderVersions and CheckpointSequence continue across the swap so sync is unaffected | ✅ done | 1 |  | claude | US-EMDB-89-8 | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-6](tasks/US-EMDB-89-6.md) | Implement live-block walk and side-file copy | ✅ done | 3 |  | claude | — | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-7](tasks/US-EMDB-89-7.md) | Implement location index rebuild during copy | ✅ done | 2 |  | claude | US-EMDB-89-6 | [US-EMDB-89](stories/US-EMDB-89.md) |
+| [US-EMDB-89-8](tasks/US-EMDB-89-8.md) | Implement atomic swap and leftover cleanup | ✅ done | 2 |  | claude | US-EMDB-89-7 | [US-EMDB-89](stories/US-EMDB-89.md) |
 | [US-EMDB-9-1](tasks/US-EMDB-9-1.md) | Test: EmailManager compiles with two-tier storage API | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
 | [US-EMDB-9-2](tasks/US-EMDB-9-2.md) | Test: AddEmailAsync writes content block + metadata block + BTree insert + folder add | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
 | [US-EMDB-9-3](tasks/US-EMDB-9-3.md) | Test: GetEmailMetadataAsync retrieves metadata via BTree lookup without reading content | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
 | [US-EMDB-9-4](tasks/US-EMDB-9-4.md) | Test: SoftDeleteEmailAsync moves to Dead folder without BTree mutation | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
 | [US-EMDB-9-5](tasks/US-EMDB-9-5.md) | Test: MoveEmailAsync updates folder membership only (BTree and blocks untouched) | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
 | [US-EMDB-9-6](tasks/US-EMDB-9-6.md) | Test: EmailHashedID deduplication prevents duplicate storage | ⚪ todo | — |  | — | — | [US-EMDB-9](stories/US-EMDB-9.md) |
-| [US-EMDB-90-1](tasks/US-EMDB-90-1.md) | Test: reEncrypt=true leaves every block at the active epoch with fresh nonces | ⚪ todo | — |  | — | — | [US-EMDB-90](stories/US-EMDB-90.md) |
-| [US-EMDB-90-2](tasks/US-EMDB-90-2.md) | Test: BlockIds unchanged and AAD recomputed with the new epoch | ⚪ todo | — |  | — | — | [US-EMDB-90](stories/US-EMDB-90.md) |
-| [US-EMDB-90-3](tasks/US-EMDB-90-3.md) | Test: DEKs with zero remaining references pruned from the KeyStore | ⚪ todo | — |  | — | — | [US-EMDB-90](stories/US-EMDB-90.md) |
-| [US-EMDB-90-4](tasks/US-EMDB-90-4.md) | Test: reEncrypt=false copies ciphertext verbatim and prunes nothing | ⚪ todo | — |  | — | — | [US-EMDB-90](stories/US-EMDB-90.md) |
-| [US-EMDB-90-5](tasks/US-EMDB-90-5.md) | Implement reEncrypt path in compaction copy | ⚪ todo | 3 |  | — | — | [US-EMDB-90](stories/US-EMDB-90.md) |
-| [US-EMDB-90-6](tasks/US-EMDB-90-6.md) | Implement DEK pruning | ⚪ todo | 2 |  | — | US-EMDB-90-5 | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-90-1](tasks/US-EMDB-90-1.md) | Test: reEncrypt=true leaves every block at the active epoch with fresh nonces | ✅ done | 1 |  | claude | US-EMDB-90-6 | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-90-2](tasks/US-EMDB-90-2.md) | Test: BlockIds unchanged and AAD recomputed with the new epoch | ✅ done | 1 |  | claude | US-EMDB-90-6 | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-90-3](tasks/US-EMDB-90-3.md) | Test: DEKs with zero remaining references pruned from the KeyStore | ✅ done | 1 |  | claude | US-EMDB-90-6 | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-90-4](tasks/US-EMDB-90-4.md) | Test: reEncrypt=false copies ciphertext verbatim and prunes nothing | ✅ done | 1 |  | claude | US-EMDB-90-6 | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-90-5](tasks/US-EMDB-90-5.md) | Implement reEncrypt path in compaction copy | ✅ done | 3 |  | claude | US-EMDB-89-6 | [US-EMDB-90](stories/US-EMDB-90.md) |
+| [US-EMDB-90-6](tasks/US-EMDB-90-6.md) | Implement DEK pruning | ✅ done | 2 |  | claude | US-EMDB-90-5 | [US-EMDB-90](stories/US-EMDB-90.md) |
 | [US-EMDB-91-1](tasks/US-EMDB-91-1.md) | Test: Substring query over addresses returns correct results at 100K emails in under 10ms warm | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
 | [US-EMDB-91-2](tasks/US-EMDB-91-2.md) | Test: FTS blocks are encrypted under every policy | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
 | [US-EMDB-91-3](tasks/US-EMDB-91-3.md) | Test: Index updates on add and delete | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |

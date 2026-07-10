@@ -202,7 +202,7 @@ entries:
 - id: US-EMDB-101
   title: Delete v1 code paths
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-22
@@ -210,7 +210,7 @@ entries:
 - id: US-EMDB-102
   title: Test suite migration to v3
   type: story
-  status: backlog
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-22
@@ -218,7 +218,7 @@ entries:
 - id: US-EMDB-103
   title: Solution hygiene
   type: story
-  status: backlog
+  status: done
   points: 3
   story_id: null
   epic_id: EPIC-EMDB-22
@@ -916,7 +916,7 @@ entries:
 - id: US-EMDB-89
   title: Side-file compaction and atomic swap
   type: story
-  status: backlog
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-18
@@ -932,7 +932,7 @@ entries:
 - id: US-EMDB-90
   title: Compaction re-encryption and DEK pruning
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-18
@@ -1125,16 +1125,16 @@ entries:
 - id: US-EMDB-101-1
   title: 'Test: All listed files and code paths removed'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-101
   epic_id: null
   tags: []
 - id: US-EMDB-101-2
   title: 'Test: Solution builds with zero warnings about missing references'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-101
   epic_id: null
   tags: []
@@ -1142,23 +1142,23 @@ entries:
   title: 'Test: No remaining reference to ZoneTree or OverrideLocation or int64 BlockId
     generation in EmailDB.Format'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-101
   epic_id: null
   tags: []
 - id: US-EMDB-101-4
   title: 'Test: git grep confirms no dead namespaces remain'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-101
   epic_id: null
   tags: []
 - id: US-EMDB-101-5
   title: Delete v1 files and code paths
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-101
   epic_id: null
@@ -1166,39 +1166,39 @@ entries:
 - id: US-EMDB-102-1
   title: 'Test: v1-format tests removed or rewritten against v3'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-102
   epic_id: null
   tags: []
 - id: US-EMDB-102-2
   title: 'Test: Crypto-primitive tests retained and passing'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-102
   epic_id: null
   tags: []
 - id: US-EMDB-102-3
   title: 'Test: Full suite green in CI on Linux'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-102
   epic_id: null
   tags: []
 - id: US-EMDB-102-4
   title: 'Test: Coverage exists for every v3 spec section with a MUST'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-102
   epic_id: null
   tags: []
 - id: US-EMDB-102-5
   title: Triage existing test suite
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-102
   epic_id: null
@@ -1206,7 +1206,7 @@ entries:
 - id: US-EMDB-102-6
   title: Port retained tests to v3 APIs
   type: task
-  status: todo
+  status: done
   points: 5
   story_id: US-EMDB-102
   epic_id: null
@@ -1214,31 +1214,31 @@ entries:
 - id: US-EMDB-103-1
   title: 'Test: Every project on disk is in the sln and vice versa'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-103
   epic_id: null
   tags: []
 - id: US-EMDB-103-2
   title: 'Test: No folder/project name mismatches remain'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-103
   epic_id: null
   tags: []
 - id: US-EMDB-103-3
   title: 'Test: PROJECT.md project table matches the sln'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-103
   epic_id: null
   tags: []
 - id: US-EMDB-103-4
   title: Fix solution and folder hygiene
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-103
   epic_id: null
@@ -5662,16 +5662,16 @@ entries:
   title: 'Test: Compacted file contains exactly the live blocks with identical BlockIds
     and content'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-89
   epic_id: null
   tags: []
 - id: US-EMDB-89-2
   title: 'Test: BlockLocationIndex rebuilt for the new layout and verifies'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-89
   epic_id: null
   tags: []
@@ -5679,16 +5679,16 @@ entries:
   title: 'Test: Kill at every step of the swap yields either the complete old file
     or the complete new file'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-89
   epic_id: null
   tags: []
 - id: US-EMDB-89-4
   title: 'Test: Leftover .compact file is deleted on next open'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-89
   epic_id: null
   tags: []
@@ -5696,15 +5696,15 @@ entries:
   title: 'Test: FolderVersions and CheckpointSequence continue across the swap so
     sync is unaffected'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-89
   epic_id: null
   tags: []
 - id: US-EMDB-89-6
   title: Implement live-block walk and side-file copy
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-89
   epic_id: null
@@ -5712,7 +5712,7 @@ entries:
 - id: US-EMDB-89-7
   title: Implement location index rebuild during copy
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-89
   epic_id: null
@@ -5720,7 +5720,7 @@ entries:
 - id: US-EMDB-89-8
   title: Implement atomic swap and leftover cleanup
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-89
   epic_id: null
@@ -5778,39 +5778,39 @@ entries:
 - id: US-EMDB-90-1
   title: 'Test: reEncrypt=true leaves every block at the active epoch with fresh nonces'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-90
   epic_id: null
   tags: []
 - id: US-EMDB-90-2
   title: 'Test: BlockIds unchanged and AAD recomputed with the new epoch'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-90
   epic_id: null
   tags: []
 - id: US-EMDB-90-3
   title: 'Test: DEKs with zero remaining references pruned from the KeyStore'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-90
   epic_id: null
   tags: []
 - id: US-EMDB-90-4
   title: 'Test: reEncrypt=false copies ciphertext verbatim and prunes nothing'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-90
   epic_id: null
   tags: []
 - id: US-EMDB-90-5
   title: Implement reEncrypt path in compaction copy
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-90
   epic_id: null
@@ -5818,7 +5818,7 @@ entries:
 - id: US-EMDB-90-6
   title: Implement DEK pruning
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-90
   epic_id: null
@@ -6204,8 +6204,8 @@ entries:
   story_id: US-EMDB-99
   epic_id: null
   tags: []
-total_points: 1299
-completed_points: 995
+total_points: 1319
+completed_points: 1068
 story_count: 104
 task_count: 633
 epic_count: 22

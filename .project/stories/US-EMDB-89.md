@@ -12,13 +12,13 @@ epic_id: EPIC-EMDB-18
 id: US-EMDB-89
 points: 8
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - compaction
 - swap
 title: Side-file compaction and atomic swap
-updated: '2026-07-02'
+updated: '2026-07-10'
 ---
 
 As an operator, I want full-file compaction via side-file + atomic rename (docs/Compaction.md Section 2, spec Section 11.2) so that space reclamation is crash-safe: copy live blocks, rebuild BlockLocationIndex, same FileId with continued sequences, rename + directory fsync.
