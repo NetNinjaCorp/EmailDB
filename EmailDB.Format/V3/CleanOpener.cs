@@ -243,6 +243,53 @@ public static class CleanOpener
         });
     }
 
+    /// <summary>
+    /// Builds a ready read-side <see cref="OpenState"/> from an EXPLICIT superblock's
+    /// LastCheckpoint hint, bypassing the on-disk CleanShutdown gate. This is the recovery
+    /// seam (spec Section 10.2 step 4, Section 10.4): the <see cref="DirtyOpener"/> uses it
+    /// to hand a caller a read-side state at the adopted Checkpoint over a still-dirty file,
+    /// so the caller can replay the uncommitted WAL into its live indexes and commit a fresh
+    /// Checkpoint itself. <paramref name="superblock"/> carries the adopted hint (its
+    /// CleanShutdown byte is ignored here). The returned state owns the block manager it
+    /// created; the on-disk superblock is untouched, so the file stays dirty until the
+    /// caller's commit heals it.
+    /// </summary>
+    internal static Result<OpenState> OpenAt(
+        FileStream stream, Superblock superblock, IEncryptionBootstrap? encryptionBootstrap)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(superblock);
+
+        // Encryption bootstrap seam (spec Section 10.2 step 2): ciphertext must not be read
+        // as plaintext, so an encrypted file needs a bootstrap before any root is resolved.
+        if (superblock.EncryptionEnabled != 0)
+        {
+            if (encryptionBootstrap is null)
+                return Result<OpenState>.Failure(
+                    "Open-at-checkpoint failed: the superblock marks the file encrypted but no IEncryptionBootstrap was supplied (spec Section 10.2 step 2).");
+            var bootstrapped = encryptionBootstrap.Bootstrap(superblock);
+            if (bootstrapped.IsFailure)
+                return Result<OpenState>.Failure(
+                    $"Open-at-checkpoint failed: encryption bootstrap failed (spec Section 10.2 step 2). {bootstrapped.Error}");
+        }
+
+        if (IsAllZero(superblock.LastCheckpointBlockId))
+            return Result<OpenState>.Failure(
+                "Open-at-checkpoint failed: the superblock records no LastCheckpoint hint.");
+
+        var runtimeMap = new RuntimeBlockOffsetMap();
+        var manager = new BlockManager(
+            stream,
+            maxPayloadLength: superblock.MaxPayloadLength,
+            offsetMap: runtimeMap,
+            ownsStream: false);
+
+        var built = BuildCleanState(manager, runtimeMap, superblock);
+        if (built.IsFailure)
+            manager.Dispose();
+        return built;
+    }
+
     private static Result<OpenState> BuildCleanState(
         BlockManager manager, RuntimeBlockOffsetMap runtimeMap, Superblock superblock)
     {

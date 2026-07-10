@@ -107,6 +107,28 @@ public sealed class BlockManager : IDisposable
     public long FlushToDiskCount => _stream.FlushToDiskCount;
 
     /// <summary>
+    /// Number of physical block reads served from the stream (each <see cref="Read"/>
+    /// that actually seeks and reads a block's bytes; a torn-tail short-circuit before
+    /// the seek does not count). <see cref="ReadDecompressed"/> funnels through
+    /// <see cref="Read"/>, so it is included exactly once. Used as the "block reads"
+    /// metric to prove the read path's cost scales with tree height (O(log n)), not
+    /// with the number of stored emails.
+    /// </summary>
+    public long ReadCount => _readCount;
+    private long _readCount;
+
+    /// <summary>
+    /// Optional test/diagnostic recorder of the byte ranges verified block reads touch. When
+    /// non-null, each successful <see cref="Read"/> appends the <c>[Offset, Offset + Length)</c>
+    /// file range it read (the full block: header through footer). This lets a test prove
+    /// <em>positionally</em> exactly which bytes a read path touched — e.g. that
+    /// <see cref="EmailManager.GetMetadata"/> never reads any byte of the Tier 3 content block,
+    /// complementing the <see cref="ReadCount"/> count with byte-level evidence. Left null in
+    /// production so reads allocate nothing.
+    /// </summary>
+    internal List<(long Offset, long Length)>? ReadRangeLog { get; set; }
+
+    /// <summary>
     /// Appends one block at end of file (never before
     /// <see cref="FirstBlockOffset"/>): mints a monotonic ULID BlockId, writes
     /// header + header checksum + payload + payload checksum + footer, and
@@ -317,6 +339,7 @@ public sealed class BlockManager : IDisposable
                         damagedRange: new DamagedRange(offset, fileLength, "torn tail (header past EOF)"))
                         .ToResult<Block>();
 
+                _readCount++;
                 _stream.Seek(offset);
                 _stream.ReadExactly(headerBytes);
             }
@@ -358,6 +381,10 @@ public sealed class BlockManager : IDisposable
             {
                 return Result<Block>.Failure($"Block payload read at offset {offset} failed: {ex.Message}");
             }
+
+            // Byte-level accounting hook (test/diagnostic only): record the full file range this
+            // read consumed so a test can prove which bytes a read path did — and did not — touch.
+            ReadRangeLog?.Add((offset, totalLength));
 
             // Re-verifies the header, then payload checksum, then footer. Typed
             // Section 13 corruption errors carry this block's file offset.

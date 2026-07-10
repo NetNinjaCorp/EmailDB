@@ -35,6 +35,18 @@ public sealed class KeyStoreBlock
     public List<KeyStoreEntry> Entries { get; set; } = new();
 
     /// <summary>
+    /// True when at least one non-active DEK epoch is still live (not yet pruned) — i.e. a past
+    /// epoch whose key can only be dropped by a re-encrypting compaction that consolidates every
+    /// block onto <see cref="ActiveEpoch"/> and then prunes the unreferenced DEKs
+    /// (docs/Compaction.md Sections 3–4, docs/Encryption.md Section 5). This is the
+    /// DEK-pruning-pending trigger the maintenance scheduler reads (via
+    /// <see cref="CompactionTriggerEvaluator"/>). The active epoch is never "pending pruning"
+    /// (new blocks are still written under it), and an already-pruned (retired) epoch holds no
+    /// key to drop, so neither contributes.
+    /// </summary>
+    public bool DekPruningPending => Entries.Any(e => e.Epoch != ActiveEpoch && !e.Retired);
+
+    /// <summary>
     /// Advances the table by one epoch (docs/Encryption.md Section 5, "Key rotation — O(1)"):
     /// mints a fresh CSPRNG DEK at <c>ActiveEpoch + 1</c>, appends it as a new live entry, and
     /// makes it the active epoch. Every existing entry — DEKs and retired flags alike — is left

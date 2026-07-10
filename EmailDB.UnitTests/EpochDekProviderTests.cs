@@ -411,6 +411,58 @@ public class EpochDekProviderTests
         Assert.All(internalKek!, b => Assert.Equal(0, b));
     }
 
+    // --- DEK-pruning-pending signal (compaction trigger, docs/Compaction.md Sections 3-4) ---
+
+    [Fact]
+    public void DekPruningPending_False_WhenOnlyActiveEpochLive()
+    {
+        using var provider = new EpochDekProvider(Id(), activeEpoch: 0, new[] { Live(0, Dek()) });
+        Assert.False(provider.DekPruningPending);
+    }
+
+    [Fact]
+    public void DekPruningPending_True_WhenAnOlderEpochIsStillLive()
+    {
+        // Epoch 0 lingers un-pruned after a rotation to epoch 1: only a re-encrypting compaction
+        // can drop its DEK, so pruning is pending.
+        using var provider = new EpochDekProvider(Id(), activeEpoch: 1,
+            new[] { Live(0, Dek()), Live(1, Dek()) });
+        Assert.True(provider.DekPruningPending);
+    }
+
+    [Fact]
+    public void DekPruningPending_False_WhenOldEpochsAlreadyRetired()
+    {
+        // Old epoch already pruned (retired): nothing left to prune.
+        using var provider = new EpochDekProvider(Id(), activeEpoch: 1,
+            new[] { Retired(0), Live(1, Dek()) });
+        Assert.False(provider.DekPruningPending);
+    }
+
+    [Fact]
+    public void DekPruningPending_ThrowsAfterDispose()
+    {
+        var provider = new EpochDekProvider(Id(), activeEpoch: 0, new[] { Live(0, Dek()) });
+        provider.Dispose();
+        Assert.Throws<ObjectDisposedException>(() => provider.DekPruningPending);
+    }
+
+    [Fact]
+    public void KeyStoreBlock_DekPruningPending_TracksRotationAndRetirement()
+    {
+        var ks = new KeyStoreBlock();
+        ks.Entries.Add(new KeyStoreEntry { Epoch = 0, Dek = Dek(), Retired = false });
+        ks.ActiveEpoch = 0;
+        Assert.False(ks.DekPruningPending);
+
+        ks.Rotate(); // active becomes epoch 1; epoch 0 is now an un-pruned older epoch
+        Assert.True(ks.DekPruningPending);
+
+        // Prune (retire) the old epoch as a re-encrypting compaction would.
+        ks.Entries.Single(e => e.Epoch == 0).Retired = true;
+        Assert.False(ks.DekPruningPending);
+    }
+
     // Reflection helpers: the provider owns copies of key material, so we reach the internal
     // buffers to prove Dispose scrubbed them (there is no public accessor by design).
     private static List<byte[]> GetInternalDeks(EpochDekProvider provider)

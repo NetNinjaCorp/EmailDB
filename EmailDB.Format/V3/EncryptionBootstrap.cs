@@ -708,6 +708,13 @@ public sealed class PasswordEncryptionBootstrap : IEncryptionBootstrap
     {
         ArgumentNullException.ThrowIfNull(superblock);
 
+        // Idempotent: recovery can bootstrap once for the dirty scan and again for the
+        // post-heal clean re-open (spec Section 10.2 step 2). The derived provider is the
+        // same for the same file+password, so a second call is a no-op — re-deriving would
+        // pay the KDF cost twice and leak the first provider's key material.
+        if (Provider is not null)
+            return Result.Success();
+
         // The opener has not built its BlockManager yet; use a short-lived one over the same
         // stream to read the KeyStore block. It does not own the stream.
         using var manager = new BlockManager(

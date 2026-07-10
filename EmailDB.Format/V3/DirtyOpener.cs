@@ -44,6 +44,16 @@ public sealed class DirtyOpenResult
     /// <summary>True when a fresh Checkpoint was written to commit the replayed state (spec Section 10.2 step 4).</summary>
     public required bool WroteFreshCheckpoint { get; init; }
 
+    /// <summary>
+    /// True when the caller opted in (via <c>buildStateForCallerCommit</c>) and uncommitted WAL was
+    /// replayed into the caller's sink but NOT committed here: <see cref="State"/> is a ready read-side
+    /// at the adopted Checkpoint over the still-dirty file, and the caller MUST apply the replayed ops
+    /// to its live indexes and commit a fresh Checkpoint (which heals the file clean). Recovery wrote no
+    /// fresh Checkpoint and left the on-disk superblock dirty, so a crash before that commit re-runs
+    /// recovery and replays the same WAL — no data loss (spec Section 13, Section 10.4).
+    /// </summary>
+    public bool RequiresCallerCommit { get; init; }
+
     /// <summary>The offset where the bounded recovery scan stopped: the torn-tail boundary, or EOF for an intact tail.</summary>
     public required long ScanCutoffOffset { get; init; }
 
@@ -115,6 +125,14 @@ public static class DirtyOpener
     /// </param>
     /// <param name="encryptionBootstrap">Encryption bootstrap seam (spec Section 10.2 step 2); required for an encrypted file.</param>
     /// <param name="log">Optional sink for one message per damaged range during the recovery scan.</param>
+    /// <param name="buildStateForCallerCommit">
+    /// When true and uncommitted WAL is replayed without <paramref name="freshCheckpointContents"/> to
+    /// commit it here, recovery does NOT leave the file unopenable: it hands back a read-side
+    /// <see cref="DirtyOpenResult.State"/> at the adopted Checkpoint (over the still-dirty file) with
+    /// <see cref="DirtyOpenResult.RequiresCallerCommit"/> set, so the caller applies the replayed ops to
+    /// its live indexes and commits the fresh Checkpoint itself (spec Section 13, Section 10.4). The
+    /// caller reads the replayed ops from the sink it passed as <paramref name="replaySink"/>.
+    /// </param>
     /// <returns>
     /// The recovery outcome; a failure only for a genuine open error (no valid
     /// superblock, no valid Checkpoint at the hint, a poisoned write during heal).
@@ -124,7 +142,8 @@ public static class DirtyOpener
         IWalReplaySink? replaySink = null,
         Func<CheckpointContents>? freshCheckpointContents = null,
         IEncryptionBootstrap? encryptionBootstrap = null,
-        Action<string>? log = null)
+        Action<string>? log = null,
+        bool buildStateForCallerCommit = false)
     {
         ArgumentNullException.ThrowIfNull(stream);
 
@@ -173,7 +192,8 @@ public static class DirtyOpener
         {
             result = Recover(
                 stream, manager, superblockManager, superblock, fileLength,
-                replaySink ?? DiscardWalReplaySink.Instance, freshCheckpointContents, log);
+                replaySink ?? DiscardWalReplaySink.Instance, freshCheckpointContents,
+                encryptionBootstrap, buildStateForCallerCommit, log);
         }
         finally
         {
@@ -190,6 +210,8 @@ public static class DirtyOpener
         long fileLength,
         IWalReplaySink sink,
         Func<CheckpointContents>? freshCheckpointContents,
+        IEncryptionBootstrap? encryptionBootstrap,
+        bool buildStateForCallerCommit,
         Action<string>? log)
     {
         // 3. Bounded forward walk from the hinted Checkpoint for the NEWEST valid
@@ -248,13 +270,16 @@ public static class DirtyOpener
 
         // 6. Produce the read-side state. A fully-healed file now takes the clean-open
         //    fast path; dispose our recovery manager first so the clean open owns a
-        //    fresh manager over the stream.
+        //    fresh manager over the stream. An encrypted file MUST forward the bootstrap
+        //    into the post-heal clean open — otherwise the healed re-open cannot decrypt
+        //    and recovery would fail on every encrypted file (spec Section 10.2 step 2).
         OpenState? state = null;
         string? detail = null;
+        bool requiresCallerCommit = false;
         if (healedClean)
         {
             manager.Dispose();
-            var clean = CleanOpener.Open(stream);
+            var clean = CleanOpener.Open(stream, encryptionBootstrap);
             if (clean.IsFailure)
                 return Result<DirtyOpenResult>.Failure(
                     $"Dirty open healed the file but the clean re-open failed: {clean.Error}");
@@ -262,6 +287,30 @@ public static class DirtyOpener
                 return Result<DirtyOpenResult>.Failure(
                     $"Dirty open healed the file but the clean re-open reported {clean.Value.Kind}: {clean.Value.Detail}");
             state = clean.Value.State;
+        }
+        else if (buildStateForCallerCommit && outcome.ReplayedBlocks.Count > 0)
+        {
+            // Torn-checkpoint / dangling-WAL recovery (spec Section 13, Section 10.4): the
+            // uncommitted WAL was replayed into the caller's sink but no fresh-Checkpoint
+            // contents were supplied here. Rather than leave the file unopenable (losing the
+            // previously-committed state), hand back a read-side state at the ADOPTED
+            // Checkpoint over the still-dirty file. The caller re-applies the replayed ops to
+            // its live indexes and commits the fresh Checkpoint (folding them in and healing
+            // the file clean). The on-disk superblock stays dirty until that commit, so a
+            // crash before it re-runs recovery and replays the same WAL — no data loss.
+            manager.Dispose();
+            var adopted = superblock.Clone();
+            adopted.LastCheckpointBlockId = (byte[])newest.BlockId.Clone();
+            adopted.LastCheckpointOffset = newest.Offset;
+            adopted.CleanShutdown = 1; // in-memory only; the on-disk superblock is NOT rewritten here.
+            var openedAt = CleanOpener.OpenAt(stream, adopted, encryptionBootstrap);
+            if (openedAt.IsFailure)
+                return Result<DirtyOpenResult>.Failure(
+                    $"Dirty open replayed the uncommitted WAL but building the read-side state at the adopted Checkpoint failed: {openedAt.Error}");
+            state = openedAt.Value;
+            requiresCallerCommit = true;
+            detail = $"Replayed {outcome.ReplayedEntryCount} WAL entries into the sink; the caller must apply them " +
+                "and commit a fresh Checkpoint to heal the file clean (spec Section 13).";
         }
         else
         {
@@ -273,6 +322,7 @@ public static class DirtyOpener
         {
             State = state,
             HealedClean = healedClean,
+            RequiresCallerCommit = requiresCallerCommit,
             AdoptedNewerCheckpoint = adoptedNewer,
             AdoptedCheckpointSequence = effectiveSequence,
             ReplayedBlockCount = outcome.ReplayedBlocks.Count,

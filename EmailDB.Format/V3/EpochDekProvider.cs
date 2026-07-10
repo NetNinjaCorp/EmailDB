@@ -148,6 +148,26 @@ public sealed class EpochDekProvider : IDisposable
     public bool HasLiveDek(ushort epoch) => _table.TryGetValue(epoch, out var e) && !e.Retired;
 
     /// <summary>
+    /// True when the table holds at least one non-active DEK epoch that is still live (not yet
+    /// pruned) — the DEK-pruning-pending trigger. Such keys linger only until a re-encrypting
+    /// compaction consolidates every block onto <see cref="ActiveEpoch"/> and prunes the
+    /// unreferenced DEKs (docs/Compaction.md Sections 3–4). The maintenance scheduler reads this
+    /// (via <see cref="CompactionTriggerEvaluator"/>) to schedule a <c>reEncrypt = true</c>
+    /// compaction "when convenient". Always false once epochs are fully consolidated.
+    /// </summary>
+    public bool DekPruningPending
+    {
+        get
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            foreach (var kv in _table)
+                if (kv.Key != ActiveEpoch && !kv.Value.Retired)
+                    return true;
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Zeroizes every DEK and the KEK (when owned), then marks the provider unusable. Idempotent.
     /// After disposal all key material this instance held is scrubbed from memory.
     /// </summary>

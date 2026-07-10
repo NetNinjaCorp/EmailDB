@@ -10,11 +10,13 @@ namespace EmailDB.Format.V3;
 public interface IIndexRootStore
 {
     /// <summary>
-    /// Appends the given IndexRoot as an IndexRoot block, returning failure
-    /// (never throwing) on an I/O error so the flush can leave the previous
-    /// root authoritative (docs/BTree_Index.md Section 6).
+    /// Appends the given IndexRoot as an IndexRoot block, returning the block's
+    /// on-disk location (BlockId + offset) so the Checkpoint layer can name the
+    /// durable descriptor. Returns failure (never throwing) on an I/O error so
+    /// the flush can leave the previous root authoritative (docs/BTree_Index.md
+    /// Section 6).
     /// </summary>
-    Result WriteIndexRoot(IndexRoot indexRoot);
+    Result<BlockLocation> WriteIndexRoot(IndexRoot indexRoot);
 }
 
 /// <summary>
@@ -28,14 +30,14 @@ public sealed class BlockManagerIndexRootStore(BlockManager blockManager) : IInd
         blockManager ?? throw new ArgumentNullException(nameof(blockManager));
 
     /// <inheritdoc/>
-    public Result WriteIndexRoot(IndexRoot indexRoot)
+    public Result<BlockLocation> WriteIndexRoot(IndexRoot indexRoot)
     {
         ArgumentNullException.ThrowIfNull(indexRoot);
         var payload = IndexRootSerializer.Serialize(indexRoot);
         var appended = _blockManager.Append(BlockType.IndexRoot, PayloadEncoding.Custom, payload);
         return appended.IsSuccess
-            ? Result.Success()
-            : Result.Failure($"IndexRoot block write failed: {appended.Error}");
+            ? Result<BlockLocation>.Success(appended.Value)
+            : Result<BlockLocation>.Failure($"IndexRoot block write failed: {appended.Error}");
     }
 }
 
@@ -86,6 +88,7 @@ public sealed class WalBufferedIndex
 
     private BTreeRoot? _committedRoot;
     private IndexRoot? _committedIndexRoot;
+    private BlockLocation? _committedIndexRootLocation;
     private DateTimeOffset? _batchStarted;
 
     /// <summary>
@@ -107,7 +110,8 @@ public sealed class WalBufferedIndex
         IndexRoot? initialIndexRoot = null,
         int? countThreshold = null,
         TimeSpan? flushInterval = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        BlockLocation? initialIndexRootLocation = null)
     {
         ArgumentNullException.ThrowIfNull(tree);
         ArgumentNullException.ThrowIfNull(indexRootStore);
@@ -131,6 +135,7 @@ public sealed class WalBufferedIndex
         FlushInterval = flushInterval;
         _committedRoot = initialRoot;
         _committedIndexRoot = initialIndexRoot;
+        _committedIndexRootLocation = initialIndexRootLocation;
     }
 
     /// <summary>Distinct buffered keys that trigger an automatic flush.</summary>
@@ -144,6 +149,13 @@ public sealed class WalBufferedIndex
 
     /// <summary>The last persisted IndexRoot descriptor; null before the first flush.</summary>
     public IndexRoot? CommittedIndexRoot => _committedIndexRoot;
+
+    /// <summary>
+    /// On-disk location (BlockId + offset) of the last persisted IndexRoot block —
+    /// the durable descriptor a Checkpoint names as this index's root (spec
+    /// Section 10.1). Null before the first flush (nothing durable to name).
+    /// </summary>
+    public BlockLocation? CommittedIndexRootLocation => _committedIndexRootLocation;
 
     /// <summary>Number of distinct keys currently buffered (unflushed).</summary>
     public int PendingCount => _buffer.Count;
@@ -284,10 +296,16 @@ public sealed class WalBufferedIndex
 
         if (working is null)
         {
-            // The batch emptied the index. There is no root node to describe, so
-            // no IndexRoot is written; the empty state is committed in memory and
-            // the persisted IndexRoot (if any) keeps its Sequence.
+            // The batch emptied the index (e.g. the last email was deleted). There is no root node
+            // to describe, so no IndexRoot is written. The committed IndexRoot references MUST be
+            // dropped too: otherwise CommittedIndexRootLocation keeps naming the now-stale IndexRoot
+            // that still describes the deleted entries, and the next Checkpoint would re-point at it
+            // — resurrecting the deleted keys on reopen. Clearing them makes the commit record an
+            // empty (None) root, which reopen seeds as an empty index (a refill flush then starts a
+            // fresh IndexRoot via CreateInitial, matching reopen-from-empty semantics).
             _committedRoot = null;
+            _committedIndexRoot = null;
+            _committedIndexRootLocation = null;
             _buffer.Clear();
             _batchStarted = null;
             return Result.Success();
@@ -309,6 +327,7 @@ public sealed class WalBufferedIndex
         // Commit: only now do the new root and IndexRoot become authoritative.
         _committedRoot = working;
         _committedIndexRoot = candidate;
+        _committedIndexRootLocation = persisted.Value;
         _buffer.Clear();
         _batchStarted = null;
         return Result.Success();

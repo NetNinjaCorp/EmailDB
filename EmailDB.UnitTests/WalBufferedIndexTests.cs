@@ -54,10 +54,10 @@ public class WalBufferedIndexTests : IDisposable
         public List<IndexRoot> Written { get; } = [];
         public bool FailNext { get; set; }
 
-        public Result WriteIndexRoot(IndexRoot indexRoot)
+        public Result<BlockLocation> WriteIndexRoot(IndexRoot indexRoot)
         {
             if (FailNext)
-                return Result.Failure("injected IndexRoot write failure");
+                return Result<BlockLocation>.Failure("injected IndexRoot write failure");
             var result = _inner.WriteIndexRoot(indexRoot);
             if (result.IsSuccess)
                 Written.Add(indexRoot);
