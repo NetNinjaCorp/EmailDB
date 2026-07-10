@@ -513,38 +513,38 @@
 | [US-EMDB-8-3](tasks/US-EMDB-8-3.md) | Test: SearchEmailsAsync returns matching EmailHashedIDs | ⚪ todo | — |  | — | — | [US-EMDB-8](stories/US-EMDB-8.md) |
 | [US-EMDB-8-4](tasks/US-EMDB-8-4.md) | Test: Search index persisted through ZoneTree storage adapters | ⚪ todo | — |  | — | — | [US-EMDB-8](stories/US-EMDB-8.md) |
 | [US-EMDB-8-5](tasks/US-EMDB-8-5.md) | Test: Delete/update operations maintain search index consistency | ⚪ todo | — |  | — | — | [US-EMDB-8](stories/US-EMDB-8.md) |
-| [US-EMDB-80-1](tasks/US-EMDB-80-1.md) | Test: EmailHashedID is SHA3-256 over canonical content and is stable across sessions | ⚪ todo | — |  | — | — | [US-EMDB-80](stories/US-EMDB-80.md) |
-| [US-EMDB-80-2](tasks/US-EMDB-80-2.md) | Test: EmailMetadata round-trips headers MIME structure threading refs and Preview | ⚪ todo | — |  | — | — | [US-EMDB-80](stories/US-EMDB-80.md) |
-| [US-EMDB-80-3](tasks/US-EMDB-80-3.md) | Test: Preview extracted as plain text from HTML or text bodies | ⚪ todo | — |  | — | — | [US-EMDB-80](stories/US-EMDB-80.md) |
-| [US-EMDB-80-4](tasks/US-EMDB-80-4.md) | Test: Both block types compress with Zstd and encrypt under Default policy | ⚪ todo | — |  | — | — | [US-EMDB-80](stories/US-EMDB-80.md) |
-| [US-EMDB-80-5](tasks/US-EMDB-80-5.md) | Implement canonical EmailHashedID | ⚪ todo | 2 |  | — | — | [US-EMDB-80](stories/US-EMDB-80.md) |
-| [US-EMDB-80-6](tasks/US-EMDB-80-6.md) | Implement Tier 2/3 models and Preview extraction | ⚪ todo | 3 |  | — | US-EMDB-80-5 | [US-EMDB-80](stories/US-EMDB-80.md) |
-| [US-EMDB-81-1](tasks/US-EMDB-81-1.md) | Test: Listing one page of a 50K-email folder costs at most 3 block reads | ⚪ todo | — |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
-| [US-EMDB-81-2](tasks/US-EMDB-81-2.md) | Test: Date-jump uses binary search over directory date ranges | ⚪ todo | — |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
-| [US-EMDB-81-3](tasks/US-EMDB-81-3.md) | Test: FolderVersion increments on every directory rewrite | ⚪ todo | — |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
-| [US-EMDB-81-4](tasks/US-EMDB-81-4.md) | Test: Pages and directory encrypted under Default policy | ⚪ todo | — |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
-| [US-EMDB-81-5](tasks/US-EMDB-81-5.md) | Test: Listing record packs EmailHashedID BlockId date flags size from subject preview in ~400 bytes | ⚪ todo | — |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
-| [US-EMDB-81-6](tasks/US-EMDB-81-6.md) | Implement listing record packing and FolderPage | ⚪ todo | 3 |  | — | — | [US-EMDB-81](stories/US-EMDB-81.md) |
-| [US-EMDB-81-7](tasks/US-EMDB-81-7.md) | Implement FolderPageDirectory | ⚪ todo | 3 |  | — | US-EMDB-81-6 | [US-EMDB-81](stories/US-EMDB-81.md) |
-| [US-EMDB-82-1](tasks/US-EMDB-82-1.md) | Test: Add/Delete/FlagChange entries append to the chain via PreviousDeltaBlockId | ⚪ todo | — |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
-| [US-EMDB-82-2](tasks/US-EMDB-82-2.md) | Test: Listing merges pending deltas with pages in memory | ⚪ todo | — |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
-| [US-EMDB-82-3](tasks/US-EMDB-82-3.md) | Test: Compile at ~500 pending entries rewrites only affected pages COW and resets the delta head | ⚪ todo | — |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
-| [US-EMDB-82-4](tasks/US-EMDB-82-4.md) | Test: Old pages directory versions and consumed delta chain become dead after compile | ⚪ todo | — |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
-| [US-EMDB-82-5](tasks/US-EMDB-82-5.md) | Test: Move is two delta entries with content blocks untouched | ⚪ todo | — |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
-| [US-EMDB-82-6](tasks/US-EMDB-82-6.md) | Implement delta chain append and ops | ⚪ todo | 3 |  | — | — | [US-EMDB-82](stories/US-EMDB-82.md) |
-| [US-EMDB-82-7](tasks/US-EMDB-82-7.md) | Implement listing merge of pending deltas | ⚪ todo | 2 |  | — | US-EMDB-82-6 | [US-EMDB-82](stories/US-EMDB-82.md) |
-| [US-EMDB-82-8](tasks/US-EMDB-82-8.md) | Implement compile-to-pages | ⚪ todo | 3 |  | — | US-EMDB-82-7 | [US-EMDB-82](stories/US-EMDB-82.md) |
-| [US-EMDB-83-1](tasks/US-EMDB-83-1.md) | Test: Regeneration reads only Tier 2 blocks never Tier 3 | ⚪ todo | — |  | — | — | [US-EMDB-83](stories/US-EMDB-83.md) |
-| [US-EMDB-83-2](tasks/US-EMDB-83-2.md) | Test: Rebuilt pages match originals except flags reset to defaults | ⚪ todo | — |  | — | — | [US-EMDB-83](stories/US-EMDB-83.md) |
-| [US-EMDB-83-3](tasks/US-EMDB-83-3.md) | Test: Regenerated directory carries a bumped FolderVersion | ⚪ todo | — |  | — | — | [US-EMDB-83](stories/US-EMDB-83.md) |
-| [US-EMDB-83-4](tasks/US-EMDB-83-4.md) | Implement Tier-2 regeneration routine | ⚪ todo | 2 |  | — | — | [US-EMDB-83](stories/US-EMDB-83.md) |
-| [US-EMDB-84-1](tasks/US-EMDB-84-1.md) | Test: Create produces a file that reopens cleanly with and without encryption | ⚪ todo | — |  | — | — | [US-EMDB-84](stories/US-EMDB-84.md) |
-| [US-EMDB-84-2](tasks/US-EMDB-84-2.md) | Test: Open wires superblock checkpoint indexes folders and encryption into one ready instance | ⚪ todo | — |  | — | — | [US-EMDB-84](stories/US-EMDB-84.md) |
-| [US-EMDB-84-3](tasks/US-EMDB-84-3.md) | Test: Close writes final checkpoint sets CleanShutdown and releases the writer lock | ⚪ todo | — |  | — | — | [US-EMDB-84](stories/US-EMDB-84.md) |
-| [US-EMDB-84-4](tasks/US-EMDB-84-4.md) | Test: Kill -9 between operations always reopens via recovery to the last commit | ⚪ todo | — |  | — | — | [US-EMDB-84](stories/US-EMDB-84.md) |
-| [US-EMDB-84-5](tasks/US-EMDB-84-5.md) | Implement Create/Initialize | ⚪ todo | 3 |  | — | — | [US-EMDB-84](stories/US-EMDB-84.md) |
-| [US-EMDB-84-6](tasks/US-EMDB-84-6.md) | Implement Open composition | ⚪ todo | 3 |  | — | US-EMDB-84-5 | [US-EMDB-84](stories/US-EMDB-84.md) |
-| [US-EMDB-84-7](tasks/US-EMDB-84-7.md) | Implement Close | ⚪ todo | 2 |  | — | US-EMDB-84-6 | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-80-1](tasks/US-EMDB-80-1.md) | Test: EmailHashedID is SHA3-256 over canonical content and is stable across sessions | ✅ done | 1 |  | claude | — | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-80-2](tasks/US-EMDB-80-2.md) | Test: EmailMetadata round-trips headers MIME structure threading refs and Preview | ✅ done | 1 |  | claude | — | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-80-3](tasks/US-EMDB-80-3.md) | Test: Preview extracted as plain text from HTML or text bodies | ✅ done | 1 |  | claude | — | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-80-4](tasks/US-EMDB-80-4.md) | Test: Both block types compress with Zstd and encrypt under Default policy | ✅ done | 1 |  | claude | — | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-80-5](tasks/US-EMDB-80-5.md) | Implement canonical EmailHashedID | ✅ done | 2 |  | claude | — | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-80-6](tasks/US-EMDB-80-6.md) | Implement Tier 2/3 models and Preview extraction | ✅ done | 3 |  | claude | US-EMDB-80-5 | [US-EMDB-80](stories/US-EMDB-80.md) |
+| [US-EMDB-81-1](tasks/US-EMDB-81-1.md) | Test: Listing one page of a 50K-email folder costs at most 3 block reads | ✅ done | 1 |  | claude | — | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-2](tasks/US-EMDB-81-2.md) | Test: Date-jump uses binary search over directory date ranges | ✅ done | 1 |  | claude | — | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-3](tasks/US-EMDB-81-3.md) | Test: FolderVersion increments on every directory rewrite | ✅ done | 1 |  | claude | — | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-4](tasks/US-EMDB-81-4.md) | Test: Pages and directory encrypted under Default policy | ✅ done | 1 |  | claude | — | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-5](tasks/US-EMDB-81-5.md) | Test: Listing record packs EmailHashedID BlockId date flags size from subject preview in ~400 bytes | ✅ done | 1 |  | claude | — | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-6](tasks/US-EMDB-81-6.md) | Implement listing record packing and FolderPage | ✅ done | 3 |  | claude | US-EMDB-80-6 | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-81-7](tasks/US-EMDB-81-7.md) | Implement FolderPageDirectory | ✅ done | 3 |  | claude | US-EMDB-81-6 | [US-EMDB-81](stories/US-EMDB-81.md) |
+| [US-EMDB-82-1](tasks/US-EMDB-82-1.md) | Test: Add/Delete/FlagChange entries append to the chain via PreviousDeltaBlockId | ✅ done | 1 |  | claude | — | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-2](tasks/US-EMDB-82-2.md) | Test: Listing merges pending deltas with pages in memory | ✅ done | 1 |  | claude | — | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-3](tasks/US-EMDB-82-3.md) | Test: Compile at ~500 pending entries rewrites only affected pages COW and resets the delta head | ✅ done | 1 |  | claude | — | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-4](tasks/US-EMDB-82-4.md) | Test: Old pages directory versions and consumed delta chain become dead after compile | ✅ done | 1 |  | claude | — | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-5](tasks/US-EMDB-82-5.md) | Test: Move is two delta entries with content blocks untouched | ✅ done | 1 |  | claude | — | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-6](tasks/US-EMDB-82-6.md) | Implement delta chain append and ops | ✅ done | 3 |  | claude | US-EMDB-81-7 | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-7](tasks/US-EMDB-82-7.md) | Implement listing merge of pending deltas | ✅ done | 2 |  | claude | US-EMDB-82-6 | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-82-8](tasks/US-EMDB-82-8.md) | Implement compile-to-pages | ✅ done | 3 |  | claude | US-EMDB-82-7 | [US-EMDB-82](stories/US-EMDB-82.md) |
+| [US-EMDB-83-1](tasks/US-EMDB-83-1.md) | Test: Regeneration reads only Tier 2 blocks never Tier 3 | ✅ done | 1 |  | claude | — | [US-EMDB-83](stories/US-EMDB-83.md) |
+| [US-EMDB-83-2](tasks/US-EMDB-83-2.md) | Test: Rebuilt pages match originals except flags reset to defaults | ✅ done | 1 |  | claude | — | [US-EMDB-83](stories/US-EMDB-83.md) |
+| [US-EMDB-83-3](tasks/US-EMDB-83-3.md) | Test: Regenerated directory carries a bumped FolderVersion | ✅ done | 1 |  | claude | — | [US-EMDB-83](stories/US-EMDB-83.md) |
+| [US-EMDB-83-4](tasks/US-EMDB-83-4.md) | Implement Tier-2 regeneration routine | ✅ done | 2 |  | claude | US-EMDB-80-6, US-EMDB-82-8 | [US-EMDB-83](stories/US-EMDB-83.md) |
+| [US-EMDB-84-1](tasks/US-EMDB-84-1.md) | Test: Create produces a file that reopens cleanly with and without encryption | ✅ done | 1 |  | claude | — | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-2](tasks/US-EMDB-84-2.md) | Test: Open wires superblock checkpoint indexes folders and encryption into one ready instance | ✅ done | 1 |  | claude | — | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-3](tasks/US-EMDB-84-3.md) | Test: Close writes final checkpoint sets CleanShutdown and releases the writer lock | ✅ done | 1 |  | claude | — | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-4](tasks/US-EMDB-84-4.md) | Test: Kill -9 between operations always reopens via recovery to the last commit | ✅ done | 1 |  | claude | — | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-5](tasks/US-EMDB-84-5.md) | Implement Create/Initialize | ✅ done | 3 |  | claude | — | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-6](tasks/US-EMDB-84-6.md) | Implement Open composition | ✅ done | 3 |  | claude | US-EMDB-84-5 | [US-EMDB-84](stories/US-EMDB-84.md) |
+| [US-EMDB-84-7](tasks/US-EMDB-84-7.md) | Implement Close | ✅ done | 2 |  | claude | US-EMDB-84-6 | [US-EMDB-84](stories/US-EMDB-84.md) |
 | [US-EMDB-85-1](tasks/US-EMDB-85-1.md) | Test: Duplicate content is detected via EmailHashedID and not stored twice | ⚪ todo | — |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
 | [US-EMDB-85-2](tasks/US-EMDB-85-2.md) | Test: A committed AddEmail survives crash and recovery | ⚪ todo | — |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
 | [US-EMDB-85-3](tasks/US-EMDB-85-3.md) | Test: 1000-email bulk add commits in batches with bounded checkpoint count | ⚪ todo | — |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |

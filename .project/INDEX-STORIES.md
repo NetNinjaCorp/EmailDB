@@ -85,11 +85,11 @@
 | [US-EMDB-78](stories/US-EMDB-78.md) | Policy-driven encryption on the write/read path | ✅ done | must | 5 | v3, encryption, policy | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 4 | 6 |
 | [US-EMDB-79](stories/US-EMDB-79.md) | Password change and key rotation | ✅ done | must | 5 | v3, encryption, rotation | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | 5 | 7 |
 | [US-EMDB-8](stories/US-EMDB-8.md) | Implement ZoneTree embedding-based vector search integration | 📦 archived | should | 5 |  | [EPIC-EMDB-3](epics/EPIC-EMDB-3.md) | 5 | 5 |
-| [US-EMDB-80](stories/US-EMDB-80.md) | Tier 2/3 email blocks (EmailMetadata + EmailContent) | 📋 backlog | must | 5 | v3, email, tiers | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 4 | 6 |
-| [US-EMDB-81](stories/US-EMDB-81.md) | FolderPage and FolderPageDirectory | 📋 backlog | must | 8 | v3, folders, pages | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 5 | 7 |
-| [US-EMDB-82](stories/US-EMDB-82.md) | FolderDeltaLog chain and compile | 📋 backlog | must | 8 | v3, folders, delta | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 5 | 8 |
-| [US-EMDB-83](stories/US-EMDB-83.md) | Tier-2 page regeneration | 📋 backlog | should | 3 | v3, folders, recovery | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 3 | 4 |
-| [US-EMDB-84](stories/US-EMDB-84.md) | Lifecycle: create, open, close | 📋 backlog | must | 8 | v3, api, lifecycle | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 7 |
+| [US-EMDB-80](stories/US-EMDB-80.md) | Tier 2/3 email blocks (EmailMetadata + EmailContent) | ✅ done | must | 5 | v3, email, tiers | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 4 | 6 |
+| [US-EMDB-81](stories/US-EMDB-81.md) | FolderPage and FolderPageDirectory | ✅ done | must | 8 | v3, folders, pages | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 5 | 7 |
+| [US-EMDB-82](stories/US-EMDB-82.md) | FolderDeltaLog chain and compile | ✅ done | must | 8 | v3, folders, delta | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 5 | 8 |
+| [US-EMDB-83](stories/US-EMDB-83.md) | Tier-2 page regeneration | ✅ done | should | 3 | v3, folders, recovery | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 3 | 4 |
+| [US-EMDB-84](stories/US-EMDB-84.md) | Lifecycle: create, open, close | ✅ done | must | 8 | v3, api, lifecycle | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 7 |
 | [US-EMDB-85](stories/US-EMDB-85.md) | AddEmail pipeline | 📋 backlog | must | 8 | v3, api, write-path | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 6 |
 | [US-EMDB-86](stories/US-EMDB-86.md) | GetEmail and open-email read path | 📋 backlog | must | 5 | v3, api, read-path | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 5 |
 | [US-EMDB-87](stories/US-EMDB-87.md) | Move, delete, flag, and list operations | 📋 backlog | must | 5 | v3, api, operations | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 6 |

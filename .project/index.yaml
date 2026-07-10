@@ -844,7 +844,7 @@ entries:
 - id: US-EMDB-80
   title: Tier 2/3 email blocks (EmailMetadata + EmailContent)
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-16
@@ -852,7 +852,7 @@ entries:
 - id: US-EMDB-81
   title: FolderPage and FolderPageDirectory
   type: story
-  status: backlog
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-16
@@ -860,7 +860,7 @@ entries:
 - id: US-EMDB-82
   title: FolderDeltaLog chain and compile
   type: story
-  status: backlog
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-16
@@ -868,7 +868,7 @@ entries:
 - id: US-EMDB-83
   title: Tier-2 page regeneration
   type: story
-  status: backlog
+  status: done
   points: 3
   story_id: null
   epic_id: EPIC-EMDB-16
@@ -876,7 +876,7 @@ entries:
 - id: US-EMDB-84
   title: 'Lifecycle: create, open, close'
   type: story
-  status: backlog
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-17
@@ -5209,8 +5209,8 @@ entries:
   title: 'Test: EmailHashedID is SHA3-256 over canonical content and is stable across
     sessions'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-80
   epic_id: null
   tags: []
@@ -5218,31 +5218,31 @@ entries:
   title: 'Test: EmailMetadata round-trips headers MIME structure threading refs and
     Preview'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-80
   epic_id: null
   tags: []
 - id: US-EMDB-80-3
   title: 'Test: Preview extracted as plain text from HTML or text bodies'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-80
   epic_id: null
   tags: []
 - id: US-EMDB-80-4
   title: 'Test: Both block types compress with Zstd and encrypt under Default policy'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-80
   epic_id: null
   tags: []
 - id: US-EMDB-80-5
   title: Implement canonical EmailHashedID
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-80
   epic_id: null
@@ -5250,7 +5250,7 @@ entries:
 - id: US-EMDB-80-6
   title: Implement Tier 2/3 models and Preview extraction
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-80
   epic_id: null
@@ -5258,32 +5258,32 @@ entries:
 - id: US-EMDB-81-1
   title: 'Test: Listing one page of a 50K-email folder costs at most 3 block reads'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-81
   epic_id: null
   tags: []
 - id: US-EMDB-81-2
   title: 'Test: Date-jump uses binary search over directory date ranges'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-81
   epic_id: null
   tags: []
 - id: US-EMDB-81-3
   title: 'Test: FolderVersion increments on every directory rewrite'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-81
   epic_id: null
   tags: []
 - id: US-EMDB-81-4
   title: 'Test: Pages and directory encrypted under Default policy'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-81
   epic_id: null
   tags: []
@@ -5291,15 +5291,15 @@ entries:
   title: 'Test: Listing record packs EmailHashedID BlockId date flags size from subject
     preview in ~400 bytes'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-81
   epic_id: null
   tags: []
 - id: US-EMDB-81-6
   title: Implement listing record packing and FolderPage
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-81
   epic_id: null
@@ -5307,7 +5307,7 @@ entries:
 - id: US-EMDB-81-7
   title: Implement FolderPageDirectory
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-81
   epic_id: null
@@ -5315,16 +5315,16 @@ entries:
 - id: US-EMDB-82-1
   title: 'Test: Add/Delete/FlagChange entries append to the chain via PreviousDeltaBlockId'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-82
   epic_id: null
   tags: []
 - id: US-EMDB-82-2
   title: 'Test: Listing merges pending deltas with pages in memory'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-82
   epic_id: null
   tags: []
@@ -5332,8 +5332,8 @@ entries:
   title: 'Test: Compile at ~500 pending entries rewrites only affected pages COW and
     resets the delta head'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-82
   epic_id: null
   tags: []
@@ -5341,23 +5341,23 @@ entries:
   title: 'Test: Old pages directory versions and consumed delta chain become dead
     after compile'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-82
   epic_id: null
   tags: []
 - id: US-EMDB-82-5
   title: 'Test: Move is two delta entries with content blocks untouched'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-82
   epic_id: null
   tags: []
 - id: US-EMDB-82-6
   title: Implement delta chain append and ops
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-82
   epic_id: null
@@ -5365,7 +5365,7 @@ entries:
 - id: US-EMDB-82-7
   title: Implement listing merge of pending deltas
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-82
   epic_id: null
@@ -5373,7 +5373,7 @@ entries:
 - id: US-EMDB-82-8
   title: Implement compile-to-pages
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-82
   epic_id: null
@@ -5381,31 +5381,31 @@ entries:
 - id: US-EMDB-83-1
   title: 'Test: Regeneration reads only Tier 2 blocks never Tier 3'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-83
   epic_id: null
   tags: []
 - id: US-EMDB-83-2
   title: 'Test: Rebuilt pages match originals except flags reset to defaults'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-83
   epic_id: null
   tags: []
 - id: US-EMDB-83-3
   title: 'Test: Regenerated directory carries a bumped FolderVersion'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-83
   epic_id: null
   tags: []
 - id: US-EMDB-83-4
   title: Implement Tier-2 regeneration routine
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-83
   epic_id: null
@@ -5413,8 +5413,8 @@ entries:
 - id: US-EMDB-84-1
   title: 'Test: Create produces a file that reopens cleanly with and without encryption'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-84
   epic_id: null
   tags: []
@@ -5422,8 +5422,8 @@ entries:
   title: 'Test: Open wires superblock checkpoint indexes folders and encryption into
     one ready instance'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-84
   epic_id: null
   tags: []
@@ -5431,8 +5431,8 @@ entries:
   title: 'Test: Close writes final checkpoint sets CleanShutdown and releases the
     writer lock'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-84
   epic_id: null
   tags: []
@@ -5440,15 +5440,15 @@ entries:
   title: 'Test: Kill -9 between operations always reopens via recovery to the last
     commit'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-84
   epic_id: null
   tags: []
 - id: US-EMDB-84-5
   title: Implement Create/Initialize
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-84
   epic_id: null
@@ -5456,7 +5456,7 @@ entries:
 - id: US-EMDB-84-6
   title: Implement Open composition
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-84
   epic_id: null
@@ -5464,7 +5464,7 @@ entries:
 - id: US-EMDB-84-7
   title: Implement Close
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-84
   epic_id: null
@@ -6204,8 +6204,8 @@ entries:
   story_id: US-EMDB-99
   epic_id: null
   tags: []
-total_points: 1258
-completed_points: 844
+total_points: 1279
+completed_points: 926
 story_count: 104
 task_count: 633
 epic_count: 22

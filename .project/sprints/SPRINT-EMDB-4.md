@@ -1,5 +1,5 @@
 ---
-completed_points: 0
+completed_points: 28
 created: '2026-07-05'
 end_date: '2026-07-19'
 goal: Encryption is a first-class v3 path — encrypted files round-trip with keys derived
@@ -16,7 +16,7 @@ planned_stories:
 - US-EMDB-79
 - US-EMDB-104
 start_date: '2026-07-05'
-status: active
+status: completed
 updated: '2026-07-05'
 ---
 

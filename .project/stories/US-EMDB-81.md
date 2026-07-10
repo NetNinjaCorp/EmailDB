@@ -12,13 +12,13 @@ epic_id: EPIC-EMDB-16
 id: US-EMDB-81
 points: 8
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - folders
 - pages
 title: FolderPage and FolderPageDirectory
-updated: '2026-07-01'
+updated: '2026-07-09'
 ---
 
 As a user, I want folder listings served from packed pages (docs/Folder_Listing.md Section 2): FolderPage (type 12) with ~80 date-descending listing records, FolderPageDirectory (type 11) with date-ranged page entries, FolderVersion counter, and delta head pointer.
