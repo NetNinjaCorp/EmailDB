@@ -90,16 +90,16 @@
 | [US-EMDB-82](stories/US-EMDB-82.md) | FolderDeltaLog chain and compile | ✅ done | must | 8 | v3, folders, delta | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 5 | 8 |
 | [US-EMDB-83](stories/US-EMDB-83.md) | Tier-2 page regeneration | ✅ done | should | 3 | v3, folders, recovery | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | 3 | 4 |
 | [US-EMDB-84](stories/US-EMDB-84.md) | Lifecycle: create, open, close | ✅ done | must | 8 | v3, api, lifecycle | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 7 |
-| [US-EMDB-85](stories/US-EMDB-85.md) | AddEmail pipeline | 📋 backlog | must | 8 | v3, api, write-path | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 6 |
-| [US-EMDB-86](stories/US-EMDB-86.md) | GetEmail and open-email read path | 📋 backlog | must | 5 | v3, api, read-path | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 5 |
-| [US-EMDB-87](stories/US-EMDB-87.md) | Move, delete, flag, and list operations | 📋 backlog | must | 5 | v3, api, operations | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 6 |
-| [US-EMDB-88](stories/US-EMDB-88.md) | Dead-block accounting and compaction triggers | 📋 backlog | should | 5 | v3, compaction, accounting | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 4 | 6 |
+| [US-EMDB-85](stories/US-EMDB-85.md) | AddEmail pipeline | ✅ done | must | 8 | v3, api, write-path | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 6 |
+| [US-EMDB-86](stories/US-EMDB-86.md) | GetEmail and open-email read path | ✅ done | must | 5 | v3, api, read-path | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 5 |
+| [US-EMDB-87](stories/US-EMDB-87.md) | Move, delete, flag, and list operations | ✅ done | must | 5 | v3, api, operations | [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | 4 | 6 |
+| [US-EMDB-88](stories/US-EMDB-88.md) | Dead-block accounting and compaction triggers | ✅ done | should | 5 | v3, compaction, accounting | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 4 | 6 |
 | [US-EMDB-89](stories/US-EMDB-89.md) | Side-file compaction and atomic swap | 📋 backlog | must | 8 | v3, compaction, swap | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 5 | 8 |
 | [US-EMDB-9](stories/US-EMDB-9.md) | Implement EmailManager with two-tier storage (metadata + content blocks) | 📋 backlog | must | 8 |  | [EPIC-EMDB-4](epics/EPIC-EMDB-4.md) | 7 | 6 |
 | [US-EMDB-90](stories/US-EMDB-90.md) | Compaction re-encryption and DEK pruning | 📋 backlog | should | 5 | v3, compaction, encryption | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 4 | 6 |
 | [US-EMDB-91](stories/US-EMDB-91.md) | Address trigram FTS index | 📋 backlog | should | 13 | v3, search, fts, trigram | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 5 | 8 |
 | [US-EMDB-92](stories/US-EMDB-92.md) | Listing page scan search | 📋 backlog | should | 3 | v3, search, scan | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 3 | 4 |
-| [US-EMDB-93](stories/US-EMDB-93.md) | Date BTree secondary index | 📋 backlog | should | 5 | v3, search, date-index | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 4 | 5 |
+| [US-EMDB-93](stories/US-EMDB-93.md) | Date BTree secondary index | ✅ done | should | 5 | v3, search, date-index | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 4 | 5 |
 | [US-EMDB-94](stories/US-EMDB-94.md) | Query planner | 📋 backlog | could | 5 | v3, search, planner | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 4 | 5 |
 | [US-EMDB-95](stories/US-EMDB-95.md) | .emdb.vec sidecar format | 📋 backlog | could | 8 | v3, vectors, sidecar | [EPIC-EMDB-20](epics/EPIC-EMDB-20.md) | 4 | 5 |
 | [US-EMDB-96](stories/US-EMDB-96.md) | Phase-1 HNSW and embedding pipeline | 📋 backlog | could | 13 | v3, vectors, hnsw, embeddings | [EPIC-EMDB-20](epics/EPIC-EMDB-20.md) | 4 | 6 |

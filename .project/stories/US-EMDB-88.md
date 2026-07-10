@@ -10,13 +10,13 @@ epic_id: EPIC-EMDB-18
 id: US-EMDB-88
 points: 5
 priority: should
-status: backlog
+status: done
 tags:
 - v3
 - compaction
 - accounting
 title: Dead-block accounting and compaction triggers
-updated: '2026-07-02'
+updated: '2026-07-10'
 ---
 
 As the maintenance layer, I want incremental live/dead byte accounting (docs/Compaction.md Section 3): bytes move live-to-dead at supersession/delete, Cleanup blocks (type 3) record supersession for audit, Checkpoint carries the counters, and triggers evaluate without any scan.

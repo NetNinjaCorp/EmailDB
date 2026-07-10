@@ -545,29 +545,29 @@
 | [US-EMDB-84-5](tasks/US-EMDB-84-5.md) | Implement Create/Initialize | ✅ done | 3 |  | claude | — | [US-EMDB-84](stories/US-EMDB-84.md) |
 | [US-EMDB-84-6](tasks/US-EMDB-84-6.md) | Implement Open composition | ✅ done | 3 |  | claude | US-EMDB-84-5 | [US-EMDB-84](stories/US-EMDB-84.md) |
 | [US-EMDB-84-7](tasks/US-EMDB-84-7.md) | Implement Close | ✅ done | 2 |  | claude | US-EMDB-84-6 | [US-EMDB-84](stories/US-EMDB-84.md) |
-| [US-EMDB-85-1](tasks/US-EMDB-85-1.md) | Test: Duplicate content is detected via EmailHashedID and not stored twice | ⚪ todo | — |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
-| [US-EMDB-85-2](tasks/US-EMDB-85-2.md) | Test: A committed AddEmail survives crash and recovery | ⚪ todo | — |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
-| [US-EMDB-85-3](tasks/US-EMDB-85-3.md) | Test: 1000-email bulk add commits in batches with bounded checkpoint count | ⚪ todo | — |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
-| [US-EMDB-85-4](tasks/US-EMDB-85-4.md) | Test: All indexes and the folder listing observe the email after commit | ⚪ todo | — |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
-| [US-EMDB-85-5](tasks/US-EMDB-85-5.md) | Implement AddEmail write pipeline | ⚪ todo | 3 |  | — | — | [US-EMDB-85](stories/US-EMDB-85.md) |
-| [US-EMDB-85-6](tasks/US-EMDB-85-6.md) | Implement group-commit batching | ⚪ todo | 3 |  | — | US-EMDB-85-5 | [US-EMDB-85](stories/US-EMDB-85.md) |
-| [US-EMDB-86-1](tasks/US-EMDB-86-1.md) | Test: GetEmail returns content for any committed email in O(log n) block reads | ⚪ todo | — |  | — | — | [US-EMDB-86](stories/US-EMDB-86.md) |
-| [US-EMDB-86-2](tasks/US-EMDB-86-2.md) | Test: Metadata-only fetch reads Tier 2 without touching Tier 3 | ⚪ todo | — |  | — | — | [US-EMDB-86](stories/US-EMDB-86.md) |
-| [US-EMDB-86-3](tasks/US-EMDB-86-3.md) | Test: Unknown ID returns a clean not-found not an exception | ⚪ todo | — |  | — | — | [US-EMDB-86](stories/US-EMDB-86.md) |
-| [US-EMDB-86-4](tasks/US-EMDB-86-4.md) | Test: Read path verifies checksums and Merkle path per spec | ⚪ todo | — |  | — | — | [US-EMDB-86](stories/US-EMDB-86.md) |
-| [US-EMDB-86-5](tasks/US-EMDB-86-5.md) | Implement GetEmail and metadata-only fetch | ⚪ todo | 3 |  | — | — | [US-EMDB-86](stories/US-EMDB-86.md) |
-| [US-EMDB-87-1](tasks/US-EMDB-87-1.md) | Test: Move appears in both folders' listings without rewriting content blocks | ⚪ todo | — |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
-| [US-EMDB-87-2](tasks/US-EMDB-87-2.md) | Test: Delete removes the email from listings and indexes and counts its bytes dead | ⚪ todo | — |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
-| [US-EMDB-87-3](tasks/US-EMDB-87-3.md) | Test: Flag change is visible in the next listing read | ⚪ todo | — |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
-| [US-EMDB-87-4](tasks/US-EMDB-87-4.md) | Test: List API returns a stable date-descending page for any offset within the folder | ⚪ todo | — |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
-| [US-EMDB-87-5](tasks/US-EMDB-87-5.md) | Implement move, delete, and flag operations | ⚪ todo | 3 |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
-| [US-EMDB-87-6](tasks/US-EMDB-87-6.md) | Implement folder listing API | ⚪ todo | 2 |  | — | — | [US-EMDB-87](stories/US-EMDB-87.md) |
-| [US-EMDB-88-1](tasks/US-EMDB-88-1.md) | Test: Every COW rewrite and delete moves the superseded block's bytes to the dead counter | ⚪ todo | — |  | — | — | [US-EMDB-88](stories/US-EMDB-88.md) |
-| [US-EMDB-88-2](tasks/US-EMDB-88-2.md) | Test: Counters persist in each Checkpoint and survive reopen | ⚪ todo | — |  | — | — | [US-EMDB-88](stories/US-EMDB-88.md) |
-| [US-EMDB-88-3](tasks/US-EMDB-88-3.md) | Test: Trigger fires at Dead greater than Live without scanning | ⚪ todo | — |  | — | — | [US-EMDB-88](stories/US-EMDB-88.md) |
-| [US-EMDB-88-4](tasks/US-EMDB-88-4.md) | Test: Cleanup blocks record superseded BlockIds for audit | ⚪ todo | — |  | — | — | [US-EMDB-88](stories/US-EMDB-88.md) |
-| [US-EMDB-88-5](tasks/US-EMDB-88-5.md) | Implement live/dead byte accounting and Cleanup blocks | ⚪ todo | 3 |  | — | — | [US-EMDB-88](stories/US-EMDB-88.md) |
-| [US-EMDB-88-6](tasks/US-EMDB-88-6.md) | Implement trigger evaluation | ⚪ todo | 1 |  | — | US-EMDB-88-5 | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-85-1](tasks/US-EMDB-85-1.md) | Test: Duplicate content is detected via EmailHashedID and not stored twice | ✅ done | 1 |  | claude | US-EMDB-85-5 | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-85-2](tasks/US-EMDB-85-2.md) | Test: A committed AddEmail survives crash and recovery | ✅ done | 1 |  | claude | US-EMDB-85-5 | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-85-3](tasks/US-EMDB-85-3.md) | Test: 1000-email bulk add commits in batches with bounded checkpoint count | ✅ done | 1 |  | claude | US-EMDB-85-6 | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-85-4](tasks/US-EMDB-85-4.md) | Test: All indexes and the folder listing observe the email after commit | ✅ done | 1 |  | claude | US-EMDB-85-5 | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-85-5](tasks/US-EMDB-85-5.md) | Implement AddEmail write pipeline | ✅ done | 3 |  | claude | US-EMDB-93-5 | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-85-6](tasks/US-EMDB-85-6.md) | Implement group-commit batching | ✅ done | 3 |  | claude | US-EMDB-85-5 | [US-EMDB-85](stories/US-EMDB-85.md) |
+| [US-EMDB-86-1](tasks/US-EMDB-86-1.md) | Test: GetEmail returns content for any committed email in O(log n) block reads | ✅ done | 1 |  | claude | US-EMDB-86-5 | [US-EMDB-86](stories/US-EMDB-86.md) |
+| [US-EMDB-86-2](tasks/US-EMDB-86-2.md) | Test: Metadata-only fetch reads Tier 2 without touching Tier 3 | ✅ done | 1 |  | claude | US-EMDB-86-5 | [US-EMDB-86](stories/US-EMDB-86.md) |
+| [US-EMDB-86-3](tasks/US-EMDB-86-3.md) | Test: Unknown ID returns a clean not-found not an exception | ✅ done | 1 |  | claude | US-EMDB-86-5 | [US-EMDB-86](stories/US-EMDB-86.md) |
+| [US-EMDB-86-4](tasks/US-EMDB-86-4.md) | Test: Read path verifies checksums and Merkle path per spec | ✅ done | 1 |  | claude | US-EMDB-86-5 | [US-EMDB-86](stories/US-EMDB-86.md) |
+| [US-EMDB-86-5](tasks/US-EMDB-86-5.md) | Implement GetEmail and metadata-only fetch | ✅ done | 3 |  | claude | US-EMDB-85-5 | [US-EMDB-86](stories/US-EMDB-86.md) |
+| [US-EMDB-87-1](tasks/US-EMDB-87-1.md) | Test: Move appears in both folders' listings without rewriting content blocks | ✅ done | 1 |  | claude | US-EMDB-87-5 | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-87-2](tasks/US-EMDB-87-2.md) | Test: Delete removes the email from listings and indexes and counts its bytes dead | ✅ done | 1 |  | claude | US-EMDB-87-5 | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-87-3](tasks/US-EMDB-87-3.md) | Test: Flag change is visible in the next listing read | ✅ done | 1 |  | claude | US-EMDB-87-5 | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-87-4](tasks/US-EMDB-87-4.md) | Test: List API returns a stable date-descending page for any offset within the folder | ✅ done | 1 |  | claude | US-EMDB-87-6 | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-87-5](tasks/US-EMDB-87-5.md) | Implement move, delete, and flag operations | ✅ done | 3 |  | claude | US-EMDB-85-5, US-EMDB-88-5 | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-87-6](tasks/US-EMDB-87-6.md) | Implement folder listing API | ✅ done | 2 |  | claude | US-EMDB-85-5 | [US-EMDB-87](stories/US-EMDB-87.md) |
+| [US-EMDB-88-1](tasks/US-EMDB-88-1.md) | Test: Every COW rewrite and delete moves the superseded block's bytes to the dead counter | ✅ done | 1 |  | claude | US-EMDB-88-5 | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-88-2](tasks/US-EMDB-88-2.md) | Test: Counters persist in each Checkpoint and survive reopen | ✅ done | 1 |  | claude | US-EMDB-88-5 | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-88-3](tasks/US-EMDB-88-3.md) | Test: Trigger fires at Dead greater than Live without scanning | ✅ done | 1 |  | claude | US-EMDB-88-6 | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-88-4](tasks/US-EMDB-88-4.md) | Test: Cleanup blocks record superseded BlockIds for audit | ✅ done | 1 |  | claude | US-EMDB-88-5 | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-88-5](tasks/US-EMDB-88-5.md) | Implement live/dead byte accounting and Cleanup blocks | ✅ done | 3 |  | claude | — | [US-EMDB-88](stories/US-EMDB-88.md) |
+| [US-EMDB-88-6](tasks/US-EMDB-88-6.md) | Implement trigger evaluation | ✅ done | 1 |  | claude | US-EMDB-88-5 | [US-EMDB-88](stories/US-EMDB-88.md) |
 | [US-EMDB-89-1](tasks/US-EMDB-89-1.md) | Test: Compacted file contains exactly the live blocks with identical BlockIds and content | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
 | [US-EMDB-89-2](tasks/US-EMDB-89-2.md) | Test: BlockLocationIndex rebuilt for the new layout and verifies | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
 | [US-EMDB-89-3](tasks/US-EMDB-89-3.md) | Test: Kill at every step of the swap yields either the complete old file or the complete new file | ⚪ todo | — |  | — | — | [US-EMDB-89](stories/US-EMDB-89.md) |
@@ -600,11 +600,11 @@
 | [US-EMDB-92-2](tasks/US-EMDB-92-2.md) | Test: Matches include pending delta entries | ⚪ todo | — |  | — | — | [US-EMDB-92](stories/US-EMDB-92.md) |
 | [US-EMDB-92-3](tasks/US-EMDB-92-3.md) | Test: Whole-mailbox fallback works when no better phase applies | ⚪ todo | — |  | — | — | [US-EMDB-92](stories/US-EMDB-92.md) |
 | [US-EMDB-92-4](tasks/US-EMDB-92-4.md) | Implement folder-scoped listing scan search | ⚪ todo | 2 |  | — | — | [US-EMDB-92](stories/US-EMDB-92.md) |
-| [US-EMDB-93-1](tasks/US-EMDB-93-1.md) | Test: Date-range query returns exactly the emails in range without scanning pages | ⚪ todo | — |  | — | — | [US-EMDB-93](stories/US-EMDB-93.md) |
-| [US-EMDB-93-2](tasks/US-EMDB-93-2.md) | Test: Duplicate timestamps handled via the BlockId suffix | ⚪ todo | — |  | — | — | [US-EMDB-93](stories/US-EMDB-93.md) |
-| [US-EMDB-93-3](tasks/US-EMDB-93-3.md) | Test: Index maintained on add and delete and recovered via Checkpoint | ⚪ todo | — |  | — | — | [US-EMDB-93](stories/US-EMDB-93.md) |
-| [US-EMDB-93-4](tasks/US-EMDB-93-4.md) | Test: Combines as a pre-filter with other search phases | ⚪ todo | — |  | — | — | [US-EMDB-93](stories/US-EMDB-93.md) |
-| [US-EMDB-93-5](tasks/US-EMDB-93-5.md) | Implement date index maintenance and range query | ⚪ todo | 3 |  | — | — | [US-EMDB-93](stories/US-EMDB-93.md) |
+| [US-EMDB-93-1](tasks/US-EMDB-93-1.md) | Test: Date-range query returns exactly the emails in range without scanning pages | ✅ done | 1 |  | claude | US-EMDB-93-5 | [US-EMDB-93](stories/US-EMDB-93.md) |
+| [US-EMDB-93-2](tasks/US-EMDB-93-2.md) | Test: Duplicate timestamps handled via the BlockId suffix | ✅ done | 1 |  | claude | US-EMDB-93-5 | [US-EMDB-93](stories/US-EMDB-93.md) |
+| [US-EMDB-93-3](tasks/US-EMDB-93-3.md) | Test: Index maintained on add and delete and recovered via Checkpoint | ✅ done | 1 |  | claude | US-EMDB-93-5 | [US-EMDB-93](stories/US-EMDB-93.md) |
+| [US-EMDB-93-4](tasks/US-EMDB-93-4.md) | Test: Combines as a pre-filter with other search phases | ✅ done | 1 |  | claude | US-EMDB-93-5 | [US-EMDB-93](stories/US-EMDB-93.md) |
+| [US-EMDB-93-5](tasks/US-EMDB-93-5.md) | Implement date index maintenance and range query | ✅ done | 3 |  | claude | — | [US-EMDB-93](stories/US-EMDB-93.md) |
 | [US-EMDB-94-1](tasks/US-EMDB-94-1.md) | Test: Address-shaped queries route to the trigram index | ⚪ todo | — |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
 | [US-EMDB-94-2](tasks/US-EMDB-94-2.md) | Test: Date-bounded queries pre-filter via the date index | ⚪ todo | — |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
 | [US-EMDB-94-3](tasks/US-EMDB-94-3.md) | Test: Results merge and dedupe across phases with stable ordering | ⚪ todo | — |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |

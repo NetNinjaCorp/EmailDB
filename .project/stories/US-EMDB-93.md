@@ -10,13 +10,13 @@ epic_id: EPIC-EMDB-19
 id: US-EMDB-93
 points: 5
 priority: should
-status: backlog
+status: done
 tags:
 - v3
 - search
 - date-index
 title: Date BTree secondary index
-updated: '2026-07-02'
+updated: '2026-07-10'
 ---
 
 As a user, I want time-range queries served by a date index (docs/BTree_Index.md Section 7, IndexKind 2): composite DateTicks|BlockId keys for uniqueness, empty values, maintained on add/delete, registered in the Checkpoint.

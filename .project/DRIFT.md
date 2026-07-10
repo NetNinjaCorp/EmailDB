@@ -1,6 +1,6 @@
 # Project Audit Report
 
-**Errors:** 0 | **Warnings:** 60 | **Info:** 91
+**Errors:** 0 | **Warnings:** 60 | **Info:** 92
 
 - [INFO] Story US-EMDB-1 has 5pts but tasks sum to 9pts
 - [INFO] Story US-EMDB-100 has 3pts but tasks sum to 2pts
@@ -69,13 +69,14 @@
 - [INFO] Story US-EMDB-82 has 8pts but tasks sum to 13pts
 - [INFO] Story US-EMDB-83 has 3pts but tasks sum to 5pts
 - [INFO] Story US-EMDB-84 has 8pts but tasks sum to 12pts
-- [INFO] Story US-EMDB-85 has 8pts but tasks sum to 6pts
-- [INFO] Story US-EMDB-86 has 5pts but tasks sum to 3pts
-- [INFO] Story US-EMDB-88 has 5pts but tasks sum to 4pts
+- [INFO] Story US-EMDB-85 has 8pts but tasks sum to 10pts
+- [INFO] Story US-EMDB-86 has 5pts but tasks sum to 7pts
+- [INFO] Story US-EMDB-87 has 5pts but tasks sum to 9pts
+- [INFO] Story US-EMDB-88 has 5pts but tasks sum to 8pts
 - [INFO] Story US-EMDB-89 has 8pts but tasks sum to 7pts
 - [INFO] Story US-EMDB-91 has 13pts but tasks sum to 11pts
 - [INFO] Story US-EMDB-92 has 3pts but tasks sum to 2pts
-- [INFO] Story US-EMDB-93 has 5pts but tasks sum to 3pts
+- [INFO] Story US-EMDB-93 has 5pts but tasks sum to 7pts
 - [INFO] Story US-EMDB-94 has 5pts but tasks sum to 3pts
 - [INFO] Story US-EMDB-95 has 8pts but tasks sum to 3pts
 - [INFO] Story US-EMDB-96 has 13pts but tasks sum to 10pts

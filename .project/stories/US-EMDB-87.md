@@ -10,13 +10,13 @@ epic_id: EPIC-EMDB-17
 id: US-EMDB-87
 points: 5
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - api
 - operations
 title: Move, delete, flag, and list operations
-updated: '2026-07-02'
+updated: '2026-07-10'
 ---
 
 As a user, I want the remaining mailbox operations: move (two folder deltas), delete (membership removal, index entry removal, dead-byte accounting), flag changes, and a folder listing API returning page slices with pending deltas merged.

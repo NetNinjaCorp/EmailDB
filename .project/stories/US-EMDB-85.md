@@ -10,13 +10,13 @@ epic_id: EPIC-EMDB-17
 id: US-EMDB-85
 points: 8
 priority: must
-status: backlog
+status: done
 tags:
 - v3
 - api
 - write-path
 title: AddEmail pipeline
-updated: '2026-07-02'
+updated: '2026-07-10'
 ---
 
 As a user, I want AddEmail to persist an email end-to-end: EmailHashedID dedupe, Tier 3 + Tier 2 blocks, WAL entry, primary and date index inserts, folder delta append, group-commit batching to one Checkpoint.

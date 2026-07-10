@@ -884,7 +884,7 @@ entries:
 - id: US-EMDB-85
   title: AddEmail pipeline
   type: story
-  status: backlog
+  status: done
   points: 8
   story_id: null
   epic_id: EPIC-EMDB-17
@@ -892,7 +892,7 @@ entries:
 - id: US-EMDB-86
   title: GetEmail and open-email read path
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-17
@@ -900,7 +900,7 @@ entries:
 - id: US-EMDB-87
   title: Move, delete, flag, and list operations
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-17
@@ -908,7 +908,7 @@ entries:
 - id: US-EMDB-88
   title: Dead-block accounting and compaction triggers
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-18
@@ -956,7 +956,7 @@ entries:
 - id: US-EMDB-93
   title: Date BTree secondary index
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-19
@@ -5472,39 +5472,39 @@ entries:
 - id: US-EMDB-85-1
   title: 'Test: Duplicate content is detected via EmailHashedID and not stored twice'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-85
   epic_id: null
   tags: []
 - id: US-EMDB-85-2
   title: 'Test: A committed AddEmail survives crash and recovery'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-85
   epic_id: null
   tags: []
 - id: US-EMDB-85-3
   title: 'Test: 1000-email bulk add commits in batches with bounded checkpoint count'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-85
   epic_id: null
   tags: []
 - id: US-EMDB-85-4
   title: 'Test: All indexes and the folder listing observe the email after commit'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-85
   epic_id: null
   tags: []
 - id: US-EMDB-85-5
   title: Implement AddEmail write pipeline
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-85
   epic_id: null
@@ -5512,7 +5512,7 @@ entries:
 - id: US-EMDB-85-6
   title: Implement group-commit batching
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-85
   epic_id: null
@@ -5521,39 +5521,39 @@ entries:
   title: 'Test: GetEmail returns content for any committed email in O(log n) block
     reads'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-86
   epic_id: null
   tags: []
 - id: US-EMDB-86-2
   title: 'Test: Metadata-only fetch reads Tier 2 without touching Tier 3'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-86
   epic_id: null
   tags: []
 - id: US-EMDB-86-3
   title: 'Test: Unknown ID returns a clean not-found not an exception'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-86
   epic_id: null
   tags: []
 - id: US-EMDB-86-4
   title: 'Test: Read path verifies checksums and Merkle path per spec'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-86
   epic_id: null
   tags: []
 - id: US-EMDB-86-5
   title: Implement GetEmail and metadata-only fetch
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-86
   epic_id: null
@@ -5562,8 +5562,8 @@ entries:
   title: 'Test: Move appears in both folders'' listings without rewriting content
     blocks'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-87
   epic_id: null
   tags: []
@@ -5571,16 +5571,16 @@ entries:
   title: 'Test: Delete removes the email from listings and indexes and counts its
     bytes dead'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-87
   epic_id: null
   tags: []
 - id: US-EMDB-87-3
   title: 'Test: Flag change is visible in the next listing read'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-87
   epic_id: null
   tags: []
@@ -5588,15 +5588,15 @@ entries:
   title: 'Test: List API returns a stable date-descending page for any offset within
     the folder'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-87
   epic_id: null
   tags: []
 - id: US-EMDB-87-5
   title: Implement move, delete, and flag operations
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-87
   epic_id: null
@@ -5604,7 +5604,7 @@ entries:
 - id: US-EMDB-87-6
   title: Implement folder listing API
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-87
   epic_id: null
@@ -5613,39 +5613,39 @@ entries:
   title: 'Test: Every COW rewrite and delete moves the superseded block''s bytes to
     the dead counter'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-88
   epic_id: null
   tags: []
 - id: US-EMDB-88-2
   title: 'Test: Counters persist in each Checkpoint and survive reopen'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-88
   epic_id: null
   tags: []
 - id: US-EMDB-88-3
   title: 'Test: Trigger fires at Dead greater than Live without scanning'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-88
   epic_id: null
   tags: []
 - id: US-EMDB-88-4
   title: 'Test: Cleanup blocks record superseded BlockIds for audit'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-88
   epic_id: null
   tags: []
 - id: US-EMDB-88-5
   title: Implement live/dead byte accounting and Cleanup blocks
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-88
   epic_id: null
@@ -5653,7 +5653,7 @@ entries:
 - id: US-EMDB-88-6
   title: Implement trigger evaluation
   type: task
-  status: todo
+  status: done
   points: 1
   story_id: US-EMDB-88
   epic_id: null
@@ -5925,39 +5925,39 @@ entries:
   title: 'Test: Date-range query returns exactly the emails in range without scanning
     pages'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-93
   epic_id: null
   tags: []
 - id: US-EMDB-93-2
   title: 'Test: Duplicate timestamps handled via the BlockId suffix'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-93
   epic_id: null
   tags: []
 - id: US-EMDB-93-3
   title: 'Test: Index maintained on add and delete and recovered via Checkpoint'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-93
   epic_id: null
   tags: []
 - id: US-EMDB-93-4
   title: 'Test: Combines as a pre-filter with other search phases'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-93
   epic_id: null
   tags: []
 - id: US-EMDB-93-5
   title: Implement date index maintenance and range query
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-93
   epic_id: null
@@ -6204,8 +6204,8 @@ entries:
   story_id: US-EMDB-99
   epic_id: null
   tags: []
-total_points: 1279
-completed_points: 926
+total_points: 1299
+completed_points: 995
 story_count: 104
 task_count: 633
 epic_count: 22
