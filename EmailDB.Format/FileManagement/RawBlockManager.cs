@@ -109,7 +109,7 @@ public class RawBlockManager : IDisposable
     /// Writes a new block to the end of the file in a thread-safe manner.
     /// Returns a Result containing the BlockLocation on success, or an error message on failure.
     /// </summary>
-    public async Task<Result<BlockLocation>> WriteBlockAsync(Block block, CancellationToken cancellationToken = default, long? OverrideLocation = null)
+    public async Task<Result<BlockLocation>> WriteBlockAsync(Block block, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
 
@@ -132,11 +132,6 @@ public class RawBlockManager : IDisposable
             // Actual write operation
             long blockStartPosition = currentPosition;
             fileStream.Seek(blockStartPosition, SeekOrigin.Begin);
-            if (OverrideLocation.HasValue)
-            {
-                // If OverrideLocation is provided, seek to that position
-                fileStream.Seek(OverrideLocation.Value, SeekOrigin.Begin);
-            }
             // Write the block data to the file
             await fileStream.WriteAsync(blockData, 0, blockData.Length, cancellationToken);
             await fileStream.FlushAsync(cancellationToken);
@@ -291,54 +286,6 @@ public class RawBlockManager : IDisposable
         {
            
                 fileLock.ReleaseWriterLock();
-        }
-    }
-
-    /// <summary>
-    /// Writes raw bytes at an arbitrary file offset. Used by BTreeWALManager
-    /// to persist WAL header and entries outside the block format.
-    /// </summary>
-    public async Task WriteRawBytesAsync(byte[] data, long fileOffset, CancellationToken ct = default)
-    {
-        ThrowIfDisposed();
-        await fileLock.AcquireWriterLock(ct);
-        try
-        {
-            fileStream.Seek(fileOffset, SeekOrigin.Begin);
-            await fileStream.WriteAsync(data, 0, data.Length, ct);
-            await fileStream.FlushAsync(ct);
-            // Update currentPosition if we wrote past the end
-            if (fileStream.Position > currentPosition)
-                currentPosition = fileStream.Position;
-        }
-        finally
-        {
-            fileLock.ReleaseWriterLock();
-        }
-    }
-
-    /// <summary>
-    /// Reads raw bytes from an arbitrary file offset. Used by BTreeWALManager
-    /// to recover WAL header and entries outside the block format.
-    /// </summary>
-    public async Task<byte[]> ReadRawBytesAsync(long fileOffset, int length, CancellationToken ct = default)
-    {
-        ThrowIfDisposed();
-        await fileLock.AcquireReaderLock(ct);
-        try
-        {
-            if (fileOffset + length > fileStream.Length)
-                return Array.Empty<byte>();
-            var buffer = new byte[length];
-            fileStream.Seek(fileOffset, SeekOrigin.Begin);
-            int bytesRead = await fileStream.ReadAsync(buffer, 0, length, ct);
-            if (bytesRead < length)
-                return Array.Empty<byte>();
-            return buffer;
-        }
-        finally
-        {
-            fileLock.ReleaseReaderLock();
         }
     }
 

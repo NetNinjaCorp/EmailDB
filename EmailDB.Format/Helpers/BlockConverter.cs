@@ -15,9 +15,6 @@ internal static class BlockContentDeserializer
         {
             BlockType.Metadata => serializer.Deserialize<MetadataContent>(block.Payload),
             BlockType.WAL => serializer.Deserialize<WALContent>(block.Payload),
-            BlockType.FolderTree => serializer.Deserialize<FolderTreeContent>(block.Payload),
-            BlockType.Folder => serializer.Deserialize<FolderContent>(block.Payload),
-            BlockType.Segment => serializer.Deserialize<SegmentContent>(block.Payload),
             _ => null,
         };
     }

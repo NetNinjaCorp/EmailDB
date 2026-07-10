@@ -4,29 +4,6 @@ using System.Collections.Generic;
 namespace EmailDB.UnitTests.Models;
 
 // Mock models for testing
-public class FolderContent
-{
-    public string Name { get; set; }
-    public List<string> EmailIds { get; set; } = new List<string>();
-}
-
-public class SegmentContent
-{
-    public long SegmentId { get; set; }
-    public byte[] SegmentData { get; set; }
-}
-
-public class FolderTreeContent
-{
-    public List<FolderHierarchyItem> FolderHierarchy { get; set; } = new List<FolderHierarchyItem>();
-}
-
-public class FolderHierarchyItem
-{
-    public string Name { get; set; }
-    public string ParentName { get; set; }
-}
-
 public class MetadataContent
 {
     public string Version { get; set; }
@@ -52,9 +29,6 @@ public enum BlockType
 
 public class BlockContent
 {
-    public FolderContent FolderContent { get; set; }
-    public SegmentContent SegmentContent { get; set; }
-    public FolderTreeContent FolderTreeContent { get; set; }
     public MetadataContent MetadataContent { get; set; }
 }
 

@@ -1,28 +1,8 @@
-﻿
-using EmailDB.Format;
-using EmailDB.Format.FileManagement;
-using EmailDB.Format.Helpers;
+// Manual block-manager smoke harness.
+//
+// The original harness exercised the v1 CacheManager/MetadataManager/FolderManager/
+// SegmentManager pipeline, all of which were retired per ADR-016 (US-EMDB-101).
+// Real coverage now lives in EmailDB.UnitTests (v3 suite). This entrypoint is kept
+// as a buildable placeholder.
 
-System.IO.File.Delete("data.blk");
-var rawBlockManager = new RawBlockManager("data.blk");
-var cacheManager = new CacheManager(rawBlockManager, new DefaultBlockContentSerializer());
-var metadataManager = new MetadataManager(cacheManager);
-var folderManager = new FolderManager(cacheManager,metadataManager);
-var segmentManager = new SegmentManager(cacheManager, metadataManager);
-await cacheManager.InitializeNewFile();
-await folderManager.CreateFolderAsync("Inbox");
-await folderManager.CreateFolderAsync("Drafts");
-await folderManager.CreateFolderAsync("Sent");
-await segmentManager.WriteSegmentAsync(new EmailDB.Format.Models.BlockTypes.SegmentContent()
-{
-    FileName = "test.txt",
-    SegmentData = new byte[900],
-    IsDeleted = false
-
-
-
-});
-rawBlockManager.Dispose();
-rawBlockManager = new RawBlockManager("data.blk",false);
-var res = await rawBlockManager.ScanFile();
-Console.WriteLine(res.Count());
+Console.WriteLine("NetNinja.Testing.BlockManager: v1 pipeline retired; see EmailDB.UnitTests for v3 coverage.");

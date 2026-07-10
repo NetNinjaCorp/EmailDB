@@ -1497,6 +1497,15 @@ public sealed class EmailManager : IDisposable
         if (!File.Exists(path))
             return Result<EmailManager>.Failure($"Cannot open '{path}': the file does not exist.");
 
+        // Discard any leftover compaction side file (spec Section 11.2): a <name>.compact
+        // present here is from a compaction interrupted before its atomic rename, so it was
+        // never current and is stale by definition. Deleting it before adopting the source
+        // completes the crash-safe swap contract — an interrupted compaction leaves the
+        // complete old file, and the next open cleans up the abandoned side file.
+        var sideCleanup = Compactor.CleanupLeftoverSideFile(path);
+        if (sideCleanup.IsFailure)
+            return Result<EmailManager>.Failure($"Cannot open '{path}': {sideCleanup.Error}");
+
         // Take the single-writer lock for the file's lifetime (spec Section 12).
         FileStream stream;
         try
@@ -1722,6 +1731,101 @@ public sealed class EmailManager : IDisposable
         if (_openState is null)
             return Result.Success(); // created-but-never-opened: nothing buffered to commit.
         return WriteCommitCheckpoint(_openState);
+    }
+
+    /// <summary>
+    /// Reclaims dead space by compacting this mailbox in place (EmailDB_FileFormat_Spec.md
+    /// Section 11.2, docs/Compaction.md Section 2): full-file side-file compaction plus atomic swap.
+    /// This is the operator-facing wiring over <see cref="Compactor"/> — the level-1 space reclaimer
+    /// v3 has (an append-only file cannot free interior dead space in place). In order it
+    /// <list type="number">
+    ///   <item><b>commits</b> every buffered mutation so compaction copies a complete committed
+    ///   snapshot (uncommitted appends are not in the durable Checkpoint compaction reads);</item>
+    ///   <item><b>releases this manager's writer handle</b> so the atomic rename can replace the file
+    ///   on every platform (Windows refuses to rename over a file with open handles) — after this the
+    ///   current instance is spent;</item>
+    ///   <item><b>runs the full compaction</b> — <see cref="Compactor.Begin"/> →
+    ///   <see cref="Compactor.CopyLiveBlocks"/> → <see cref="Compactor.RebuildLocationIndexAndWriteCheckpoint"/>
+    ///   → <see cref="Compactor.FinalizeAndSwap"/> — copying every live block AND every directly-
+    ///   addressed Checkpoint root (folder tree, metadata, key store) into a side file with the same
+    ///   FileId and continued sequences, rebuilding the location index, and atomically swapping it in;</item>
+    ///   <item><b>reopens the compacted file</b> and returns a fresh, ready manager.</item>
+    /// </list>
+    ///
+    /// <para>The returned manager replaces this one: on success the caller must use it and must not
+    /// reuse this (now-released) instance. FolderVersions and the CheckpointSequence continue across
+    /// the swap (same FileId, continued sequences), so a sync client sees a coherent continuation
+    /// (docs/Sync.md). Crash-safe: a failure or crash before the swap leaves the complete old file at
+    /// the path, reopenable with <see cref="Open"/> (the next open discards any leftover side file).</para>
+    /// </summary>
+    /// <param name="reEncryptProvider">
+    /// When supplied, the copy pass re-encrypts every DEK-encrypted block at the provider's active
+    /// epoch with a fresh nonce (docs/Compaction.md Section 4, US-EMDB-90-5); the caller owns the
+    /// provider and it must hold a DEK for every epoch the live blocks reference. Omit for a verbatim copy.
+    /// </param>
+    /// <param name="encryptionBootstrap">
+    /// Encryption bootstrap used to open the clean snapshot compaction reads (spec Section 10.2 step 2);
+    /// omit for a plaintext file or a Default-policy encrypted file (whose structural blocks are plaintext).
+    /// </param>
+    /// <param name="reopenOptions">Options for reopening the compacted file (e.g. the password of an encrypted file); omit for plaintext.</param>
+    /// <param name="keyStoreKek">
+    /// The 32-byte KEK sealing the file's KeyStore, supplied alongside <paramref name="reEncryptProvider"/>
+    /// to prune the now-unreferenced DEK epochs from the compacted file's KeyStore (docs/Compaction.md
+    /// Section 4, US-EMDB-90-6). Omit it to copy the KeyStore verbatim and prune nothing.
+    /// </param>
+    /// <returns>A fresh manager over the compacted file on success; a failure (with the intact original file left in place) otherwise.</returns>
+    public Result<EmailManager> Compact(
+        EpochDekProvider? reEncryptProvider = null,
+        IEncryptionBootstrap? encryptionBootstrap = null,
+        EmailManagerOpenOptions? reopenOptions = null,
+        ReadOnlyMemory<byte> keyStoreKek = default)
+    {
+        if (_disposed)
+            return Result<EmailManager>.Failure("Compact called on a disposed EmailManager.");
+        if (_closed)
+            return Result<EmailManager>.Failure("Compact called on a closed EmailManager.");
+
+        string path = Path;
+
+        // 1. Make every buffered mutation durable so compaction copies a complete committed snapshot.
+        if (_openState is not null)
+        {
+            var commit = WriteCommitCheckpoint(_openState);
+            if (commit.IsFailure)
+                return Result<EmailManager>.Failure($"Compact aborted committing pending state: {commit.Error}");
+        }
+
+        // 2. Release this manager's exclusive handle so the swap can rename the side file over the file.
+        _closed = true;
+        ReleaseResources();
+
+        // 3. Run the full side-file compaction over the now-closed file.
+        var begin = Compactor.Begin(path, encryptionBootstrap);
+        if (begin.IsFailure)
+            return Result<EmailManager>.Failure(
+                $"Compact could not start over '{path}' (the original file is intact and reopenable): {begin.Error}");
+        using (var compactor = begin.Value)
+        {
+            var copy = reEncryptProvider is null
+                ? compactor.CopyLiveBlocks()
+                : compactor.CopyLiveBlocks(reEncrypt: true, reEncryptProvider, keyStoreKek);
+            if (copy.IsFailure)
+                return Result<EmailManager>.Failure(
+                    $"Compact could not copy live blocks (the original file is intact): {copy.Error}");
+
+            var rebuild = compactor.RebuildLocationIndexAndWriteCheckpoint();
+            if (rebuild.IsFailure)
+                return Result<EmailManager>.Failure(
+                    $"Compact could not rebuild the index/Checkpoint (the original file is intact): {rebuild.Error}");
+
+            var swap = compactor.FinalizeAndSwap();
+            if (swap.IsFailure)
+                return Result<EmailManager>.Failure(
+                    $"Compact could not swap in the compacted file (the original file is intact): {swap.Error}");
+        }
+
+        // 4. Reopen the compacted file and hand back a fresh, ready manager.
+        return Open(path, reopenOptions);
     }
 
     /// <summary>

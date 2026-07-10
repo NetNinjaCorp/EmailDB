@@ -1,92 +1,92 @@
+using System.Text;
 using EmailDB.Format;
-using EmailDB.Format.FileManagement;
-using EmailDB.Format.Helpers;
-using EmailDB.Format.Models;
-using EmailDB.Format.Models.BlockTypes;
+using EmailDB.Format.V3;
+using V3Id = EmailDB.Format.V3.EmailHashedID;
 
 namespace EmailDB.UnitTests;
 
 /// <summary>
-/// End-to-end test: add 1000 emails then retrieve each by ID.
-/// Verifies acceptance criterion for story US-EMDB-33.
+/// v3 port of the legacy scale end-to-end test (was RawBlockManager + offset
+/// <c>BTreeIndex</c>). Drives the full v3 <see cref="EmailManager"/> pipeline
+/// (EmailDB_FileFormat_Spec.md Sections 6-7, 11): add 1000 emails through the
+/// group-commit AddEmail path, commit, then retrieve every email by its
+/// content-addressed identity and verify the raw MIME round-trips — including
+/// across a close/reopen cycle so the retrieval exercises the persisted index.
 /// </summary>
 public class EndToEndAdd1000EmailsTests : IDisposable
 {
-    private readonly string _tempDir;
-
-    public EndToEndAdd1000EmailsTests()
-    {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"emdb_e2e_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempDir);
-        BlockIdGenerator.Instance.Reset();
-    }
+    private readonly string _path = Path.Combine(
+        Path.GetTempPath(), $"emaildb-e2e-1000-{Guid.NewGuid():N}.emdb");
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, true);
+        if (File.Exists(_path))
+            File.Delete(_path);
     }
 
+    private static void Ok<T>(Result<T> r) => Assert.True(r.IsSuccess, r.IsFailure ? r.Error : null);
+    private static void Ok(Result r) => Assert.True(r.IsSuccess, r.IsFailure ? r.Error : null);
+
+    private static byte[] Mime(int i) =>
+        Encoding.UTF8.GetBytes(
+            $"From: sender{i}@e2e-test.com\r\nTo: recipient{i}@e2e-test.com\r\n" +
+            $"Subject: E2E Subject {i}\r\n\r\nEmail body number {i} lorem ipsum dolor.");
+
+    private static AddEmailRequest Request(FolderPageDirectory folder, int i) => new()
+    {
+        RawContent = Mime(i),
+        Folder = folder,
+        MetadataPayload = Encoding.UTF8.GetBytes($"meta-{i}"),
+        DateTicks = i + 1,
+        Flags = ListingFlags.Read,
+        From = $"sender{i}@e2e-test.com",
+        Subject = $"E2E Subject {i}",
+        Preview = $"Email body number {i}",
+    };
+
     [Fact]
-    public async Task Add1000Emails_ThenRetrieveEachById()
+    public void Add1000Emails_ThenRetrieveEachById()
     {
         const int emailCount = 1000;
-        var filePath = Path.Combine(_tempDir, "e2e_1000.emdb");
-        using var rawBlockManager = new RawBlockManager(filePath);
-        var btreeIndex = new BTreeIndex(rawBlockManager);
+        var stored = new List<(V3Id Id, byte[] Mime)>(emailCount);
 
-        var stored = new List<(EmailHashedID Id, long BlockId, long Offset, byte[] Payload)>(emailCount);
+        EmailManager.Create(_path).Value.Dispose();
 
-        // Phase 1: Add 1000 emails
-        for (int i = 0; i < emailCount; i++)
+        using (var mgr = EmailManager.Open(_path).Value)
         {
-            var emailId = new EmailHashedID(
-                $"msg-{i:D4}@e2e-test.com", i * 1000L,
-                $"E2E Subject {i}", $"sender{i}@test.com", $"recipient{i}@test.com");
+            var folder = FolderPageDirectory.Create(new UlidGenerator().Next(), Array.Empty<PageEntry>());
 
-            byte[] payload = System.Text.Encoding.UTF8.GetBytes(
-                $"From: sender{i}@test.com\r\nTo: recipient{i}@test.com\r\nSubject: E2E Subject {i}\r\n\r\nEmail body #{i}");
-
-            var emailBlock = new Block
+            // Phase 1: add 1000 emails through the v3 AddEmail pipeline.
+            for (int i = 0; i < emailCount; i++)
             {
-                Version = 1,
-                Type = BlockType.EmailContent,
-                Flags = 0,
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                BlockId = BlockIdGenerator.Instance.GetNextBlockId(BlockType.EmailContent),
-                Payload = payload
-            };
+                var added = mgr.AddEmail(Request(folder, i));
+                Ok(added);
+                folder = added.Value.Folder!;
+                stored.Add((added.Value.EmailId, Mime(i)));
+            }
 
-            var writeResult = await rawBlockManager.WriteBlockAsync(emailBlock);
-            Assert.True(writeResult.IsSuccess, $"Write failed for email {i}: {writeResult.Error}");
+            Ok(mgr.Commit());
 
-            var insertResult = await btreeIndex.InsertAsync(
-                emailId, writeResult.Value.Position, emailBlock.BlockId);
-            Assert.True(insertResult.IsSuccess, $"Insert failed for email {i}: {insertResult.Error}");
+            // Phase 2 (in-process): retrieve each email by identity and verify the MIME.
+            foreach (var (id, mime) in stored)
+            {
+                var got = mgr.GetEmail(id);
+                Ok(got);
+                Assert.True(got.Value.Found);
+                Assert.Equal(mime, got.Value.Content);
+            }
 
-            stored.Add((emailId, emailBlock.BlockId, writeResult.Value.Position, payload));
+            Ok(mgr.Close());
         }
 
-        // Verify tree entry count
-        Assert.NotNull(btreeIndex.CurrentRoot);
-        Assert.Equal((long)emailCount, btreeIndex.CurrentRoot.EntryCount);
-
-        // Phase 2: Retrieve each email by ID and verify
-        for (int i = 0; i < stored.Count; i++)
+        // Phase 3 (after reopen): the persisted index resolves every identity too.
+        using var reopened = EmailManager.Open(_path).Value;
+        foreach (var (id, mime) in stored)
         {
-            var (id, blockId, offset, expectedPayload) = stored[i];
-
-            // Lookup via B+-tree
-            var lookupResult = await btreeIndex.LookupAsync(id);
-            Assert.True(lookupResult.IsSuccess, $"Lookup failed for email {i}: {lookupResult.Error}");
-            Assert.Equal(offset, lookupResult.Value.BlockOffset);
-            Assert.Equal(blockId, lookupResult.Value.BlockId);
-
-            // Read back the content block
-            var readResult = await rawBlockManager.ReadBlockAsync(lookupResult.Value.BlockId);
-            Assert.True(readResult.IsSuccess, $"Read failed for email {i}: {readResult.Error}");
-            Assert.Equal(BlockType.EmailContent, readResult.Value.Type);
-            Assert.Equal(expectedPayload, readResult.Value.Payload);
+            var got = reopened.GetEmail(id);
+            Ok(got);
+            Assert.True(got.Value.Found);
+            Assert.Equal(mime, got.Value.Content);
         }
     }
 }

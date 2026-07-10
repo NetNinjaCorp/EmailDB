@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Testing.FileFormatB
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Format.Protobuf", "EmailDB.Format.Protobuf\EmailDB.Format.Protobuf.csproj", "{4DD80CF9-5A18-4A61-B751-A54BCB2D09B8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Testing.RawBlocks", "EmailDB.Testing.CapnProtoFile\EmailDB.Testing.RawBlocks.csproj", "{1E9C60CA-BA07-47F4-83DA-885CBC1126FB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.Testing.RawBlocks", "EmailDB.Testing.RawBlocks\EmailDB.Testing.RawBlocks.csproj", "{1E9C60CA-BA07-47F4-83DA-885CBC1126FB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailDB.UnitTests", "EmailDB.UnitTests\EmailDB.UnitTests.csproj", "{6AF782D6-220B-4FEB-B94E-ED1055DEA807}"
 EndProject

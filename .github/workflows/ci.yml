@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main, InitialDev]
+  pull_request:
+    branches: [main, InitialDev]
+
+jobs:
+  unit-tests:
+    name: Unit tests (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore EmailDB.UnitTests/EmailDB.UnitTests.csproj
+
+      - name: Build
+        run: dotnet build EmailDB.UnitTests/EmailDB.UnitTests.csproj --configuration Release --no-restore
+
+      # Runs the full v3 unit-test suite. The randomized COW B+-tree stress tests
+      # (Category=Stress) are excluded here because they append multi-GB stores and
+      # take minutes; they run in the dedicated stress job below.
+      - name: Test (v3 suite, excluding stress)
+        run: >-
+          dotnet test EmailDB.UnitTests/EmailDB.UnitTests.csproj
+          --configuration Release --no-build
+          --filter "Category!=Stress"
+          --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/test-results.trx'
+          if-no-files-found: ignore
+
+  stress-tests:
+    name: COW B+-tree stress (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore EmailDB.UnitTests/EmailDB.UnitTests.csproj
+
+      - name: Build
+        run: dotnet build EmailDB.UnitTests/EmailDB.UnitTests.csproj --configuration Release --no-restore
+
+      - name: Test (stress only)
+        run: >-
+          dotnet test EmailDB.UnitTests/EmailDB.UnitTests.csproj
+          --configuration Release --no-build
+          --filter "Category=Stress"

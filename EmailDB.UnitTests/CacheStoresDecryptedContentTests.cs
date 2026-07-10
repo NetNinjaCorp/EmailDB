@@ -23,7 +23,6 @@ public class CacheStoresDecryptedContentTests : IDisposable
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"emdb_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
-        BlockIdGenerator.Instance.Reset();
         _jsonSerializer = new DefaultBlockContentSerializer();
     }
 
@@ -75,17 +74,6 @@ public class CacheStoresDecryptedContentTests : IDisposable
         FolderTreeOffset = 8192,
         SegmentOffsets = new Dictionary<string, long> { ["seg-0"] = 100, ["seg-1"] = 200 },
         OutdatedOffsets = new List<long> { 50, 75 }
-    };
-
-    private SegmentContent CreateSampleSegment() => new()
-    {
-        SegmentId = 7,
-        SegmentData = new byte[] { 0xDE, 0xAD, 0xBE, 0xEF },
-        FileName = "segment_7.dat",
-        FileOffset = 0,
-        ContentLength = 4,
-        SegmentTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-        Version = 1
     };
 
     [Fact]
@@ -188,7 +176,7 @@ public class CacheStoresDecryptedContentTests : IDisposable
         var block = new Block
         {
             Type = BlockType.Folder,
-            BlockId = BlockIdGenerator.Instance.GetNextBlockId(BlockType.Folder),
+            BlockId = 100,
             Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             Payload = (byte[])originalPayload.Clone()
         };
@@ -228,7 +216,7 @@ public class CacheStoresDecryptedContentTests : IDisposable
         var block = new Block
         {
             Type = BlockType.Segment,
-            BlockId = BlockIdGenerator.Instance.GetNextBlockId(BlockType.Segment),
+            BlockId = 200,
             Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             Payload = (byte[])originalPayload.Clone()
         };

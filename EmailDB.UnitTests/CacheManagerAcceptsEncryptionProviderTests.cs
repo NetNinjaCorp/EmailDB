@@ -1,6 +1,5 @@
 using EmailDB.Format.Encryption;
 using EmailDB.Format.FileManagement;
-using EmailDB.Format.Helpers;
 using EmailDB.Format.Models;
 using EmailDB.Format.Models.BlockTypes;
 using EmailDB.Format.Protobuf;
@@ -18,7 +17,6 @@ public class CacheManagerAcceptsEncryptionProviderTests : IDisposable
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"emdb_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
-        BlockIdGenerator.Instance.Reset();
     }
 
     public void Dispose()
