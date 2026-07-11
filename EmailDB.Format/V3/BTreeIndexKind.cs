@@ -3,7 +3,7 @@ namespace EmailDB.Format.V3;
 /// <summary>
 /// IndexKind registry (EmailDB_FileFormat_Spec.md Section 6.1): which index a
 /// generic B+-tree node belongs to. Key/value widths are declared per node in
-/// its header, so new kinds never require a node format change. Values 4-99
+/// its header, so new kinds never require a node format change. Values 5-99
 /// are reserved; 100+ are experimental.
 /// </summary>
 public enum BTreeIndexKind : ushort
@@ -29,4 +29,7 @@ public enum BTreeIndexKind : ushort
 
     /// <summary>Trigram/FTS trees (layout defined in docs/Search.md).</summary>
     Fts = 3,
+
+    /// <summary>Per-folder Bloom filter catalog (BlockType 18, docs/Search.md Phase 5).</summary>
+    Bloom = 4,
 }

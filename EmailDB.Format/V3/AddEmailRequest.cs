@@ -30,8 +30,20 @@ public sealed class AddEmailRequest
     /// <summary>Listing state flags stamped into the Tier 1 row (read/flagged/answered/draft).</summary>
     public ListingFlags Flags { get; init; }
 
-    /// <summary>Decoded From display value for the listing row.</summary>
+    /// <summary>Decoded From display value for the listing row (and the From address indexed by the FTS trigram index).</summary>
     public string From { get; init; } = string.Empty;
+
+    /// <summary>
+    /// The email's To addresses, indexed by the Phase 1 FTS trigram index (docs/Search.md, US-EMDB-91).
+    /// Not stored in the Tier 1 listing row; supplied only to feed address search. Empty when unknown.
+    /// </summary>
+    public IReadOnlyList<string> To { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// The email's Cc addresses, indexed by the Phase 1 FTS trigram index (docs/Search.md, US-EMDB-91).
+    /// Not stored in the Tier 1 listing row; supplied only to feed address search. Empty when unknown.
+    /// </summary>
+    public IReadOnlyList<string> Cc { get; init; } = Array.Empty<string>();
 
     /// <summary>Decoded Subject for the listing row.</summary>
     public string Subject { get; init; } = string.Empty;

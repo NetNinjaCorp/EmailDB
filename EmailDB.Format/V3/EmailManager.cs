@@ -110,6 +110,17 @@ public sealed class EmailManager : IDisposable
     private readonly WalWriter? _walWriter;
     private readonly EncryptedBlockStore? _encryptedStore;
     private readonly BlockManagerIndexRootStore? _dateIndexRootStore;
+    // FTS address trigram index (US-EMDB-91-7): the in-memory posting state, and the store that
+    // reads/writes its always-encrypted segment blocks. Maintained on AddEmail/DeleteEmail like the
+    // Date index; its SearchRoot is registered in the Checkpoint under IndexKind 3. Null on Create.
+    private readonly FtsIndex? _ftsIndex;
+    private readonly FtsBlockStore? _ftsBlockStore;
+    // Per-folder Bloom filters (US-EMDB-97-5, docs/Search.md Phase 5): the in-memory filter set that
+    // gates which folders a multi-folder scan touches, and the store that reads/writes its always-encrypted
+    // catalog block (type 18). Rebuilt for a folder at page-compile time; the catalog is registered in the
+    // Checkpoint under IndexKind 4. Null on a Create-but-never-opened instance.
+    private readonly FolderBloomIndex? _bloomIndex;
+    private readonly BloomFilterStore? _bloomStore;
     // Group-commit state (US-EMDB-85-6). The last persisted Date IndexRoot descriptor and the
     // block that holds it, so successive Commits increment its Sequence monotonically and the
     // Checkpoint's secondary table names the durable descriptor. Advanced by Commit.
@@ -224,7 +235,11 @@ public sealed class EmailManager : IDisposable
         CheckpointRootPointer lastCheckpoint,
         ulong lastCheckpointSequence,
         IndexSeed primarySeed,
-        IndexSeed dateSeed)
+        IndexSeed dateSeed,
+        FtsIndex ftsIndex,
+        FtsBlockStore ftsBlockStore,
+        FolderBloomIndex bloomIndex,
+        BloomFilterStore bloomStore)
     {
         Path = path;
         _stream = stream;
@@ -272,6 +287,10 @@ public sealed class EmailManager : IDisposable
         _encryptedStore = provider is null
             ? null
             : new EncryptedBlockStore(openState.BlockManager, provider, EncryptionPolicy.Default);
+        _ftsIndex = ftsIndex;
+        _ftsBlockStore = ftsBlockStore;
+        _bloomIndex = bloomIndex;
+        _bloomStore = bloomStore;
     }
 
     /// <summary>Filesystem path of the managed file.</summary>
@@ -476,6 +495,22 @@ public sealed class EmailManager : IDisposable
     public DateIndex? DateIndex => _dateIndex;
 
     /// <summary>
+    /// The session's FTS address trigram index (IndexKind 3, docs/Search.md Phase 1) that
+    /// <see cref="AddEmail"/> folds each email's From/To/Cc trigrams into and <see cref="DeleteEmail"/>
+    /// tombstones from; flushed to a segment and registered in the Checkpoint at each commit. Null on an
+    /// unopened instance.
+    /// </summary>
+    public FtsIndex? Fts => _ftsIndex;
+
+    /// <summary>
+    /// The session's per-folder Bloom filters (IndexKind 4, docs/Search.md Phase 5) that
+    /// <see cref="SearchMailbox"/> consults to skip folders that cannot match. Rebuilt for a folder by
+    /// <see cref="RebuildFolderBloomFilter"/> at page-compile time; flushed to a catalog block and
+    /// registered in the Checkpoint at each commit. Null on an unopened instance.
+    /// </summary>
+    public FolderBloomIndex? Bloom => _bloomIndex;
+
+    /// <summary>
     /// The session's WAL writer: <see cref="AddEmail"/> logs each insert as a WAL block fenced to the
     /// current committed Checkpoint (spec Section 10.4) so a committed add survives crash recovery.
     /// Null on an unopened instance.
@@ -646,6 +681,11 @@ public sealed class EmailManager : IDisposable
         if (date.IsFailure)
             return Result<AddEmailResult>.Failure($"AddEmail failed adding the date index entry: {date.Error}");
 
+        // FTS address trigram index (US-EMDB-91-7): fold this email's From/To/Cc trigrams into the
+        // in-memory posting set; it is flushed to a segment and re-registered under IndexKind 3 at the
+        // next commit. Rebuildable (docs/Search.md), so a failure here never fails the durable AddEmail.
+        _ftsIndex!.AddEmail(id, request.From, request.To, request.Cc);
+
         // 5. Folder delta append: an Add listing row chained onto the folder's delta head, then the
         //    COW-advanced directory persisted.
         var record = new ListingRecord
@@ -808,6 +848,10 @@ public sealed class EmailManager : IDisposable
         if (dateRemove.IsFailure)
             return Result<DeleteEmailResult>.Failure($"DeleteEmail failed removing the date index entry: {dateRemove.Error}");
 
+        // FTS address trigram index (US-EMDB-91-7): tombstone the identity so it is masked from address
+        // search immediately and dropped from the segment at the next commit's flush.
+        _ftsIndex!.RemoveEmail(request.EmailId);
+
         // 4. Remove the folder membership: a Delete delta, then persist the advanced directory.
         var removed = AppendFolderDelta(request.Folder, FolderDeltaEntry.Delete(request.EmailId));
         if (removed.IsFailure)
@@ -929,12 +973,608 @@ public sealed class EmailManager : IDisposable
     }
 
     /// <summary>
+    /// Folder-scoped keyword scan over the Tier 1 Subject/From/Preview fields (docs/Search.md Phase 2,
+    /// story US-EMDB-92) — the zero-index search baseline and the accuracy backstop other phases confirm
+    /// candidates against. It loads the folder's <b>effective</b> listing (the same read path
+    /// <see cref="ListFolder"/> runs: compiled pages with the pending <see cref="FolderDeltaLog"/> chain
+    /// merged over them) and returns the rows whose selected fields contain <paramref name="query"/>
+    /// case-insensitively, newest-first. Because the scanned listing is the merged effective listing,
+    /// matches naturally <b>include pending delta rows</b> that no page has compiled yet.
+    /// </summary>
+    /// <param name="folderId">The folder's 16-byte ULID (its directory block's stable BlockId).</param>
+    /// <param name="query">The keyword to match; a non-empty substring searched case-insensitively.</param>
+    /// <param name="fields">Which Tier 1 fields to match (defaults to Subject, From, and Preview).</param>
+    /// <param name="maxResults">Cap on the number of hits returned, newest-first (defaults to unbounded).</param>
+    /// <returns>The date-descending matches with the scan count; a failure on a bad argument or read fault.</returns>
+    public Result<ListingScanResult> SearchFolder(
+        byte[] folderId, string query,
+        ListingSearchField fields = ListingSearchField.All, int maxResults = int.MaxValue)
+    {
+        ArgumentNullException.ThrowIfNull(folderId);
+        var guard = EnsureFolderReadReady("SearchFolder");
+        if (guard is not null)
+            return Result<ListingScanResult>.Failure(guard);
+        var argError = ValidateScanArgs(query, maxResults);
+        if (argError is not null)
+            return Result<ListingScanResult>.Failure($"SearchFolder {argError}");
+
+        var scanned = ScanFolder(folderId, query, fields, maxResults);
+        if (scanned.IsFailure)
+            return Result<ListingScanResult>.Failure(scanned.Error);
+
+        return Result<ListingScanResult>.Success(new ListingScanResult
+        {
+            Hits = scanned.Value.Hits,
+            RecordsScanned = scanned.Value.Scanned,
+            WholeMailbox = false,
+        });
+    }
+
+    /// <summary>
+    /// Whole-mailbox keyword scan (docs/Search.md Phase 2, story US-EMDB-92): the fallback that runs when
+    /// no better phase applies, scanning every folder in <paramref name="folderIds"/> with the same
+    /// effective-listing match as <see cref="SearchFolder"/> and merging the hits into one canonical
+    /// date-descending result (newest-first, ties broken by <see cref="EmailHashedID"/>). Each hit keeps
+    /// the folder it was found in, so a message listed in more than one folder yields a hit per folder.
+    /// Pending delta rows are included per folder exactly as in the folder-scoped scan.
+    /// </summary>
+    /// <param name="folderIds">The folders to scan; each a 16-byte ULID. An empty set is a clean empty result.</param>
+    /// <param name="query">The keyword to match; a non-empty substring searched case-insensitively.</param>
+    /// <param name="fields">Which Tier 1 fields to match (defaults to Subject, From, and Preview).</param>
+    /// <param name="maxResults">Cap on the number of hits returned, newest-first (defaults to unbounded).</param>
+    /// <returns>The merged date-descending matches with the total scan count; a failure on a bad argument or read fault.</returns>
+    public Result<ListingScanResult> SearchMailbox(
+        IEnumerable<byte[]> folderIds, string query,
+        ListingSearchField fields = ListingSearchField.All, int maxResults = int.MaxValue)
+    {
+        ArgumentNullException.ThrowIfNull(folderIds);
+        var guard = EnsureFolderReadReady("SearchMailbox");
+        if (guard is not null)
+            return Result<ListingScanResult>.Failure(guard);
+        var argError = ValidateScanArgs(query, maxResults);
+        if (argError is not null)
+            return Result<ListingScanResult>.Failure($"SearchMailbox {argError}");
+
+        var hits = new List<ListingScanHit>();
+        int scannedTotal = 0;
+        int foldersSkipped = 0;
+        foreach (var folderId in folderIds)
+        {
+            if (folderId is null)
+                return Result<ListingScanResult>.Failure("SearchMailbox: a folder id in the set was null.");
+
+            // Phase 5 (docs/Search.md): consult the folder's Bloom filter first. A covering filter (built
+            // over this folder's compiled pages, matching the live directory version with no pending delta)
+            // that eliminates the query proves no record here can match, so the folder is skipped without a
+            // page scan. Bloom filters have no false negatives, so a skip is always safe; a folder with
+            // pending deltas or a stale/absent filter is never skipped (it falls through to a full scan).
+            if (_bloomIndex is not null)
+            {
+                var directory = TryReadFolderDirectory(folderId);
+                if (directory is not null
+                    && !_bloomIndex.MightMatch(folderId, query, directory.FolderVersion, directory.HasPendingDelta))
+                {
+                    foldersSkipped++;
+                    continue;
+                }
+            }
+
+            // Gather every folder's matches unbounded, then apply the mailbox-wide cap after the global
+            // date-descending merge — a per-folder cap would drop newer hits from later folders.
+            var scanned = ScanFolder(folderId, query, fields, int.MaxValue);
+            if (scanned.IsFailure)
+                return Result<ListingScanResult>.Failure(scanned.Error);
+            hits.AddRange(scanned.Value.Hits);
+            scannedTotal += scanned.Value.Scanned;
+        }
+
+        // Merge across folders into one canonical newest-first order (date desc, tie-break by id), then cap.
+        hits.Sort(static (a, b) =>
+        {
+            int byDate = b.Record.DateTicks.CompareTo(a.Record.DateTicks); // newest first
+            return byDate != 0 ? byDate : a.Record.EmailHashedId.CompareTo(b.Record.EmailHashedId);
+        });
+        if (hits.Count > maxResults)
+            hits.RemoveRange(maxResults, hits.Count - maxResults);
+
+        return Result<ListingScanResult>.Success(new ListingScanResult
+        {
+            Hits = hits,
+            RecordsScanned = scannedTotal,
+            WholeMailbox = true,
+            FoldersSkipped = foldersSkipped,
+        });
+    }
+
+    /// <summary>
+    /// Rebuilds folder <paramref name="folderId"/>'s Bloom filter (docs/Search.md Phase 5, story
+    /// US-EMDB-97) from its <b>compiled pages</b> and stamps it with the folder's current
+    /// <see cref="FolderPageDirectory.FolderVersion"/> — the "filters rebuilt with page compile" hook: a
+    /// caller runs it right after compiling the folder's pending deltas into pages
+    /// (<see cref="FolderCompiler.Compile"/>), when the folder has no pending delta, so the filter covers
+    /// the folder's whole effective listing. The rebuilt filter is held in the session index and made
+    /// durable (catalog block + IndexKind-4 registration) by the next <see cref="Commit"/>/<see cref="Close"/>.
+    ///
+    /// <para>Building over the compiled pages ONLY — never the pending delta chain — is the delta-safety
+    /// contract: a folder with pending deltas is never skipped by <see cref="SearchMailbox"/> (the filter's
+    /// covered version will not match the live directory), so the deltas are always scanned. Rebuilding a
+    /// folder that still has pending deltas simply produces a filter that will not be consulted until the
+    /// folder is compiled and rebuilt at the compiled version.</para>
+    /// </summary>
+    /// <param name="folderId">The folder's 16-byte ULID (its directory block's stable BlockId).</param>
+    /// <returns>Success once the session filter is rebuilt; a failure on a bad argument or read fault.</returns>
+    public Result RebuildFolderBloomFilter(byte[] folderId)
+    {
+        ArgumentNullException.ThrowIfNull(folderId);
+        var guard = EnsureFolderReadReady("RebuildFolderBloomFilter");
+        if (guard is not null)
+            return Result.Failure(guard);
+        if (folderId.Length != UlidGenerator.UlidSize)
+            return Result.Failure(
+                $"RebuildFolderBloomFilter folderId must be exactly {UlidGenerator.UlidSize} bytes, got {folderId.Length}.");
+
+        if (!_openState!.Resolver.TryGetLocation(folderId, out var dirLoc) || dirLoc is null)
+            return Result.Failure(
+                "RebuildFolderBloomFilter failed: the folder id does not resolve to a FolderPageDirectory block " +
+                "(the folder was never written this session or committed, spec Section 7).");
+        var directory = _folderDirectoryStore!.ReadDirectory(dirLoc.Offset);
+        if (directory.IsFailure)
+            return Result.Failure($"RebuildFolderBloomFilter failed reading the folder directory: {directory.Error}");
+
+        var pageRecords = LoadCompiledPageRecords(directory.Value);
+        if (pageRecords.IsFailure)
+            return Result.Failure(pageRecords.Error);
+
+        _bloomIndex!.RebuildFolder(folderId, directory.Value.FolderVersion, pageRecords.Value);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Instant substring search over From/To/Cc addresses via the Phase 1 trigram FTS index
+    /// (docs/Search.md Phase 1, story US-EMDB-91) — the address counterpart to the Tier 1 keyword scans
+    /// <see cref="SearchFolder"/>/<see cref="SearchMailbox"/>. It runs the documented query path:
+    /// <list type="number">
+    ///   <item><b>Split the query into trigrams.</b> The query is normalized (NFC + casefold) and
+    ///   windowed into trigrams with the SAME <see cref="TrigramExtractor"/> ingest used, so a query
+    ///   trigram matches an indexed trigram exactly when the characters match.</item>
+    ///   <item><b>Intersect posting lists.</b> <see cref="FtsIndex.FindCandidates"/> returns the emails
+    ///   whose addresses hold EVERY query trigram within a single requested field (the AND semantics),
+    ///   restricted to <paramref name="fields"/>. Trigram co-occurrence is necessary but not sufficient.</item>
+    ///   <item><b>Verify against Tier 1.</b> Each candidate's Tier 1 listing row (loaded from
+    ///   <paramref name="folderIds"/>, the same effective-listing read path <see cref="SearchFolder"/>
+    ///   uses) confirms the match: a From candidate is kept only when the row's actual
+    ///   <see cref="ListingRecord.From"/> address contains the query substring, dropping trigram false
+    ///   positives. To/Cc address text is not persisted at Tier 1, so a To/Cc candidate is kept at the
+    ///   trigram level (best-effort) — a documented limitation of the current schema.</item>
+    ///   <item><b>Rank.</b> Verified hits are returned newest-first (date descending, ties broken by
+    ///   <see cref="EmailHashedID"/> ascending — the house order), then capped at
+    ///   <paramref name="maxResults"/>.</item>
+    /// </list>
+    ///
+    /// <para><b>Short queries.</b> A query shorter than a trigram (fewer than three runes after
+    /// normalization) has nothing to intersect, so it falls back to a Tier 1 substring scan of the
+    /// searched folders' From addresses (<see cref="AddressSearchResult.UsedTrigramIndex"/> is false).
+    /// Only From is persisted at Tier 1, so the fallback matches the From address regardless of the
+    /// requested To/Cc bits.</para>
+    ///
+    /// <para>Because candidates are verified against the folders' <b>effective</b> listings (compiled
+    /// pages with the pending delta chain merged), a deleted email — masked in both the FTS index and
+    /// the folder listing — never surfaces, and an email not listed in any searched folder is skipped
+    /// (its Tier 1 row, and hence its date and From address, are not reachable).</para>
+    /// </summary>
+    /// <param name="folderIds">The folders whose Tier 1 listings verify candidates; each a 16-byte ULID. Empty verifies nothing.</param>
+    /// <param name="query">The address substring to search; a non-empty string.</param>
+    /// <param name="fields">Which address fields to search (defaults to <see cref="AddressField.All"/>).</param>
+    /// <param name="maxResults">Cap on the number of hits returned, newest-first (defaults to unbounded).</param>
+    /// <returns>The date-descending verified matches; a failure on a bad argument, unopened manager, or read fault.</returns>
+    public Result<AddressSearchResult> SearchAddresses(
+        IEnumerable<byte[]> folderIds, string query,
+        AddressField fields = AddressField.All, int maxResults = int.MaxValue)
+    {
+        ArgumentNullException.ThrowIfNull(folderIds);
+        var guard = EnsureFolderReadReady("SearchAddresses");
+        if (guard is not null)
+            return Result<AddressSearchResult>.Failure(guard);
+        if (_ftsIndex is null)
+            return Result<AddressSearchResult>.Failure(
+                "SearchAddresses requires an opened EmailManager (Open, not Create): the FTS index is wired only over the composed read-side.");
+        if (string.IsNullOrEmpty(query))
+            return Result<AddressSearchResult>.Failure("SearchAddresses requires a non-empty query.");
+        if (maxResults <= 0)
+            return Result<AddressSearchResult>.Failure($"SearchAddresses maxResults must be positive, got {maxResults}.");
+        var mask = fields & AddressField.All;
+        if (mask == AddressField.None)
+            return Result<AddressSearchResult>.Failure("SearchAddresses requires at least one address field (From/To/Cc).");
+
+        // 1. Load Tier 1: the effective listing rows of every searched folder, keyed by email. The first
+        //    folder an email appears in tags its hit; its From/DateTicks are identical across folders.
+        var records = new Dictionary<EmailHashedID, (ListingRecord Record, byte[] FolderId)>();
+        foreach (var folderId in folderIds)
+        {
+            if (folderId is null)
+                return Result<AddressSearchResult>.Failure("SearchAddresses: a folder id in the set was null.");
+            var listing = LoadEffectiveListing(folderId, out _);
+            if (listing.IsFailure)
+                return Result<AddressSearchResult>.Failure(listing.Error);
+            foreach (var rec in listing.Value)
+                records.TryAdd(rec.EmailHashedId, (rec, folderId));
+        }
+
+        string normalizedQuery = TrigramExtractor.Normalize(query);
+        var trigrams = TrigramExtractor.Extract(query);
+
+        var hits = new List<AddressSearchHit>();
+        bool usedIndex;
+        int examined;
+
+        if (trigrams.Count == 0)
+        {
+            // Short query (fewer than three runes after normalization): the trigram index has nothing to
+            // intersect. Fall back to a Tier 1 From-address substring scan (To/Cc text is not persisted).
+            usedIndex = false;
+            examined = records.Count;
+            foreach (var (email, entry) in records)
+            {
+                if ((mask & AddressField.From) != 0
+                    && TrigramExtractor.Normalize(entry.Record.From).Contains(normalizedQuery, StringComparison.Ordinal))
+                {
+                    hits.Add(new AddressSearchHit
+                    {
+                        EmailId = email,
+                        FolderId = entry.FolderId,
+                        Record = entry.Record,
+                        MatchedFields = AddressField.From,
+                    });
+                }
+            }
+        }
+        else
+        {
+            // Trigram-index path: intersect posting lists (field-scoped AND), then verify each candidate.
+            usedIndex = true;
+            var candidates = _ftsIndex.FindCandidates(trigrams, mask);
+            examined = candidates.Count;
+            foreach (var cand in candidates)
+            {
+                // An email not listed in the searched folders has no reachable Tier 1 row to verify or rank.
+                if (!records.TryGetValue(cand.Email, out var entry))
+                    continue;
+
+                AddressField matched = AddressField.None;
+                // From: verify the actual Tier 1 address contains the query substring — drops trigram
+                // false positives (all trigrams present, but not as a contiguous substring).
+                if ((cand.Fields & AddressField.From) != 0
+                    && TrigramExtractor.Normalize(entry.Record.From).Contains(normalizedQuery, StringComparison.Ordinal))
+                    matched |= AddressField.From;
+                // To/Cc: not persisted at Tier 1, so accept the trigram co-occurrence as-is (best-effort).
+                matched |= cand.Fields & (AddressField.To | AddressField.Cc);
+
+                if (matched != AddressField.None)
+                    hits.Add(new AddressSearchHit
+                    {
+                        EmailId = cand.Email,
+                        FolderId = entry.FolderId,
+                        Record = entry.Record,
+                        MatchedFields = matched,
+                    });
+            }
+        }
+
+        // 2. Rank: date descending, ties broken by EmailHashedID ascending (the house order), then cap.
+        hits.Sort(static (a, b) =>
+        {
+            int byDate = b.Record.DateTicks.CompareTo(a.Record.DateTicks); // newest first
+            return byDate != 0 ? byDate : a.EmailId.CompareTo(b.EmailId);
+        });
+        if (hits.Count > maxResults)
+            hits.RemoveRange(maxResults, hits.Count - maxResults);
+
+        return Result<AddressSearchResult>.Success(new AddressSearchResult
+        {
+            Hits = hits,
+            UsedTrigramIndex = usedIndex,
+            CandidatesExamined = examined,
+        });
+    }
+
+    /// <summary>
+    /// The one query-planner entry point (story US-EMDB-94, docs/Search.md "Query planning"): it classifies a
+    /// <see cref="SearchQuery"/> by shape, routes it across the search phases, and merges + dedupes the results
+    /// into one ranked list of <see cref="SearchHit"/>s. The routing follows the docs matrix:
+    /// <list type="bullet">
+    ///   <item><b>Address-shaped</b> (an <see cref="SearchQuery.AddressFields"/> hint, or a <see cref="SearchQuery.Text"/>
+    ///   holding an <c>@</c>) → Phase 1, the trigram FTS index (<see cref="SearchAddresses"/>). If the FTS index is
+    ///   absent (no committed root and nothing indexed this session) the plan <b>degrades to a Tier 1 From scan</b>
+    ///   rather than erroring.</item>
+    ///   <item><b>Keyword / free text</b> → Phase 2, the listing scan (<see cref="SearchFolder"/> for a single-folder
+    ///   scope, <see cref="SearchMailbox"/> — Bloom-gated — for a multi-folder scope).</item>
+    ///   <item><b>Date-bounded</b> (<see cref="SearchQuery.FromTicks"/>/<see cref="SearchQuery.ToTicks"/>) → Phase 3,
+    ///   the Date B+-tree pre-filter: the in-range <c>ContentBlockId</c>s narrow whichever text phase ran. A
+    ///   date-only query (no text) lists the scoped folders filtered to the range. When the Date index is absent the
+    ///   plan <b>degrades to an in-memory <see cref="ListingRecord.DateTicks"/> filter</b> — the bound still holds.</item>
+    /// </list>
+    ///
+    /// <para>Results from the executed phase(s) are deduped by <see cref="EmailHashedID"/> (a message listed in
+    /// several scoped folders becomes one hit, attributed to the lexicographically smallest folder ULID) and ranked
+    /// in the house canonical order: date descending, ties broken by id ascending, then capped at
+    /// <see cref="SearchQuery.MaxResults"/>. The executed phases and the index-vs-degraded decisions are reported on
+    /// the <see cref="SearchResult"/> so the routing is observable.</para>
+    /// </summary>
+    /// <param name="query">The query spec: text, optional address-field hint, optional date range, and folder scope.</param>
+    /// <returns>The ranked, deduped hits with the plan diagnostics; a failure on a bad argument, unopened manager, or read fault.</returns>
+    public Result<SearchResult> Search(SearchQuery query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        var guard = EnsureFolderReadReady("Search");
+        if (guard is not null)
+            return Result<SearchResult>.Failure(guard);
+        if (query.Folders is null)
+            return Result<SearchResult>.Failure("Search requires a folder scope (Folders must not be null).");
+        if (query.MaxResults <= 0)
+            return Result<SearchResult>.Failure($"Search maxResults must be positive, got {query.MaxResults}.");
+
+        var folderIds = new List<byte[]>();
+        foreach (var folderId in query.Folders)
+        {
+            if (folderId is null)
+                return Result<SearchResult>.Failure("Search: a folder id in the scope was null.");
+            folderIds.Add(folderId);
+        }
+
+        string text = query.Text ?? string.Empty;
+        bool hasText = text.Length > 0;
+        bool hasDate = query.FromTicks.HasValue || query.ToTicks.HasValue;
+        if (!hasText && !hasDate)
+            return Result<SearchResult>.Failure("Search requires query text or a date range.");
+
+        var addressMask = (query.AddressFields ?? AddressField.None) & AddressField.All;
+        bool addressShaped = addressMask != AddressField.None || (hasText && text.Contains('@'));
+
+        // 1. Date pre-filter (Phase 3). Query the Date index for the in-range ContentBlockId set; if the index
+        //    is absent (never populated this session), degrade to an in-memory DateTicks filter — the bound
+        //    still holds, the plan just does not error (graceful degradation).
+        long fromTicks = query.FromTicks ?? 0;
+        long toTicks = query.ToTicks ?? long.MaxValue;
+        HashSet<string>? dateSet = null;
+        bool usedDateIndex = false;
+        bool dateDegraded = false;
+        if (hasDate)
+        {
+            if (fromTicks < 0 || toTicks < 0)
+                return Result<SearchResult>.Failure(
+                    $"Search date bounds must be non-negative, got [{fromTicks}, {toTicks}].");
+            if (fromTicks > toTicks)
+                return Result<SearchResult>.Failure(
+                    $"Search date range is inverted: fromTicks ({fromTicks}) must not exceed toTicks ({toTicks}).");
+
+            if (_dateIndex is not null && _dateIndex.Root is not null)
+            {
+                var ranged = _dateIndex.RangeQuery(fromTicks, toTicks);
+                if (ranged.IsFailure)
+                    return Result<SearchResult>.Failure($"Search date pre-filter failed: {ranged.Error}");
+                dateSet = new HashSet<string>(ranged.Value.Count);
+                foreach (var entry in ranged.Value)
+                    dateSet.Add(Convert.ToHexStringLower(entry.BlockId));
+                usedDateIndex = true;
+            }
+            else
+            {
+                dateDegraded = true;
+            }
+        }
+
+        // 2. Text/candidate phase. Address-shaped → FTS (Phase 1), degrading to a From scan when FTS is absent;
+        //    other text → listing scan (Phase 2); no text (date-only) → the scoped folders' effective listings.
+        var raw = new List<SearchHit>();
+        SearchPhase executed = SearchPhase.None;
+        bool usedTrigram = false;
+        int candidatesExamined = 0;
+        int recordsScanned = 0;
+        int foldersSkipped = 0;
+
+        bool ftsAvailable = _ftsIndex is not null
+            && (_ftsIndex.IndexedEmailCount > 0 || _ftsIndex.CommittedSearchRootLocation is not null);
+
+        if (hasText && addressShaped && ftsAvailable)
+        {
+            var addr = SearchAddresses(folderIds, text, addressMask == AddressField.None ? AddressField.All : addressMask);
+            if (addr.IsFailure)
+                return Result<SearchResult>.Failure(addr.Error);
+            executed |= SearchPhase.Fts;
+            usedTrigram = addr.Value.UsedTrigramIndex;
+            candidatesExamined = addr.Value.CandidatesExamined;
+            foreach (var hit in addr.Value.Hits)
+                raw.Add(new SearchHit
+                {
+                    EmailId = hit.EmailId,
+                    FolderId = hit.FolderId,
+                    Record = hit.Record,
+                    MatchedPhase = SearchPhase.Fts,
+                });
+        }
+        else if (hasText)
+        {
+            // Keyword / free text, OR an address-shaped query degrading to scan because the FTS index is absent.
+            // The degraded address scan restricts to From (address text lives only in From at Tier 1); a plain
+            // keyword scan uses the requested ScanFields.
+            var scanFields = addressShaped ? ListingSearchField.From : query.ScanFields;
+            var scan = folderIds.Count == 1
+                ? SearchFolder(folderIds[0], text, scanFields)
+                : SearchMailbox(folderIds, text, scanFields);
+            if (scan.IsFailure)
+                return Result<SearchResult>.Failure(scan.Error);
+            executed |= SearchPhase.Scan;
+            recordsScanned = scan.Value.RecordsScanned;
+            foldersSkipped = scan.Value.FoldersSkipped;
+            foreach (var hit in scan.Value.Hits)
+                raw.Add(new SearchHit
+                {
+                    EmailId = hit.Record.EmailHashedId,
+                    FolderId = hit.FolderId,
+                    Record = hit.Record,
+                    MatchedPhase = SearchPhase.Scan,
+                });
+        }
+        else
+        {
+            // Date-only query: no text phase — the scoped folders' effective listings are the candidate set,
+            // which the date pre-filter below narrows to the range.
+            foreach (var folderId in folderIds)
+            {
+                var listing = LoadEffectiveListing(folderId, out _);
+                if (listing.IsFailure)
+                    return Result<SearchResult>.Failure(listing.Error);
+                foreach (var record in listing.Value)
+                    raw.Add(new SearchHit
+                    {
+                        EmailId = record.EmailHashedId,
+                        FolderId = folderId,
+                        Record = record,
+                        MatchedPhase = SearchPhase.DateIndex,
+                    });
+            }
+        }
+
+        // 3. Apply the date bound. Either intersect with the Date index's in-range set (pre-filter) or, when the
+        //    index was absent, filter the candidate rows by their own DateTicks (the degraded path).
+        if (hasDate)
+        {
+            executed |= SearchPhase.DateIndex;
+            raw = raw.Where(h => usedDateIndex
+                    ? dateSet!.Contains(Convert.ToHexStringLower(h.Record.ContentBlockId))
+                    : h.Record.DateTicks >= fromTicks && h.Record.DateTicks <= toTicks)
+                .ToList();
+        }
+
+        // 4. Merge + dedupe by EmailHashedID (a message in several scoped folders is one hit), attributing the
+        //    hit to the lexicographically smallest folder ULID for a deterministic result.
+        var deduped = new Dictionary<EmailHashedID, SearchHit>();
+        foreach (var hit in raw)
+        {
+            if (!deduped.TryGetValue(hit.EmailId, out var kept)
+                || CompareUnsigned(hit.FolderId, kept.FolderId) < 0)
+                deduped[hit.EmailId] = hit;
+        }
+
+        // 5. Rank: date descending, ties broken by EmailHashedID ascending (the house order), then cap.
+        var hits = deduped.Values.ToList();
+        hits.Sort(static (a, b) =>
+        {
+            int byDate = b.Record.DateTicks.CompareTo(a.Record.DateTicks); // newest first
+            return byDate != 0 ? byDate : a.EmailId.CompareTo(b.EmailId);
+        });
+        if (hits.Count > query.MaxResults)
+            hits.RemoveRange(query.MaxResults, hits.Count - query.MaxResults);
+
+        return Result<SearchResult>.Success(new SearchResult
+        {
+            Hits = hits,
+            PhasesExecuted = executed,
+            UsedTrigramIndex = usedTrigram,
+            UsedDateIndex = usedDateIndex,
+            DateFilterDegraded = dateDegraded,
+            CandidatesExamined = candidatesExamined,
+            RecordsScanned = recordsScanned,
+            FoldersSkipped = foldersSkipped,
+        });
+    }
+
+    /// <summary>Unsigned lexicographic comparison of two equal-or-unequal-length byte arrays (folder-id tie-break).</summary>
+    private static int CompareUnsigned(byte[] a, byte[] b)
+    {
+        int min = Math.Min(a.Length, b.Length);
+        for (int i = 0; i < min; i++)
+        {
+            int c = a[i].CompareTo(b[i]);
+            if (c != 0) return c;
+        }
+        return a.Length.CompareTo(b.Length);
+    }
+
+    /// <summary>
+    /// Scans one folder's effective listing for <paramref name="query"/> over the selected fields, returning
+    /// the matching rows (already date-descending — the listing's canonical order is preserved by the filter)
+    /// tagged with <paramref name="folderId"/>, plus how many rows were examined. The <paramref name="maxResults"/>
+    /// cap lets the folder-scoped caller stop early; the whole-mailbox caller passes int.MaxValue and caps after
+    /// its cross-folder merge. Shared by <see cref="SearchFolder"/> and <see cref="SearchMailbox"/>.
+    /// </summary>
+    private Result<(IReadOnlyList<ListingScanHit> Hits, int Scanned)> ScanFolder(
+        byte[] folderId, string query, ListingSearchField fields, int maxResults)
+    {
+        var listing = LoadEffectiveListing(folderId, out _);
+        if (listing.IsFailure)
+            return Result<(IReadOnlyList<ListingScanHit>, int)>.Failure(listing.Error);
+
+        var hits = new List<ListingScanHit>();
+        var rows = listing.Value;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (hits.Count >= maxResults)
+                break;
+            if (ListingScanMatcher.Matches(rows[i], query, fields))
+                hits.Add(new ListingScanHit { FolderId = folderId, Record = rows[i] });
+        }
+        return Result<(IReadOnlyList<ListingScanHit>, int)>.Success((hits, rows.Count));
+    }
+
+    /// <summary>
+    /// Shared argument validation for the listing scan searches: the query must be a non-empty keyword and
+    /// the result cap must be positive. Returns an error fragment (appended after the operation name) or null.
+    /// </summary>
+    private static string? ValidateScanArgs(string query, int maxResults)
+    {
+        if (string.IsNullOrEmpty(query))
+            return "requires a non-empty query.";
+        if (maxResults <= 0)
+            return $"maxResults must be positive, got {maxResults}.";
+        return null;
+    }
+
+    /// <summary>
     /// Loads a folder's effective, date-descending listing (compiled pages with the pending delta chain
     /// merged over them) shared by <see cref="ListFolder"/> and <see cref="ListFolderFromDate"/>. Resolves
     /// the directory by its stable BlockId, reads every page newest-first, walks the delta chain head-to-
     /// root, and hands both to <see cref="FolderListingMerger"/>. Also returns the directory's
     /// <see cref="FolderPageDirectory.FolderVersion"/> the listing was read at.
     /// </summary>
+    /// <summary>
+    /// Best-effort read of a folder's <see cref="FolderPageDirectory"/> for the Bloom-filter consult in
+    /// <see cref="SearchMailbox"/> — returns null on any resolve/read miss so the caller simply falls
+    /// through to a normal scan (which surfaces the real error identically). Never skips a folder on an
+    /// error, so the correctness of the scan path is unaffected.
+    /// </summary>
+    private FolderPageDirectory? TryReadFolderDirectory(byte[] folderId)
+    {
+        if (folderId.Length != UlidGenerator.UlidSize)
+            return null;
+        if (!_openState!.Resolver.TryGetLocation(folderId, out var dirLoc) || dirLoc is null)
+            return null;
+        var directory = _folderDirectoryStore!.ReadDirectory(dirLoc.Offset);
+        return directory.IsSuccess ? directory.Value : null;
+    }
+
+    /// <summary>
+    /// Reads a folder's <b>compiled page</b> records — the page rows only, WITHOUT the pending delta chain —
+    /// in directory order. This is the exact token source a Bloom filter covers (<see cref="RebuildFolderBloomFilter"/>):
+    /// the filter is authoritative only for compiled pages, so pending deltas are deliberately excluded.
+    /// </summary>
+    private Result<IReadOnlyList<ListingRecord>> LoadCompiledPageRecords(FolderPageDirectory directory)
+    {
+        var pageRecords = new List<ListingRecord>();
+        foreach (var entry in directory.PageEntries)
+        {
+            if (!_openState!.Resolver.TryGetLocation(entry.PageBlockId, out var pageLoc) || pageLoc is null)
+                return Result<IReadOnlyList<ListingRecord>>.Failure(
+                    "Bloom rebuild failed: a FolderPage the directory names does not resolve to a physical offset " +
+                    "(directory/page inconsistency, spec Section 13).");
+            var page = _folderPageStore!.ReadPage(pageLoc.Offset);
+            if (page.IsFailure)
+                return Result<IReadOnlyList<ListingRecord>>.Failure($"Bloom rebuild failed reading a folder page: {page.Error}");
+            pageRecords.AddRange(page.Value.Records);
+        }
+        return Result<IReadOnlyList<ListingRecord>>.Success(pageRecords);
+    }
+
     private Result<IReadOnlyList<ListingRecord>> LoadEffectiveListing(byte[] folderId, out ulong folderVersion)
     {
         folderVersion = 0;
@@ -1618,11 +2258,47 @@ public sealed class EmailManager : IDisposable
             if (dateSeed.IsFailure)
                 return Result<EmailManager>.Failure(dateSeed.Error);
 
+            // Reconstruct the FTS address trigram index from its IndexKind-3 secondary entry
+            // (US-EMDB-91-7): resolve the FTSSearchRoot the Checkpoint named, then read its segments'
+            // posting lists back into the in-memory index so a committed ingest/delete survives reopen.
+            ResolvedRoot? ftsResolved = null;
+            foreach (var secondary in state.Checkpoint.SecondaryIndexes)
+            {
+                if (secondary.IndexKind == BTreeIndexKind.Fts)
+                {
+                    ftsResolved = secondary.Root;
+                    break;
+                }
+            }
+            var ftsBlockStore = new FtsBlockStore(state.BlockManager, provider, state.Resolver);
+            var ftsIndex = FtsIndex.Reconstruct(ftsBlockStore, ftsResolved);
+            if (ftsIndex.IsFailure)
+                return Result<EmailManager>.Failure(ftsIndex.Error);
+
+            // Reconstruct the per-folder Bloom filters from their IndexKind-4 secondary entry
+            // (US-EMDB-97-5): resolve the BloomFilterCatalog the Checkpoint named and load every folder's
+            // filter, so a committed rebuild-at-compile survives reopen. Absent ⇒ an empty filter set.
+            ResolvedRoot? bloomResolved = null;
+            foreach (var secondary in state.Checkpoint.SecondaryIndexes)
+            {
+                if (secondary.IndexKind == BTreeIndexKind.Bloom)
+                {
+                    bloomResolved = secondary.Root;
+                    break;
+                }
+            }
+            var bloomStore = new BloomFilterStore(state.BlockManager, provider);
+            var bloomIndex = FolderBloomIndex.Reconstruct(bloomStore, bloomResolved);
+            if (bloomIndex.IsFailure)
+                return Result<EmailManager>.Failure(bloomIndex.Error);
+
             var manager = new EmailManager(
                 path, stream, state, provider,
                 folderPageStore, folderDirectoryStore, folderDeltaStore,
                 lastCheckpoint, lastCheckpointSequence,
-                primarySeed.Value, dateSeed.Value);
+                primarySeed.Value, dateSeed.Value,
+                ftsIndex.Value, ftsBlockStore,
+                bloomIndex.Value, bloomStore);
 
             // Torn-checkpoint recovery (spec Section 13, Section 10.4): recovery replayed the
             // uncommitted WAL fenced to the adopted Checkpoint into the recording sink but left the
@@ -1858,7 +2534,7 @@ public sealed class EmailManager : IDisposable
         // 2. Persist the Date index root descriptor when it advanced this batch (its nodes were already
         //    appended by AddEmail). The IndexRoot block carries the shape the reopen rebuilds the tree
         //    from; its Sequence increments monotonically per index (BTree_Index.md Section 6).
-        CheckpointSecondaryIndex[] secondaries;
+        var secondaryList = new List<CheckpointSecondaryIndex>();
         if (_dateIndex!.Root is not null)
         {
             byte[] dateRootBlockId = _dateIndex.Root.RootRef.Reference;
@@ -1879,17 +2555,35 @@ public sealed class EmailManager : IDisposable
                 _dateIndexRoot = candidate;
                 _dateIndexRootLocation = written.Value;
             }
-            secondaries = new[]
-            {
-                CheckpointSecondaryIndex.Create(
-                    BTreeIndexKind.Date,
-                    (byte[])_dateIndexRootLocation!.BlockId.Clone(), _dateIndexRootLocation.Offset),
-            };
+            secondaryList.Add(CheckpointSecondaryIndex.Create(
+                BTreeIndexKind.Date,
+                (byte[])_dateIndexRootLocation!.BlockId.Clone(), _dateIndexRootLocation.Offset));
         }
-        else
-        {
-            secondaries = Array.Empty<CheckpointSecondaryIndex>();
-        }
+
+        // 2b. Flush the FTS address trigram index (US-EMDB-91-7): write the live posting set as a fresh
+        //     segment + FTSSearchRoot when it changed this batch (a clean index re-registers its existing
+        //     root), then register the root under IndexKind 3 so the index reopens from the Checkpoint.
+        //     Done BEFORE the runtime-map snapshot below so the segment blocks fold into the location index.
+        var ftsFlush = _ftsIndex!.Flush(_ftsBlockStore!);
+        if (ftsFlush.IsFailure)
+            return Result.Failure($"Commit aborted flushing the FTS index: {ftsFlush.Error}");
+        if (ftsFlush.Value is { } ftsRootLoc)
+            secondaryList.Add(FtsSearchRoot.ToCheckpointSecondaryIndex(
+                (byte[])ftsRootLoc.BlockId.Clone(), ftsRootLoc.Offset));
+
+        // 2c. Flush the per-folder Bloom filters (US-EMDB-97-5): write the whole filter set as a fresh
+        //     always-encrypted catalog block when it changed this batch (a clean index re-registers its
+        //     existing catalog), then register it under IndexKind 4 so the filters reopen from the
+        //     Checkpoint. Done BEFORE the runtime-map snapshot so the catalog block folds into the location
+        //     index.
+        var bloomFlush = _bloomIndex!.Flush(_bloomStore!);
+        if (bloomFlush.IsFailure)
+            return Result.Failure($"Commit aborted flushing the Bloom filters: {bloomFlush.Error}");
+        if (bloomFlush.Value is { } bloomRootLoc)
+            secondaryList.Add(BloomFilterCatalog.ToCheckpointSecondaryIndex(
+                (byte[])bloomRootLoc.BlockId.Clone(), bloomRootLoc.Offset));
+
+        CheckpointSecondaryIndex[] secondaries = secondaryList.ToArray();
 
         // 3. Fold every block appended since the last commit (the runtime map) into the durable location
         //    index in one COW batch — the index/IndexRoot/email/folder/WAL blocks all become resolvable
