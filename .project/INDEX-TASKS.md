@@ -588,28 +588,28 @@
 | [US-EMDB-90-4](tasks/US-EMDB-90-4.md) | Test: reEncrypt=false copies ciphertext verbatim and prunes nothing | ✅ done | 1 |  | claude | US-EMDB-90-6 | [US-EMDB-90](stories/US-EMDB-90.md) |
 | [US-EMDB-90-5](tasks/US-EMDB-90-5.md) | Implement reEncrypt path in compaction copy | ✅ done | 3 |  | claude | US-EMDB-89-6 | [US-EMDB-90](stories/US-EMDB-90.md) |
 | [US-EMDB-90-6](tasks/US-EMDB-90-6.md) | Implement DEK pruning | ✅ done | 2 |  | claude | US-EMDB-90-5 | [US-EMDB-90](stories/US-EMDB-90.md) |
-| [US-EMDB-91-1](tasks/US-EMDB-91-1.md) | Test: Substring query over addresses returns correct results at 100K emails in under 10ms warm | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
-| [US-EMDB-91-2](tasks/US-EMDB-91-2.md) | Test: FTS blocks are encrypted under every policy | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
-| [US-EMDB-91-3](tasks/US-EMDB-91-3.md) | Test: Index updates on add and delete | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
-| [US-EMDB-91-4](tasks/US-EMDB-91-4.md) | Test: Candidates verified against Tier 1 records to remove trigram false positives | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
-| [US-EMDB-91-5](tasks/US-EMDB-91-5.md) | Test: Root recoverable from the Checkpoint secondary index table | ⚪ todo | — |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
-| [US-EMDB-91-6](tasks/US-EMDB-91-6.md) | Implement trigram extraction and FTS block structures | ⚪ todo | 5 |  | — | — | [US-EMDB-91](stories/US-EMDB-91.md) |
-| [US-EMDB-91-7](tasks/US-EMDB-91-7.md) | Implement ingest and delete maintenance | ⚪ todo | 3 |  | — | US-EMDB-91-6 | [US-EMDB-91](stories/US-EMDB-91.md) |
-| [US-EMDB-91-8](tasks/US-EMDB-91-8.md) | Implement trigram query path | ⚪ todo | 3 |  | — | US-EMDB-91-7 | [US-EMDB-91](stories/US-EMDB-91.md) |
-| [US-EMDB-92-1](tasks/US-EMDB-92-1.md) | Test: Folder-scoped scan of a 50K-email folder completes in ~15ms warm | ⚪ todo | — |  | — | — | [US-EMDB-92](stories/US-EMDB-92.md) |
-| [US-EMDB-92-2](tasks/US-EMDB-92-2.md) | Test: Matches include pending delta entries | ⚪ todo | — |  | — | — | [US-EMDB-92](stories/US-EMDB-92.md) |
-| [US-EMDB-92-3](tasks/US-EMDB-92-3.md) | Test: Whole-mailbox fallback works when no better phase applies | ⚪ todo | — |  | — | — | [US-EMDB-92](stories/US-EMDB-92.md) |
-| [US-EMDB-92-4](tasks/US-EMDB-92-4.md) | Implement folder-scoped listing scan search | ⚪ todo | 2 |  | — | — | [US-EMDB-92](stories/US-EMDB-92.md) |
+| [US-EMDB-91-1](tasks/US-EMDB-91-1.md) | Test: Substring query over addresses returns correct results at 100K emails in under 10ms warm | ✅ done | 1 |  | claude | US-EMDB-91-8 | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-2](tasks/US-EMDB-91-2.md) | Test: FTS blocks are encrypted under every policy | ✅ done | 1 |  | claude | US-EMDB-91-7 | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-3](tasks/US-EMDB-91-3.md) | Test: Index updates on add and delete | ✅ done | 1 |  | claude | US-EMDB-91-7 | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-4](tasks/US-EMDB-91-4.md) | Test: Candidates verified against Tier 1 records to remove trigram false positives | ✅ done | 1 |  | claude | US-EMDB-91-8 | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-5](tasks/US-EMDB-91-5.md) | Test: Root recoverable from the Checkpoint secondary index table | ✅ done | 1 |  | claude | US-EMDB-91-7 | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-6](tasks/US-EMDB-91-6.md) | Implement trigram extraction and FTS block structures | ✅ done | 5 |  | claude | — | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-7](tasks/US-EMDB-91-7.md) | Implement ingest and delete maintenance | ✅ done | 3 |  | claude | US-EMDB-91-6 | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-91-8](tasks/US-EMDB-91-8.md) | Implement trigram query path | ✅ done | 3 |  | claude | US-EMDB-91-7 | [US-EMDB-91](stories/US-EMDB-91.md) |
+| [US-EMDB-92-1](tasks/US-EMDB-92-1.md) | Test: Folder-scoped scan of a 50K-email folder completes in ~15ms warm | ✅ done | 1 |  | claude | US-EMDB-92-4 | [US-EMDB-92](stories/US-EMDB-92.md) |
+| [US-EMDB-92-2](tasks/US-EMDB-92-2.md) | Test: Matches include pending delta entries | ✅ done | 1 |  | claude | US-EMDB-92-4 | [US-EMDB-92](stories/US-EMDB-92.md) |
+| [US-EMDB-92-3](tasks/US-EMDB-92-3.md) | Test: Whole-mailbox fallback works when no better phase applies | ✅ done | 1 |  | claude | US-EMDB-92-4 | [US-EMDB-92](stories/US-EMDB-92.md) |
+| [US-EMDB-92-4](tasks/US-EMDB-92-4.md) | Implement folder-scoped listing scan search | ✅ done | 2 |  | claude | — | [US-EMDB-92](stories/US-EMDB-92.md) |
 | [US-EMDB-93-1](tasks/US-EMDB-93-1.md) | Test: Date-range query returns exactly the emails in range without scanning pages | ✅ done | 1 |  | claude | US-EMDB-93-5 | [US-EMDB-93](stories/US-EMDB-93.md) |
 | [US-EMDB-93-2](tasks/US-EMDB-93-2.md) | Test: Duplicate timestamps handled via the BlockId suffix | ✅ done | 1 |  | claude | US-EMDB-93-5 | [US-EMDB-93](stories/US-EMDB-93.md) |
 | [US-EMDB-93-3](tasks/US-EMDB-93-3.md) | Test: Index maintained on add and delete and recovered via Checkpoint | ✅ done | 1 |  | claude | US-EMDB-93-5 | [US-EMDB-93](stories/US-EMDB-93.md) |
 | [US-EMDB-93-4](tasks/US-EMDB-93-4.md) | Test: Combines as a pre-filter with other search phases | ✅ done | 1 |  | claude | US-EMDB-93-5 | [US-EMDB-93](stories/US-EMDB-93.md) |
 | [US-EMDB-93-5](tasks/US-EMDB-93-5.md) | Implement date index maintenance and range query | ✅ done | 3 |  | claude | — | [US-EMDB-93](stories/US-EMDB-93.md) |
-| [US-EMDB-94-1](tasks/US-EMDB-94-1.md) | Test: Address-shaped queries route to the trigram index | ⚪ todo | — |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
-| [US-EMDB-94-2](tasks/US-EMDB-94-2.md) | Test: Date-bounded queries pre-filter via the date index | ⚪ todo | — |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
-| [US-EMDB-94-3](tasks/US-EMDB-94-3.md) | Test: Results merge and dedupe across phases with stable ordering | ⚪ todo | — |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
-| [US-EMDB-94-4](tasks/US-EMDB-94-4.md) | Test: Planner degrades gracefully when an index is absent | ⚪ todo | — |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
-| [US-EMDB-94-5](tasks/US-EMDB-94-5.md) | Implement query planner routing and merge | ⚪ todo | 3 |  | — | — | [US-EMDB-94](stories/US-EMDB-94.md) |
+| [US-EMDB-94-1](tasks/US-EMDB-94-1.md) | Test: Address-shaped queries route to the trigram index | ✅ done | 1 |  | claude | US-EMDB-94-5 | [US-EMDB-94](stories/US-EMDB-94.md) |
+| [US-EMDB-94-2](tasks/US-EMDB-94-2.md) | Test: Date-bounded queries pre-filter via the date index | ✅ done | 1 |  | claude | US-EMDB-94-5 | [US-EMDB-94](stories/US-EMDB-94.md) |
+| [US-EMDB-94-3](tasks/US-EMDB-94-3.md) | Test: Results merge and dedupe across phases with stable ordering | ✅ done | 1 |  | claude | US-EMDB-94-5 | [US-EMDB-94](stories/US-EMDB-94.md) |
+| [US-EMDB-94-4](tasks/US-EMDB-94-4.md) | Test: Planner degrades gracefully when an index is absent | ✅ done | 1 |  | claude | US-EMDB-94-5 | [US-EMDB-94](stories/US-EMDB-94.md) |
+| [US-EMDB-94-5](tasks/US-EMDB-94-5.md) | Implement query planner routing and merge | ✅ done | 3 |  | claude | US-EMDB-91-8, US-EMDB-92-4 | [US-EMDB-94](stories/US-EMDB-94.md) |
 | [US-EMDB-95-1](tasks/US-EMDB-95-1.md) | Test: Sidecar round-trips embeddings and index nodes | ⚪ todo | — |  | — | — | [US-EMDB-95](stories/US-EMDB-95.md) |
 | [US-EMDB-95-2](tasks/US-EMDB-95-2.md) | Test: Stale sidecar detected via CheckpointSequence mismatch and rebuilt from the main file | ⚪ todo | — |  | — | — | [US-EMDB-95](stories/US-EMDB-95.md) |
 | [US-EMDB-95-3](tasks/US-EMDB-95-3.md) | Test: Deleting the sidecar never loses email data | ⚪ todo | — |  | — | — | [US-EMDB-95](stories/US-EMDB-95.md) |
@@ -621,11 +621,11 @@
 | [US-EMDB-96-4](tasks/US-EMDB-96-4.md) | Test: Search never blocks on concurrent inserts | ⚪ todo | — |  | — | — | [US-EMDB-96](stories/US-EMDB-96.md) |
 | [US-EMDB-96-5](tasks/US-EMDB-96-5.md) | Integrate ONNX embedding and text prep | ⚪ todo | 5 |  | — | — | [US-EMDB-96](stories/US-EMDB-96.md) |
 | [US-EMDB-96-6](tasks/US-EMDB-96-6.md) | Implement HNSW build/search with sidecar flush | ⚪ todo | 5 |  | — | US-EMDB-96-5 | [US-EMDB-96](stories/US-EMDB-96.md) |
-| [US-EMDB-97-1](tasks/US-EMDB-97-1.md) | Test: Filter sized for ~1% false positives over Tier 1 tokens | ⚪ todo | — |  | — | — | [US-EMDB-97](stories/US-EMDB-97.md) |
-| [US-EMDB-97-2](tasks/US-EMDB-97-2.md) | Test: Multi-folder search consults filters before scanning | ⚪ todo | — |  | — | — | [US-EMDB-97](stories/US-EMDB-97.md) |
-| [US-EMDB-97-3](tasks/US-EMDB-97-3.md) | Test: Filters always encrypted | ⚪ todo | — |  | — | — | [US-EMDB-97](stories/US-EMDB-97.md) |
-| [US-EMDB-97-4](tasks/US-EMDB-97-4.md) | Test: Filters rebuilt with page compile and registered in the Checkpoint | ⚪ todo | — |  | — | — | [US-EMDB-97](stories/US-EMDB-97.md) |
-| [US-EMDB-97-5](tasks/US-EMDB-97-5.md) | Implement bloom filter build, query, and registration | ⚪ todo | 3 |  | — | — | [US-EMDB-97](stories/US-EMDB-97.md) |
+| [US-EMDB-97-1](tasks/US-EMDB-97-1.md) | Test: Filter sized for ~1% false positives over Tier 1 tokens | ✅ done | 1 |  | claude | US-EMDB-97-5 | [US-EMDB-97](stories/US-EMDB-97.md) |
+| [US-EMDB-97-2](tasks/US-EMDB-97-2.md) | Test: Multi-folder search consults filters before scanning | ✅ done | 1 |  | claude | US-EMDB-97-5 | [US-EMDB-97](stories/US-EMDB-97.md) |
+| [US-EMDB-97-3](tasks/US-EMDB-97-3.md) | Test: Filters always encrypted | ✅ done | 1 |  | claude | US-EMDB-97-5 | [US-EMDB-97](stories/US-EMDB-97.md) |
+| [US-EMDB-97-4](tasks/US-EMDB-97-4.md) | Test: Filters rebuilt with page compile and registered in the Checkpoint | ✅ done | 1 |  | claude | US-EMDB-97-5 | [US-EMDB-97](stories/US-EMDB-97.md) |
+| [US-EMDB-97-5](tasks/US-EMDB-97-5.md) | Implement bloom filter build, query, and registration | ✅ done | 3 |  | claude | US-EMDB-92-4 | [US-EMDB-97](stories/US-EMDB-97.md) |
 | [US-EMDB-98-1](tasks/US-EMDB-98-1.md) | Test: Backup converges to the active file's content set after arbitrary interruption | ⚪ todo | — |  | — | — | [US-EMDB-98](stories/US-EMDB-98.md) |
 | [US-EMDB-98-2](tasks/US-EMDB-98-2.md) | Test: Delta computation is a single high-water-mark comparison | ⚪ todo | — |  | — | — | [US-EMDB-98](stories/US-EMDB-98.md) |
 | [US-EMDB-98-3](tasks/US-EMDB-98-3.md) | Test: Backup rebuilds its own indexes from received blocks | ⚪ todo | — |  | — | — | [US-EMDB-98](stories/US-EMDB-98.md) |

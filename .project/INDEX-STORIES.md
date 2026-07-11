@@ -97,12 +97,12 @@
 | [US-EMDB-89](stories/US-EMDB-89.md) | Side-file compaction and atomic swap | ✅ done | must | 8 | v3, compaction, swap | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 5 | 8 |
 | [US-EMDB-9](stories/US-EMDB-9.md) | Implement EmailManager with two-tier storage (metadata + content blocks) | 📋 backlog | must | 8 |  | [EPIC-EMDB-4](epics/EPIC-EMDB-4.md) | 7 | 6 |
 | [US-EMDB-90](stories/US-EMDB-90.md) | Compaction re-encryption and DEK pruning | ✅ done | should | 5 | v3, compaction, encryption | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | 4 | 6 |
-| [US-EMDB-91](stories/US-EMDB-91.md) | Address trigram FTS index | 📋 backlog | should | 13 | v3, search, fts, trigram | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 5 | 8 |
-| [US-EMDB-92](stories/US-EMDB-92.md) | Listing page scan search | 📋 backlog | should | 3 | v3, search, scan | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 3 | 4 |
+| [US-EMDB-91](stories/US-EMDB-91.md) | Address trigram FTS index | ✅ done | should | 13 | v3, search, fts, trigram | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 5 | 8 |
+| [US-EMDB-92](stories/US-EMDB-92.md) | Listing page scan search | ✅ done | should | 3 | v3, search, scan | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 3 | 4 |
 | [US-EMDB-93](stories/US-EMDB-93.md) | Date BTree secondary index | ✅ done | should | 5 | v3, search, date-index | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 4 | 5 |
-| [US-EMDB-94](stories/US-EMDB-94.md) | Query planner | 📋 backlog | could | 5 | v3, search, planner | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 4 | 5 |
+| [US-EMDB-94](stories/US-EMDB-94.md) | Query planner | ✅ done | could | 5 | v3, search, planner | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | 4 | 5 |
 | [US-EMDB-95](stories/US-EMDB-95.md) | .emdb.vec sidecar format | 📋 backlog | could | 8 | v3, vectors, sidecar | [EPIC-EMDB-20](epics/EPIC-EMDB-20.md) | 4 | 5 |
 | [US-EMDB-96](stories/US-EMDB-96.md) | Phase-1 HNSW and embedding pipeline | 📋 backlog | could | 13 | v3, vectors, hnsw, embeddings | [EPIC-EMDB-20](epics/EPIC-EMDB-20.md) | 4 | 6 |
-| [US-EMDB-97](stories/US-EMDB-97.md) | Per-folder bloom filters | 📋 backlog | could | 5 | v3, search, bloom | [EPIC-EMDB-20](epics/EPIC-EMDB-20.md) | 4 | 5 |
+| [US-EMDB-97](stories/US-EMDB-97.md) | Per-folder bloom filters | ✅ done | could | 5 | v3, search, bloom | [EPIC-EMDB-20](epics/EPIC-EMDB-20.md) | 4 | 5 |
 | [US-EMDB-98](stories/US-EMDB-98.md) | Content replication via ULID high-water mark | 📋 backlog | could | 8 | v3, sync, content | [EPIC-EMDB-21](epics/EPIC-EMDB-21.md) | 4 | 5 |
 | [US-EMDB-99](stories/US-EMDB-99.md) | Folder replication via FolderVersion | 📋 backlog | could | 5 | v3, sync, folders | [EPIC-EMDB-21](epics/EPIC-EMDB-21.md) | 3 | 4 |

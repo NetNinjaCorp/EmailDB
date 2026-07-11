@@ -940,7 +940,7 @@ entries:
 - id: US-EMDB-91
   title: Address trigram FTS index
   type: story
-  status: backlog
+  status: done
   points: 13
   story_id: null
   epic_id: EPIC-EMDB-19
@@ -948,7 +948,7 @@ entries:
 - id: US-EMDB-92
   title: Listing page scan search
   type: story
-  status: backlog
+  status: done
   points: 3
   story_id: null
   epic_id: EPIC-EMDB-19
@@ -964,7 +964,7 @@ entries:
 - id: US-EMDB-94
   title: Query planner
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-19
@@ -988,7 +988,7 @@ entries:
 - id: US-EMDB-97
   title: Per-folder bloom filters
   type: story
-  status: backlog
+  status: done
   points: 5
   story_id: null
   epic_id: EPIC-EMDB-20
@@ -5827,24 +5827,24 @@ entries:
   title: 'Test: Substring query over addresses returns correct results at 100K emails
     in under 10ms warm'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-91
   epic_id: null
   tags: []
 - id: US-EMDB-91-2
   title: 'Test: FTS blocks are encrypted under every policy'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-91
   epic_id: null
   tags: []
 - id: US-EMDB-91-3
   title: 'Test: Index updates on add and delete'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-91
   epic_id: null
   tags: []
@@ -5852,23 +5852,23 @@ entries:
   title: 'Test: Candidates verified against Tier 1 records to remove trigram false
     positives'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-91
   epic_id: null
   tags: []
 - id: US-EMDB-91-5
   title: 'Test: Root recoverable from the Checkpoint secondary index table'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-91
   epic_id: null
   tags: []
 - id: US-EMDB-91-6
   title: Implement trigram extraction and FTS block structures
   type: task
-  status: todo
+  status: done
   points: 5
   story_id: US-EMDB-91
   epic_id: null
@@ -5876,7 +5876,7 @@ entries:
 - id: US-EMDB-91-7
   title: Implement ingest and delete maintenance
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-91
   epic_id: null
@@ -5884,7 +5884,7 @@ entries:
 - id: US-EMDB-91-8
   title: Implement trigram query path
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-91
   epic_id: null
@@ -5892,31 +5892,31 @@ entries:
 - id: US-EMDB-92-1
   title: 'Test: Folder-scoped scan of a 50K-email folder completes in ~15ms warm'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-92
   epic_id: null
   tags: []
 - id: US-EMDB-92-2
   title: 'Test: Matches include pending delta entries'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-92
   epic_id: null
   tags: []
 - id: US-EMDB-92-3
   title: 'Test: Whole-mailbox fallback works when no better phase applies'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-92
   epic_id: null
   tags: []
 - id: US-EMDB-92-4
   title: Implement folder-scoped listing scan search
   type: task
-  status: todo
+  status: done
   points: 2
   story_id: US-EMDB-92
   epic_id: null
@@ -5965,39 +5965,39 @@ entries:
 - id: US-EMDB-94-1
   title: 'Test: Address-shaped queries route to the trigram index'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-94
   epic_id: null
   tags: []
 - id: US-EMDB-94-2
   title: 'Test: Date-bounded queries pre-filter via the date index'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-94
   epic_id: null
   tags: []
 - id: US-EMDB-94-3
   title: 'Test: Results merge and dedupe across phases with stable ordering'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-94
   epic_id: null
   tags: []
 - id: US-EMDB-94-4
   title: 'Test: Planner degrades gracefully when an index is absent'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-94
   epic_id: null
   tags: []
 - id: US-EMDB-94-5
   title: Implement query planner routing and merge
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-94
   epic_id: null
@@ -6094,39 +6094,39 @@ entries:
 - id: US-EMDB-97-1
   title: 'Test: Filter sized for ~1% false positives over Tier 1 tokens'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-97
   epic_id: null
   tags: []
 - id: US-EMDB-97-2
   title: 'Test: Multi-folder search consults filters before scanning'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-97
   epic_id: null
   tags: []
 - id: US-EMDB-97-3
   title: 'Test: Filters always encrypted'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-97
   epic_id: null
   tags: []
 - id: US-EMDB-97-4
   title: 'Test: Filters rebuilt with page compile and registered in the Checkpoint'
   type: task
-  status: todo
-  points: null
+  status: done
+  points: 1
   story_id: US-EMDB-97
   epic_id: null
   tags: []
 - id: US-EMDB-97-5
   title: Implement bloom filter build, query, and registration
   type: task
-  status: todo
+  status: done
   points: 3
   story_id: US-EMDB-97
   epic_id: null
@@ -6204,8 +6204,8 @@ entries:
   story_id: US-EMDB-99
   epic_id: null
   tags: []
-total_points: 1319
-completed_points: 1068
+total_points: 1335
+completed_points: 1129
 story_count: 104
 task_count: 633
 epic_count: 22
