@@ -1553,3 +1553,11 @@
 {"event_type":"update","item_id":"US-EMDB-92-1","item_type":"task","changes":{"status":{"before":"review","after":"done"}},"timestamp":"2026-07-11T02:15:58.731460Z","actor":"Ryan Tregea","source":"cli"}
 {"event_type":"update","item_id":"US-EMDB-92","item_type":"story","changes":{"status":{"before":"ready","after":"done"}},"timestamp":"2026-07-11T02:15:59.355814Z","actor":"Ryan Tregea","source":"cli"}
 {"event_type":"update","item_id":"SPRINT-EMDB-8","item_type":"sprint","changes":{"status":{"before":"active","after":"completed"}},"timestamp":"2026-07-11T02:16:04.855644Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-105","item_type":"story","changes":{},"timestamp":"2026-07-11T02:27:18.231285Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-105-1","item_type":"task","changes":{},"timestamp":"2026-07-11T02:27:20.984060Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-105-2","item_type":"task","changes":{},"timestamp":"2026-07-11T02:27:21.684567Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-105-3","item_type":"task","changes":{},"timestamp":"2026-07-11T02:27:21.994832Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-105-4","item_type":"task","changes":{},"timestamp":"2026-07-11T02:27:22.300946Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-105-5","item_type":"task","changes":{},"timestamp":"2026-07-11T02:27:22.610526Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"create","item_id":"US-EMDB-105-6","item_type":"task","changes":{},"timestamp":"2026-07-11T02:27:23.017915Z","actor":"Ryan Tregea","source":"cli"}
+{"event_type":"update","item_id":"US-EMDB-105","item_type":"story","changes":{"epic_id":{"before":null,"after":"EPIC-EMDB-17"}},"timestamp":"2026-07-11T02:27:23.212966Z","actor":"Ryan Tregea","source":"cli"}

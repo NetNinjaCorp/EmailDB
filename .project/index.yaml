@@ -231,6 +231,14 @@ entries:
   story_id: null
   epic_id: EPIC-EMDB-13
   tags: []
+- id: US-EMDB-105
+  title: First-class email tags
+  type: story
+  status: backlog
+  points: null
+  story_id: null
+  epic_id: EPIC-EMDB-17
+  tags: []
 - id: US-EMDB-11
   title: Implement MaintenanceManager compaction and cleanup
   type: story
@@ -1283,6 +1291,58 @@ entries:
   status: done
   points: 5
   story_id: US-EMDB-104
+  epic_id: null
+  tags: []
+- id: US-EMDB-105-1
+  title: 'Test: Users can create/rename/delete tags in a persisted tag registry'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-105
+  epic_id: null
+  tags: []
+- id: US-EMDB-105-2
+  title: 'Test: An email can hold multiple tags and tag/untag does not rewrite folder
+    listing rows or bump FolderVersion'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-105
+  epic_id: null
+  tags: []
+- id: US-EMDB-105-3
+  title: 'Test: Single-tag and multi-tag (AND/OR) queries return correct results through
+    the Search() planner and combine with ...'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-105
+  epic_id: null
+  tags: []
+- id: US-EMDB-105-4
+  title: 'Test: Tag registry and assignments survive close/reopen via Checkpoint registration
+    and survive compaction'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-105
+  epic_id: null
+  tags: []
+- id: US-EMDB-105-5
+  title: 'Test: Tag blocks are always encrypted under every policy'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-105
+  epic_id: null
+  tags: []
+- id: US-EMDB-105-6
+  title: 'Test: Design decision folders-as-tags vs first-class recorded in docs with
+    the chosen approach'
+  type: task
+  status: todo
+  points: null
+  story_id: US-EMDB-105
   epic_id: null
   tags: []
 - id: US-EMDB-11-1
@@ -6206,6 +6266,6 @@ entries:
   tags: []
 total_points: 1335
 completed_points: 1129
-story_count: 104
-task_count: 633
+story_count: 105
+task_count: 639
 epic_count: 22

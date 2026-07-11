@@ -10,7 +10,7 @@
 | [EPIC-EMDB-14](epics/EPIC-EMDB-14.md) | Checkpoint, WAL &amp; Recovery | 📝 draft | must | v3, recovery, checkpoint, wal, durability | 5 | 34 |
 | [EPIC-EMDB-15](epics/EPIC-EMDB-15.md) | Encryption v3 | 📝 draft | must | v3, security, encryption | 4 | 23 |
 | [EPIC-EMDB-16](epics/EPIC-EMDB-16.md) | Folder System &amp; Three-Tier Storage | 📝 draft | must | v3, folders, storage, three-tier | 4 | 24 |
-| [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | EmailManager API | 📝 draft | must | v3, api, email | 4 | 26 |
+| [EPIC-EMDB-17](epics/EPIC-EMDB-17.md) | EmailManager API | 📝 draft | must | v3, api, email | 5 | 26 |
 | [EPIC-EMDB-18](epics/EPIC-EMDB-18.md) | Compaction | 📝 draft | should | v3, compaction, maintenance | 3 | 18 |
 | [EPIC-EMDB-19](epics/EPIC-EMDB-19.md) | Search Phases 1-3 | 📝 draft | should | v3, search, fts, index | 4 | 26 |
 | [EPIC-EMDB-2](epics/EPIC-EMDB-2.md) | Serialization Layer Consolidation | 📦 archived | must | serialization, architecture | 3 | 13 |

@@ -36,6 +36,12 @@
 | [US-EMDB-104-3](tasks/US-EMDB-104-3.md) | Test: CowBTree model stress and Merkle verification suites pass unchanged | ✅ done | 1 |  | claude | US-EMDB-104-5 | [US-EMDB-104](stories/US-EMDB-104.md) |
 | [US-EMDB-104-4](tasks/US-EMDB-104-4.md) | Test: docs/BTree_Index.md current-behavior note removed | ✅ done | 1 |  | claude | US-EMDB-104-5 | [US-EMDB-104](stories/US-EMDB-104.md) |
 | [US-EMDB-104-5](tasks/US-EMDB-104-5.md) | Implement one-pass COW batch apply in CowBTree.PutBatch | ✅ done | 5 |  | claude | — | [US-EMDB-104](stories/US-EMDB-104.md) |
+| [US-EMDB-105-1](tasks/US-EMDB-105-1.md) | Test: Users can create/rename/delete tags in a persisted tag registry | ⚪ todo | — |  | — | — | [US-EMDB-105](stories/US-EMDB-105.md) |
+| [US-EMDB-105-2](tasks/US-EMDB-105-2.md) | Test: An email can hold multiple tags and tag/untag does not rewrite folder listing rows or bump FolderVersion | ⚪ todo | — |  | — | — | [US-EMDB-105](stories/US-EMDB-105.md) |
+| [US-EMDB-105-3](tasks/US-EMDB-105-3.md) | Test: Single-tag and multi-tag (AND/OR) queries return correct results through the Search() planner and combine with ... | ⚪ todo | — |  | — | — | [US-EMDB-105](stories/US-EMDB-105.md) |
+| [US-EMDB-105-4](tasks/US-EMDB-105-4.md) | Test: Tag registry and assignments survive close/reopen via Checkpoint registration and survive compaction | ⚪ todo | — |  | — | — | [US-EMDB-105](stories/US-EMDB-105.md) |
+| [US-EMDB-105-5](tasks/US-EMDB-105-5.md) | Test: Tag blocks are always encrypted under every policy | ⚪ todo | — |  | — | — | [US-EMDB-105](stories/US-EMDB-105.md) |
+| [US-EMDB-105-6](tasks/US-EMDB-105-6.md) | Test: Design decision folders-as-tags vs first-class recorded in docs with the chosen approach | ⚪ todo | — |  | — | — | [US-EMDB-105](stories/US-EMDB-105.md) |
 | [US-EMDB-11-1](tasks/US-EMDB-11-1.md) | Test: MaintenanceManager uncommented and compiles | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
 | [US-EMDB-11-2](tasks/US-EMDB-11-2.md) | Test: CompactAsync creates a new file with only latest block versions | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
 | [US-EMDB-11-3](tasks/US-EMDB-11-3.md) | Test: Cleanup removes blocks listed in OutdatedOffsets | ⚪ todo | — |  | — | — | [US-EMDB-11](stories/US-EMDB-11.md) |
